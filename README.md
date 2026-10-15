@@ -15,7 +15,7 @@ Manager 的 Git URL 安装可使用 `https://github.com/adachi0130/Adachi-Inpain
 git clone https://github.com/adachi0130/Adachi-Inpaint-Workbench.git
 ```
 
-Manager 搜索收录需要其维护者合并节点清单申请；仅有 GitHub 仓库不会立即出现在搜索结果中喵。
+Manager 搜索收录申请已提交：[ComfyUI-Manager PR #3378](https://github.com/Comfy-Org/ComfyUI-Manager/pull/3378)，仍需维护者合并及索引更新，尚不能保证搜索可见喵。
 当前尚未配置 Comfy Registry 发布者，Registry 发布流程见 [发布说明](registry/README.md) 喵。
 
 ## 安装

@@ -1,6 +1,7 @@
 # Manager / Registry 发布
 
 GitHub 仓库公开并不代表 Manager 搜索清单或 Comfy Registry 已收录喵。
+本插件的 Manager 收录申请见 [PR #3378](https://github.com/Comfy-Org/ComfyUI-Manager/pull/3378)，当前等待上游处理喵。
 
 ## Manager 清单
 
