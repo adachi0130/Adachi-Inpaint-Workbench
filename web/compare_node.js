@@ -2,6 +2,7 @@ import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
 import { ImageCompareView } from "./compare.js";
 import { routeWheelOutsideImage } from "./wheel_routing.js";
+import { T } from "./i18n.js";
 
 function viewUrl(image) {
     const type = ["input", "output", "temp"].includes(image?.type) ? image.type : "temp";
@@ -11,7 +12,7 @@ function viewUrl(image) {
 function targets(node) {
     const graph = node.graph;
     const editors = (graph?._nodes || []).filter(candidate => candidate.type === "AdachiInlineMask" && candidate.adachiUseResult)
-        .map(candidate => ({ id: candidate.id, label: `${candidate.title || "Inline Mask"} #${candidate.id}` }));
+        .map(candidate => ({ id: candidate.id, label: `${candidate.title || T("Inline Mask")} #${candidate.id}` }));
     const sourceLink = graph?.links?.[node.inputs?.find(input => input.name === "original")?.link];
     const queue = sourceLink ? [sourceLink.origin_id] : [], seen = new Set(), upstream = new Set();
     while (queue.length && seen.size < 256) {
@@ -40,11 +41,11 @@ app.registerExtension({
                 onSelect: index => { node.properties.adachi_result_index = index; },
                 async onAdopt(id, image) {
                     const target = node.graph?.getNodeById(id);
-                    if (!target?.adachiUseResult) throw new Error("No inline mask node is available to receive the result");
+                    if (!target?.adachiUseResult) throw new Error(T("No inline mask node is available to receive the result"));
                     const response = await api.fetchApi(`/view?${new URLSearchParams({ filename: image.filename, subfolder: image.subfolder || "", type: image.type || "temp" })}`);
-                    if (!response.ok) throw new Error("Result preview expired; run the workflow again");
+                    if (!response.ok) throw new Error(T("Result preview expired; run the workflow again"));
                     const blob = await response.blob();
-                    if (blob.size > 64 * 1024 * 1024) throw new Error("Result image exceeds 64 MiB; downscale it first");
+                    if (blob.size > 64 * 1024 * 1024) throw new Error(T("Result image exceeds 64 MiB; downscale it first"));
                     await target.adachiUseResult(new File([blob], `adachi-result-${Date.now()}.png`, { type: "image/png" }));
                 },
             });

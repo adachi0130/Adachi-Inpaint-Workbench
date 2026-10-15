@@ -2,6 +2,7 @@ import { app } from "../../scripts/app.js";
 import { InpaintParameterPanel } from "./inpaint_panel.js";
 import { connectedEditor, connectedSamplers, relocateWidgets } from "./parameter_bridge.js";
 import { routeWheelOutsideImage } from "./wheel_routing.js";
+import { T } from "./i18n.js";
 
 export function installInpaintWorkbench(nodeType) {
     const created = nodeType.prototype.onNodeCreated;
@@ -10,7 +11,7 @@ export function installInpaintWorkbench(nodeType) {
         const root = document.createElement("div"); root.className = "dd-inpaint dd-workbench";
         const tools = document.createElement("div"); tools.className = "dd-workbench-tools";
         const placeholder = document.createElement("div"); placeholder.className = "dd-param-placeholder dd-tools-placeholder";
-        placeholder.textContent = "Connect an inline mask to show the painting tools";
+        placeholder.textContent = T("Connect an inline mask to show the painting tools");
         tools.append(placeholder); root.append(tools);
         let source = null, mountedEditor = null, frame = 0, removed = false;
         const markChanged = () => {
@@ -31,7 +32,7 @@ export function installInpaintWorkbench(nodeType) {
                 scheduleSize();
             }
             placeholder.hidden = !!next;
-            placeholder.textContent = editor ? "The painting tools live in the other inpaint node connected to this image" : "Connect an inline mask to show the painting tools";
+            placeholder.textContent = editor ? T("The painting tools live in the other inpaint node connected to this image") : T("Connect an inline mask to show the painting tools");
         };
         const contentHeight = () => (tools.scrollHeight || 30) + (panel?.root.scrollHeight || 620);
         const scheduleSize = () => {

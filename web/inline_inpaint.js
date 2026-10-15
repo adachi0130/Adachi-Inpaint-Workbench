@@ -3,6 +3,7 @@ import { api } from "../../scripts/api.js";
 import { InlineMaskEditor } from "./editor.js";
 import { installInpaintWorkbench } from "./inpaint_node.js";
 import { routeWheelOutsideImage } from "./wheel_routing.js";
+import { T } from "./i18n.js";
 
 const styleId = "adachi-inpaint-style";
 if (!document.getElementById(styleId)) {
@@ -80,7 +81,7 @@ app.registerExtension({
                 if (!embedded && !filename) return;
                 restoring = true;
                 editor.embed.checked = !!embedded;
-                try { await editor.setImage(embedded || imageUrl(filename), maskWidget?.value || "", embedded ? "Embedded image" : filename); }
+                try { await editor.setImage(embedded || imageUrl(filename), maskWidget?.value || "", embedded ? T("Embedded image") : filename); }
                 catch (error) { console.warn("[Adachi Inpaint]", error); }
                 finally { restoring = false; }
             };
@@ -97,7 +98,7 @@ app.registerExtension({
                     body.append("type", "input");
                     body.append("subfolder", "adachi-inpaint");
                     const response = await api.fetchApi("/upload/image", { method: "POST", body });
-                    if (!response.ok) throw new Error(`Upload failed (${response.status})`);
+                    if (!response.ok) throw new Error(`${T("Upload failed")} (${response.status})`);
                     const uploaded = await response.json();
                     if (version !== uploadVersion || editor.destroyed) return;
                     const name = uploaded.subfolder ? `${uploaded.subfolder}/${uploaded.name}` : uploaded.name;
@@ -117,10 +118,10 @@ app.registerExtension({
             node.adachiEditor = editor;
             const stopWheelRouting = routeWheelOutsideImage(editor.root, editor.canvas, () => editor.ready);
             node.adachiUseResult = async file => {
-                if (editor.destroyed) throw new Error("The inline mask node was removed");
+                if (editor.destroyed) throw new Error(T("The inline mask node was removed"));
                 await editor.options.onUpload(file);
                 editor.view = "overlay"; editor.updateButtons(); editor.schedule();
-                editor.status("Adopted the result as the new source image; the old mask was cleared");
+                editor.status(T("Adopted the result as the new source image; the old mask was cleared"));
             };
             const domWidget = node.addDOMWidget("adachi_canvas", "adachi_inline_mask", editor.root, {
                 serialize: false,
@@ -134,11 +135,11 @@ app.registerExtension({
             const resizeHandle = document.createElement("div");
             resizeHandle.className = "dd-resize-handle";
             resizeHandle.textContent = "↕";
-            resizeHandle.title = "Drag to resize canvas height";
+            resizeHandle.title = T("Drag to resize canvas height");
             resizeHandle.tabIndex = 0;
             resizeHandle.setAttribute("role", "separator");
             resizeHandle.setAttribute("aria-orientation", "horizontal");
-            resizeHandle.setAttribute("aria-label", "Resize canvas height");
+            resizeHandle.setAttribute("aria-label", T("Resize canvas height"));
             editor.root.append(resizeHandle);
             let resizing = null;
             const resizeHeight = height => {

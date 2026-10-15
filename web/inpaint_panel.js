@@ -1,4 +1,5 @@
 /* Inline controls edit the connected sampler's real widgets, not a second set of parameters. */
+import { T } from "./i18n.js";
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; };
 export const INPAINT_FIELDS = ["mask_mode", "fill", "area", "padding", "width", "height", "denoise", "sampler_name", "scheduler", "steps", "cfg", "seed", "control_after_generate", "batch_size", "mask_blur", "mask_grow", "resize_mode", "inpaint_model", "soft_edge", "soft_strength", "refiner_switch"];
 const choices = {
@@ -12,11 +13,11 @@ const choices = {
 export class InpaintParameterPanel {
     constructor(options) {
         this.options = options; this.bindings = []; this.root = el("section", "dd-parameters");
-        const header = el("div", "dd-param-header"); header.append(el("strong", "", "WebUI Inpaint"));
-        this.targetSelect = el("select"); this.targetSelect.setAttribute("aria-label", "Controlled WebUI inpaint node");
+        const header = el("div", "dd-param-header"); header.append(el("strong", "", T("WebUI Inpaint")));
+        this.targetSelect = el("select"); this.targetSelect.setAttribute("aria-label", T("Controlled WebUI inpaint node"));
         this.targetSelect.onchange = () => { this.preferred = this.targetSelect.value; this.options.onPreferred?.(this.preferred); this.refresh(); };
         header.append(this.targetSelect); this.root.append(header);
-        this.placeholder = el("div", "dd-param-placeholder", "Connect a WebUI inpaint node to edit its parameters here");
+        this.placeholder = el("div", "dd-param-placeholder", T("Connect a WebUI inpaint node to edit its parameters here"));
         this.body = el("div", "dd-param-body"); this.root.append(this.placeholder, this.body);
         this.observer = new ResizeObserver(() => options.onHeight?.()); this.observer.observe(this.root);
         this.timer = setInterval(() => { if (this.root.isConnected && !document.hidden) this.refresh(); }, 350);
@@ -30,7 +31,7 @@ export class InpaintParameterPanel {
         const signature = targets.map(n => `${n.id}:${n.title}`).join("|");
         if (signature !== this.signature) {
             this.signature = signature; this.targetSelect.replaceChildren();
-            for (const n of targets) { const option = el("option", "", `${n.title || "WebUI Inpaint"} #${n.id}`); option.value = String(n.id); this.targetSelect.append(option); }
+            for (const n of targets) { const option = el("option", "", `${n.title || T("WebUI Inpaint")} #${n.id}`); option.value = String(n.id); this.targetSelect.append(option); }
         }
         this.targetSelect.hidden = targets.length < 2;
         if (next) this.targetSelect.value = String(next.id);
@@ -56,20 +57,22 @@ export class InpaintParameterPanel {
 
     enum(parent, name, label, pills = false) {
         const widget = this.widget(name); if (!widget) return;
+        label = T(label);
         const wrapper = el("div", "dd-param-field"); wrapper.append(el("span", "dd-param-label", label));
         let values = widget.options?.values; if (typeof values === "function") values = values();
         if (!Array.isArray(values)) values = Object.keys(choices[name] || {});
         if (!values.includes(widget.value)) values = [widget.value, ...values];
+        const display = value => choices[name]?.[value] ? T(choices[name][value], "enum") : String(value);
         if (pills) {
             const row = el("div", "dd-param-pills");
             const buttons = values.map(value => {
-                const button = el("button", "", choices[name]?.[value] || String(value)); button.type = "button";
+                const button = el("button", "", display(value)); button.type = "button";
                 button.onclick = () => { this.write(name, value, true); this.refresh(); }; row.append(button); return { button, value };
             });
             wrapper.append(row); this.bindings.push({ sync: () => { for (const {button,value} of buttons) { button.classList.toggle("dd-active", widget.value === value); button.setAttribute("aria-pressed", String(widget.value === value)); button.disabled = this.linked(name); } } });
         } else {
             const select = el("select"); select.setAttribute("aria-label", label);
-            for (const value of values) { const option = el("option", "", choices[name]?.[value] || String(value)); option.value = value; select.append(option); }
+            for (const value of values) { const option = el("option", "", display(value)); option.value = value; select.append(option); }
             select.onchange = () => this.write(name, select.value, true); wrapper.append(select);
             this.bindings.push({ sync: () => { if (document.activeElement !== select) select.value = widget.value; select.disabled = this.linked(name); } });
         }
@@ -78,6 +81,7 @@ export class InpaintParameterPanel {
 
     number(parent, name, label, { min, max, step = 1, range = false, rangeMax = max } = {}) {
         const widget = this.widget(name); if (!widget) return;
+        label = T(label);
         min ??= widget.options?.min ?? 0; max ??= widget.options?.max ?? 1000000;
         const wrapper = el("label", "dd-param-field"); const row = el("span", "dd-param-number-label"); row.append(el("span", "", label));
         const input = el("input"); input.type = "number"; input.min = min; input.max = max; input.step = step; input.setAttribute("aria-label", label); row.append(input); wrapper.append(row);
@@ -103,7 +107,7 @@ export class InpaintParameterPanel {
     toggle(parent, name, label) {
         const widget = this.widget(name); if (!widget) return;
         const wrapper = el("label", "dd-param-toggle"), input = el("input"); input.type = "checkbox";
-        input.onchange = () => this.write(name, input.checked, true); wrapper.append(input, document.createTextNode(label)); parent.append(wrapper);
+        input.onchange = () => this.write(name, input.checked, true); wrapper.append(input, document.createTextNode(T(label))); parent.append(wrapper);
         this.bindings.push({ sync: () => { input.checked = !!widget.value; input.disabled = this.linked(name); } });
     }
 
@@ -113,9 +117,9 @@ export class InpaintParameterPanel {
         this.enum(this.body, "mask_mode", "Mask mode", true);
         this.enum(this.body, "fill", "Fill content", true);
         this.enum(this.body, "area", "Sampling area", true);
-        const resolution = el("div", "dd-param-resolution"); resolution.append(el("span", "dd-param-label", "Sampling resolution"));
-        this.sourceSize = el("button", "", "Use source size"); this.sourceSize.type = "button";
-        this.sourceSize.title = "Fill width and height from the current source image; aligned to 8 px and clamped to 64-8192 px";
+        const resolution = el("div", "dd-param-resolution"); resolution.append(el("span", "dd-param-label", T("Sampling resolution")));
+        this.sourceSize = el("button", "", T("Use source size")); this.sourceSize.type = "button";
+        this.sourceSize.title = T("Fill width and height from the current source image; aligned to 8 px and clamped to 64-8192 px");
         this.sourceSize.onclick = () => {
             const image = this.options.getImage?.(); if (!image) return;
             const aligned = value => Math.max(64, Math.min(8192, Math.round(value / 8) * 8));
@@ -131,7 +135,7 @@ export class InpaintParameterPanel {
         this.number(scale, "steps", "Steps", { min: 1, max: 10000, range: true, rangeMax: 150 });
         this.number(scale, "cfg", "CFG scale", { min: 0, max: 100, step: .1, range: true, rangeMax: 30 });
         const seed = this.grid(this.body); this.number(seed, "seed", "Seed", { min: 0, max: Number.MAX_SAFE_INTEGER }); this.enum(seed, "control_after_generate", "After generate");
-        const advanced = el("details", "dd-param-advanced"), summary = el("summary", "", "Mask, batch and advanced settings"); advanced.append(summary);
+        const advanced = el("details", "dd-param-advanced"), summary = el("summary", "", T("Mask, batch and advanced settings")); advanced.append(summary);
         const content = el("div", "dd-param-advanced-body"); advanced.append(content);
         this.number(content, "padding", "Context padding", { min: 0, max: 2048 });
         const masks = this.grid(content);

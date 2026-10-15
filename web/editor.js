@@ -1,5 +1,6 @@
 /* Original implementation, MIT licensed. No WebUI source is bundled. */
 import { registerImageWheel } from "./wheel_gestures.js";
+import { T } from "./i18n.js";
 const el = (tag, cls, text) => {
     const node = document.createElement(tag);
     if (cls) node.className = cls;
@@ -10,7 +11,7 @@ const makeCanvas = () => document.createElement("canvas");
 const loadImage = (url) => new Promise((resolve, reject) => {
     const image = new Image();
     image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error("Cannot load image"));
+        image.onerror = () => reject(new Error(T("Cannot load image")));
     image.src = url;
 });
 
@@ -87,12 +88,12 @@ export class InlineMaskEditor {
 
     build() {
         const head = el("div", "dd-head");
-        this.sizeLabel = el("span", "dd-dimensions", "INLINE MASK");
+        this.sizeLabel = el("span", "dd-dimensions", T("INLINE MASK"));
         head.append(this.sizeLabel);
         this.root.append(head);
         const files = el("div", "dd-row dd-files");
-        this.loadButton = this.button(files, "Load image", "Upload an image, or drop / paste one", () => this.imageInput.click(), "dd-primary");
-        this.filename = el("span", "dd-filename", "Drop an image onto the canvas");
+        this.loadButton = this.button(files, T("Load image"), T("Upload an image, or drop / paste one"), () => this.imageInput.click(), "dd-primary");
+        this.filename = el("span", "dd-filename", T("Drop an image onto the canvas"));
         files.append(this.filename);
         this.root.append(files);
         this.imageInput = el("input");
@@ -121,19 +122,19 @@ export class InlineMaskEditor {
             ["brush", "Brush", "Brush (B)"], ["erase", "Eraser", "Eraser (E); hold Alt or right-click for temporary erase"],
             ["rect", "Rectangle", "Rectangle (R)"], ["lasso", "Lasso", "Freehand lasso (L)"],
             ["pan", "Pan", "Pan (H), or hold Space"],
-        ]) this.toolButtons[name] = this.button(tools, label, title, () => this.setTool(name));
+        ]) this.toolButtons[name] = this.button(tools, T(label), T(title), () => this.setTool(name));
         this.root.append(tools);
         const settings = el("div", "dd-settings");
-        this.addSlider(settings, "Brush size", "brushSize", 1, 512, "px");
-        this.addSlider(settings, "Hardness", "hardness", 0, 100, "%");
-        this.addSlider(settings, "Brush opacity", "brushOpacity", 1, 100, "%");
-        this.addSlider(settings, "Overlay", "overlayOpacity", 0, 100, "%");
+        this.addSlider(settings, T("Brush size"), "brushSize", 1, 512, "px");
+        this.addSlider(settings, T("Hardness"), "hardness", 0, 100, "%");
+        this.addSlider(settings, T("Brush opacity"), "brushOpacity", 1, 100, "%");
+        this.addSlider(settings, T("Overlay"), "overlayOpacity", 0, 100, "%");
         this.stage = el("div", "dd-stage");
         this.canvas = makeCanvas();
-        this.canvas.setAttribute("aria-label", "Inline mask painting canvas; orange areas are repainted");
+        this.canvas.setAttribute("aria-label", T("Inline mask painting canvas; orange areas are repainted"));
         this.stage.append(this.canvas);
         this.empty = el("div", "dd-empty");
-        this.empty.append(el("span", "dd-empty-symbol", "+"), el("strong", "", "Drop an image here"), el("span", "", "Paint the areas to repaint directly in this node"));
+        this.empty.append(el("span", "dd-empty-symbol", "+"), el("strong", "", T("Drop an image here")), el("span", "", T("Paint the areas to repaint directly in this node")));
         this.stage.append(this.empty);
         this.root.append(this.stage, settings);
         this.canvas.oncontextmenu = event => event.preventDefault();
@@ -151,32 +152,33 @@ export class InlineMaskEditor {
             if (file) this.upload(file);
         });
         const actions = el("div", "dd-row dd-actions");
-        this.undoButton = this.button(actions, "Undo", "Undo (Ctrl+Z)", () => this.undo());
-        this.redoButton = this.button(actions, "Redo", "Redo (Ctrl+Shift+Z)", () => this.redo());
-        this.button(actions, "Invert", "Invert the painted mask", () => this.action({ type: "invert" }));
-        this.button(actions, "Fill", "Fill the whole image with mask", () => this.action({ type: "fill" }));
-        this.button(actions, "Clear", "Clear the mask", () => this.action({ type: "clear" }));
-        this.button(actions, "Import mask", "White repaints, black preserves", () => { if (this.ready) this.maskInput.click(); });
-        this.button(actions, "Export", "Export the mask PNG at full resolution", () => this.download());
+        this.undoButton = this.button(actions, T("Undo"), T("Undo (Ctrl+Z)"), () => this.undo());
+        this.redoButton = this.button(actions, T("Redo"), T("Redo (Ctrl+Shift+Z)"), () => this.redo());
+        this.button(actions, T("Invert"), T("Invert the painted mask"), () => this.action({ type: "invert" }));
+        this.button(actions, T("Fill"), T("Fill the whole image with mask"), () => this.action({ type: "fill" }));
+        this.button(actions, T("Clear"), T("Clear the mask"), () => this.action({ type: "clear" }));
+        this.button(actions, T("Import mask"), T("White repaints, black preserves"), () => { if (this.ready) this.maskInput.click(); });
+        this.button(actions, T("Export"), T("Export the mask PNG at full resolution"), () => this.download());
         this.root.append(actions);
         const footer = el("div", "dd-row dd-viewbar");
         this.viewButtons = {};
         for (const [name, label] of [["overlay", "Overlay"], ["image", "Image"], ["mask", "Mask"]]) {
-            this.viewButtons[name] = this.button(footer, label, `${label} / ${name}`, () => { this.view = name; this.updateButtons(); this.schedule(); });
+            const text = T(label);
+            this.viewButtons[name] = this.button(footer, text, `${text} / ${name}`, () => { this.view = name; this.updateButtons(); this.schedule(); });
         }
         const spacer = el("span", "dd-spacer");
         footer.append(spacer);
         this.zoomLabel = el("span", "dd-zoom", "100%");
         footer.append(this.zoomLabel);
-        this.button(footer, "Fit", "Fit the image to the canvas", () => this.fit());
+        this.button(footer, T("Fit"), T("Fit the image to the canvas"), () => this.fit());
         this.root.append(footer);
         const embedRow = el("label", "dd-embed");
         this.embed = el("input");
         this.embed.type = "checkbox";
         this.embed.onchange = () => this.options.onEmbed?.(this.embed.checked);
-        embedRow.append(this.embed, document.createTextNode("Embed the source image in the workflow; no separate file needed when sharing"));
+        embedRow.append(this.embed, document.createTextNode(T("Embed the source image in the workflow; no separate file needed when sharing")));
         this.root.append(embedRow);
-        this.message = el("div", "dd-status", "Alt = temporary erase · Ctrl+wheel = brush size · wheel = zoom · Space = pan");
+        this.message = el("div", "dd-status", T("Alt = temporary erase · Ctrl+wheel = brush size · wheel = zoom · Space = pan"));
         this.message.hidden = true;
         this.message.setAttribute("role", "alert");
         this.root.append(this.message);
@@ -215,9 +217,9 @@ export class InlineMaskEditor {
     }
 
     async upload(file) {
-        if (file.size > 64 * 1024 * 1024) { this.status("File is too large (max 64 MB)", true); return; }
+        if (file.size > 64 * 1024 * 1024) { this.status(T("File is too large (max 64 MB)"), true); return; }
         try {
-            this.status("Loading image…");
+            this.status(T("Loading image…"));
             await this.options.onUpload?.(file);
         } catch (error) { this.status(error.message, true); }
     }
@@ -229,7 +231,7 @@ export class InlineMaskEditor {
             const [image, loadedMask] = await Promise.all([loadImage(url), maskData ? loadImage(maskData) : Promise.resolve(null)]);
             if (version !== this.loadVersion || this.destroyed) return;
             if (image.width * image.height > 32 * 1024 * 1024 || Math.max(image.width, image.height) > 16384) {
-                throw new Error("Image is too large; keep it under 32 MP and 16384 px per side");
+                throw new Error(T("Image is too large; keep it under 32 MP and 16384 px per side"));
             }
             this.image = image;
             for (const canvas of [this.mask, this.baseMask]) { canvas.width = image.width; canvas.height = image.height; }
@@ -251,7 +253,7 @@ export class InlineMaskEditor {
             if (version !== this.loadVersion || this.destroyed) return;
             this.baseMask.getContext("2d").drawImage(this.mask, 0, 0);
             this.sizeLabel.textContent = `${image.width} × ${image.height}`;
-            this.filename.textContent = name || "Embedded image";
+            this.filename.textContent = name || T("Embedded image");
             this.filename.title = this.filename.textContent;
             this.empty.hidden = true;
             this.ready = true;
@@ -260,7 +262,7 @@ export class InlineMaskEditor {
             this.fit();
             this.updateButtons();
             this.options.onImage?.(image);
-            this.status("Orange is the painted mask · Alt = temporary erase · Ctrl+wheel = brush size");
+            this.status(T("Orange is the painted mask · Alt = temporary erase · Ctrl+wheel = brush size"));
         } catch (error) {
             if (version === this.loadVersion && !this.destroyed) this.status(error.message, true);
             throw error;
