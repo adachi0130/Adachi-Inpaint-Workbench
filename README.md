@@ -22,6 +22,7 @@ The built-in `Painter` node draws an image and exposes a mask, but it stops ther
 Copy the whole `Adachi-Inpaint-Workbench` folder into `ComfyUI/custom_nodes/`, keeping `web/`, `backend.py` and `__init__.py`.
 Restart ComfyUI, then hard-refresh the browser with `Ctrl+F5`.
 Search for `Inline Mask` or `WebUI Inpaint`; the category is **Adachi-Inpaint-Workbench**.
+The node pack follows the ComfyUI language setting: node names, sockets and tooltips come from `locales/`, and the canvas buttons and parameter panel from `web/i18n.js`, so a Chinese ComfyUI shows the Chinese labels. English is the built-in default, and any missing entry falls back to English.
 
 On Windows you can instead run the installer from the unzipped plugin folder, pointing it at your ComfyUI directory (the one containing `main.py`).
 
@@ -174,7 +175,10 @@ python -m unittest discover -s tests -v
 连接 **WebUI 局部重绘** 节点后，画笔工具与采样参数都在该节点内，支持整图范围与蒙版范围重绘、原尺寸回贴、Alt 临时橡皮擦、Ctrl+滚轮笔径、图像对比，以及把满意的结果一键回填为新的原图继续重绘。
 代码里的默认文案是英文，以便 Manager 用户直接使用；节点搜索可输入 `Inline Mask`，分类为 **Adachi-Inpaint-Workbench**。
 
-想用中文界面时，把 ComfyUI 的语言切成中文即可：`locales/zh/` 里的翻译会通过 ComfyUI 的 `/i18n` 机制自动加载，节点名称、分类、输入输出名与提示会恢复成「内联蒙版」「原图」「宽度」等中文。
-在 ComfyUI 设置里找到 **Locale / 语言**（设置项 `Comfy.Locale`）选择 `zh`，然后刷新浏览器（`Ctrl+F5`）即可；英文用户看到的一直是英文。
+想用中文界面时，把 ComfyUI 的语言切成中文即可，插件会自动跟随：
+在 ComfyUI 设置里找到 **Locale / 语言**（设置项 `Comfy.Locale`）选择 `zh`，然后刷新浏览器（`Ctrl+F5`）。
+节点名称、分类、输入输出名与提示由 `locales/zh/` 提供，通过 ComfyUI 的 `/i18n` 机制加载；
+画布按钮与参数面板由 `web/i18n.js` 读取同一个语言设置翻译，因此「宽度」「高度」「载入原图」等也会一起变回中文。
+英文用户看到的一直是英文（英文是内置默认值）；某个词条若没有对应翻译，会自动回退为英文。
 两套语言共用同一个节点类 ID 和参数键名，所以已保存的工作流不受语言切换影响。
 
