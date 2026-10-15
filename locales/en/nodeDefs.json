@@ -1,0 +1,232 @@
+{
+  "AdachiInlineMask": {
+    "display_name": "Inline Mask",
+    "description": "Paint an inpaint mask directly in the workflow.",
+    "inputs": {
+      "image": {
+        "name": "image",
+        "tooltip": "Input image path populated by inline upload."
+      },
+      "mask_data": {
+        "name": "mask_data",
+        "tooltip": "Editor mask PNG data URL; white repaints."
+      },
+      "source_data": {
+        "name": "source_data",
+        "tooltip": "Embedded source image for portable workflows."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "image"
+      },
+      "1": {
+        "name": "mask"
+      }
+    }
+  },
+  "AdachiInpaintPrepare": {
+    "display_name": "Inpaint Prepare",
+    "description": "Crop and prepare masks with exact compositing context; use the all-in-one sampler for latent fill modes.",
+    "inputs": {
+      "image": {
+        "name": "image",
+        "tooltip": "Original image; output is restored to this exact size."
+      },
+      "mask": {
+        "name": "mask",
+        "tooltip": "White repaints; black preserves."
+      },
+      "area": {
+        "name": "area",
+        "tooltip": "Whole image or mask bounding-box inpainting."
+      },
+      "width": {
+        "name": "width",
+        "tooltip": "Sampling canvas width, independent of final image size."
+      },
+      "height": {
+        "name": "height",
+        "tooltip": "Sampling canvas height."
+      },
+      "padding": {
+        "name": "padding",
+        "tooltip": "Mask-only context padding in original pixels."
+      },
+      "mask_blur": {
+        "name": "mask_blur",
+        "tooltip": "Gaussian mask feathering in original pixels."
+      },
+      "mask_grow": {
+        "name": "mask_grow",
+        "tooltip": "Positive dilates; negative erodes the mask."
+      },
+      "mask_mode": {
+        "name": "mask_mode",
+        "tooltip": "Repaint inside or invert the mask."
+      },
+      "fill": {
+        "name": "fill",
+        "tooltip": "Original, surrounding-color fill, latent noise, or zero latent. Latent modes require the all-in-one sampler."
+      },
+      "resize_mode": {
+        "name": "resize_mode",
+        "tooltip": "Whole-image resize mode; mask-only mode always retains the entire mask."
+      },
+      "soft_edge": {
+        "name": "soft_edge",
+        "tooltip": "Extra feathering, not AUTOMATIC1111's Soft Inpainting algorithm."
+      },
+      "soft_strength": {
+        "name": "soft_strength",
+        "tooltip": "Adds 0-16 pixels of Gaussian feathering."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "pixels"
+      },
+      "1": {
+        "name": "mask"
+      },
+      "2": {
+        "name": "context"
+      }
+    }
+  },
+  "AdachiInpaintComposite": {
+    "display_name": "Inpaint Composite",
+    "description": "Restore original size and preserve pixels outside the effective mask exactly.",
+    "inputs": {
+      "generated": {
+        "name": "generated",
+        "tooltip": "Generated sampling canvas."
+      },
+      "context": {
+        "name": "context",
+        "tooltip": "Context from Adachi Inpaint Prepare."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "image"
+      }
+    }
+  },
+  "AdachiWebUIInpaint": {
+    "display_name": "WebUI Inpaint",
+    "description": "WebUI-style inpainting, crop, latent fill, sampling and original-size compositing.",
+    "inputs": {
+      "image": {
+        "name": "image",
+        "tooltip": "Original image; output is restored to this exact size."
+      },
+      "mask": {
+        "name": "mask",
+        "tooltip": "White repaints; black preserves."
+      },
+      "area": {
+        "name": "area",
+        "tooltip": "Whole image or mask bounding-box inpainting."
+      },
+      "width": {
+        "name": "width",
+        "tooltip": "Sampling canvas width, independent of final image size."
+      },
+      "height": {
+        "name": "height",
+        "tooltip": "Sampling canvas height."
+      },
+      "padding": {
+        "name": "padding",
+        "tooltip": "Mask-only context padding in original pixels."
+      },
+      "mask_blur": {
+        "name": "mask_blur",
+        "tooltip": "Gaussian mask feathering in original pixels."
+      },
+      "mask_grow": {
+        "name": "mask_grow",
+        "tooltip": "Positive dilates; negative erodes the mask."
+      },
+      "mask_mode": {
+        "name": "mask_mode",
+        "tooltip": "Repaint inside or invert the mask."
+      },
+      "fill": {
+        "name": "fill",
+        "tooltip": "Original, surrounding-color fill, latent noise, or zero latent. Latent modes require the all-in-one sampler."
+      },
+      "resize_mode": {
+        "name": "resize_mode",
+        "tooltip": "Whole-image resize mode; mask-only mode always retains the entire mask."
+      },
+      "seed": {
+        "name": "seed",
+        "tooltip": "Seed for a reproducible batch of distinct samples."
+      },
+      "denoise": {
+        "name": "denoise",
+        "tooltip": "Zero returns the original exactly; one fully denoises."
+      },
+      "batch_size": {
+        "name": "batch_size",
+        "tooltip": "Number of generated variants per input image."
+      },
+      "refiner_switch": {
+        "name": "refiner_switch",
+        "tooltip": "Fraction of steps on the base model when a refiner is connected."
+      },
+      "inpaint_model": {
+        "name": "inpaint_model",
+        "tooltip": "Enable only for dedicated inpainting models; uses ComfyUI's native InpaintModelConditioning."
+      },
+      "soft_edge": {
+        "name": "soft_edge",
+        "tooltip": "Extra feathering, not A1111 Soft Inpainting."
+      },
+      "refiner_model": {
+        "name": "refiner_model",
+        "tooltip": "Optional compatible refiner model, e.g. SDXL refiner."
+      },
+      "refiner_positive": {
+        "name": "refiner_positive",
+        "tooltip": "Encode using the refiner CLIP; defaults to original positive conditioning."
+      },
+      "refiner_negative": {
+        "name": "refiner_negative",
+        "tooltip": "Encode using the refiner CLIP; defaults to original negative conditioning."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "image"
+      },
+      "1": {
+        "name": "crop"
+      },
+      "2": {
+        "name": "mask"
+      }
+    }
+  },
+  "AdachiImageCompare": {
+    "display_name": "Image Compare",
+    "description": "Hover to compare; adopt a result into the upstream inline editor.",
+    "inputs": {
+      "original": {
+        "name": "original",
+        "tooltip": "Original image shown on the right."
+      },
+      "result": {
+        "name": "result",
+        "tooltip": "Full-size generated image shown on the left; use image, not crop."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "image"
+      }
+    }
+  }
+}
