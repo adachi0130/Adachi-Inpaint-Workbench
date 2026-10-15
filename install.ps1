@@ -22,7 +22,7 @@ if (-not $destination.StartsWith($customRoot.TrimEnd('\') + '\', [StringComparis
     throw 'Install destination must stay within the selected custom_nodes directory.'
 }
 if ($destination.TrimEnd('\') -eq $packageRoot.TrimEnd('\')) {
-    Write-Host 'This package is already in the selected ComfyUI custom_nodes directory. 喵'
+    Write-Host 'This package is already in the selected ComfyUI custom_nodes directory.'
     exit 0
 }
 if ((Test-Path -LiteralPath $destination) -and (Test-Path -LiteralPath $legacyPath)) {
@@ -38,7 +38,7 @@ if ($existingPath) {
     New-Item -ItemType Directory -Path $backupRoot -Force | Out-Null
     $backupFile = Join-Path $backupRoot ('Adachi-Inpaint-Workbench-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '.zip')
     Compress-Archive -LiteralPath $existingPath -DestinationPath $backupFile
-    Write-Host "Previous installation backed up: $backupFile 喵"
+    Write-Host "Previous installation backed up: $backupFile"
     if ($existingPath -ne $destination) {
         # Verify both resolved absolute paths before moving the legacy folder.
         if ([IO.Path]::GetDirectoryName($existingPath) -ne $customRoot -or [IO.Path]::GetDirectoryName($destination) -ne $customRoot) {
@@ -54,5 +54,5 @@ Get-ChildItem -LiteralPath $packageRoot -Force | Where-Object {
 } | ForEach-Object {
     Copy-Item -LiteralPath $_.FullName -Destination $destination -Recurse -Force
 }
-Write-Host "Installed Adachi-Inpaint-Workbench: $destination 喵"
-Write-Host 'Restart ComfyUI, then refresh the browser with Ctrl+F5. 喵'
+Write-Host "Installed Adachi-Inpaint-Workbench: $destination"
+Write-Host 'Restart ComfyUI, then refresh the browser with Ctrl+F5.'

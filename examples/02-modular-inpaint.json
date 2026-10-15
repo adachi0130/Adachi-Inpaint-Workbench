@@ -792,7 +792,7 @@
       "outputs": [],
       "properties": {},
       "widgets_values": [
-        "安达工作台 / Adachi-Inpaint-Workbench — 标准节点组合\n选择模型，载入原图并涂抹，然后运行喵\nPrepare → VAE Encode → Set Latent Noise Mask → KSampler → VAE Decode → Composite 喵\n独立 Prepare 的 fill 请选择 original 或 fill 喵\nlatent_noise / latent_nothing 由一体采样节点实现，独立预处理不修改 latent 喵\n使用专用 inpaint checkpoint 时请改用原生 InpaintModelConditioning 或一体节点 inpaint_model 喵"
+        "安达工作台 / Adachi-Inpaint-Workbench — 标准节点组合\n选择模型，载入原图并涂抹，然后运行\nPrepare → VAE Encode → Set Latent Noise Mask → KSampler → VAE Decode → Composite\n独立 Prepare 的 fill 请选择 original 或 fill\nlatent_noise / latent_nothing 由一体采样节点实现，独立预处理不修改 latent\n使用专用 inpaint checkpoint 时请改用原生 InpaintModelConditioning 或一体节点 inpaint_model"
       ],
       "color": "#432",
       "bgcolor": "#653"
