@@ -1,0 +1,548 @@
+/* Original implementation, MIT licensed. No WebUI source is bundled. */
+const el = (tag, cls, text) => {
+    const node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text) node.textContent = text;
+    return node;
+};
+const makeCanvas = () => document.createElement("canvas");
+const loadImage = (url) => new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("无法读取图像 / Cannot load image"));
+    image.src = url;
+});
+
+export class InlineMaskEditor {
+    constructor(options = {}) {
+        this.options = options;
+        this.root = el("div", "dd-inpaint");
+        this.root.tabIndex = 0;
+        this.image = null;
+        this.mask = makeCanvas();
+        this.baseMask = makeCanvas();
+        this.overlay = makeCanvas();
+        this.tool = "brush";
+        this.view = "overlay";
+        this.brushSize = 64;
+        this.hardness = 100;
+        this.brushOpacity = 100;
+        this.overlayOpacity = 55;
+        this.zoom = 1;
+        this.pan = { x: 0, y: 0 };
+        this.history = [];
+        this.future = [];
+        this.dirty = false;
+        this.ready = false;
+        this.loadVersion = 0;
+        this.build();
+        this.observer = new ResizeObserver(() => this.schedule());
+        this.observer.observe(this.stage);
+        // Nodes 2.0 captures wheel events before widget handlers. Route only
+        // this canvas at window capture so image gestures stay inside it.
+        this.captureWheel = event => { if (event.target === this.canvas) this.wheel(event); };
+        window.addEventListener("wheel", this.captureWheel, { capture: true, passive: false });
+        this.root.addEventListener("keydown", (event) => this.keydown(event));
+        this.root.addEventListener("keyup", (event) => {
+            if (event.code === "Space") { this.space = false; this.stage.classList.remove("dd-pan"); }
+            if (event.key === "Alt") { this.altErase = false; this.updateButtons(); this.schedule(); }
+        });
+        this.root.addEventListener("blur", () => { this.space = false; this.altErase = false; this.updateButtons(); this.schedule(); }, true);
+        this.root.addEventListener("paste", (event) => {
+            const file = [...(event.clipboardData?.files || [])].find(f => f.type.startsWith("image/"));
+            if (file) { event.preventDefault(); event.stopPropagation(); this.upload(file); }
+        });
+    }
+
+    button(parent, label, title, action, cls = "") {
+        const button = el("button", cls, label);
+        button.type = "button";
+        button.title = title;
+        button.setAttribute("aria-label", title);
+        button.onclick = (event) => { event.preventDefault(); action(event); };
+        parent.append(button);
+        return button;
+    }
+
+    build() {
+        const head = el("div", "dd-head");
+        head.append(el("span", "dd-brand", "ADACHI WORKBENCH"));
+        this.sizeLabel = el("span", "dd-dimensions", "内联蒙版 · INLINE MASK");
+        head.append(this.sizeLabel);
+        this.root.append(head);
+        const files = el("div", "dd-row dd-files");
+        this.button(files, "载入原图", "上传图片，也可拖放或粘贴 / Upload image", () => this.imageInput.click(), "dd-primary");
+        this.filename = el("span", "dd-filename", "拖放图片到画布");
+        files.append(this.filename);
+        this.root.append(files);
+        this.imageInput = el("input");
+        this.imageInput.type = "file";
+        this.imageInput.accept = "image/*";
+        this.imageInput.hidden = true;
+        this.imageInput.onchange = () => { if (this.imageInput.files[0]) this.upload(this.imageInput.files[0]); this.imageInput.value = ""; };
+        this.maskInput = el("input");
+        this.maskInput.type = "file";
+        this.maskInput.accept = "image/*";
+        this.maskInput.hidden = true;
+        this.maskInput.onchange = async () => {
+            const file = this.maskInput.files[0];
+            if (file) {
+                const url = URL.createObjectURL(file);
+                try { this.action({ type: "import", image: await loadImage(url) }); }
+                catch (error) { this.status(error.message, true); }
+                finally { URL.revokeObjectURL(url); }
+            }
+            this.maskInput.value = "";
+        };
+        this.root.append(this.imageInput, this.maskInput);
+        const tools = el("div", "dd-row dd-tools");
+        this.toolButtons = {};
+        for (const [name, label, title] of [
+            ["brush", "画笔", "画笔 B / Brush"], ["erase", "橡皮", "橡皮 E，按住 Alt 或鼠标右键临时擦除 / Eraser"],
+            ["rect", "矩形", "矩形 R / Rectangle"], ["lasso", "套索", "自由套索 L / Freehand lasso"],
+            ["pan", "移动", "移动 H，或按住空格 / Pan"],
+        ]) this.toolButtons[name] = this.button(tools, label, title, () => this.setTool(name));
+        this.root.append(tools);
+        const settings = el("div", "dd-settings");
+        this.addSlider(settings, "笔径", "brushSize", 1, 512, "px");
+        this.addSlider(settings, "硬度", "hardness", 0, 100, "%");
+        this.addSlider(settings, "笔触", "brushOpacity", 1, 100, "%");
+        this.addSlider(settings, "叠加", "overlayOpacity", 0, 100, "%");
+        this.stage = el("div", "dd-stage");
+        this.canvas = makeCanvas();
+        this.canvas.setAttribute("aria-label", "直接涂抹蒙版；橙色区域将被重绘 / Inline mask painting canvas");
+        this.stage.append(this.canvas);
+        this.empty = el("div", "dd-empty");
+        this.empty.append(el("span", "dd-empty-symbol", "+"), el("strong", "", "把原图拖到这里"), el("span", "", "直接在节点中涂抹需要重绘的区域"));
+        this.stage.append(this.empty);
+        this.root.append(this.stage, settings);
+        this.canvas.oncontextmenu = event => event.preventDefault();
+        this.canvas.addEventListener("pointerdown", event => this.pointerDown(event));
+        this.canvas.addEventListener("pointermove", event => this.pointerMove(event));
+        this.canvas.addEventListener("pointerup", event => this.pointerUp(event));
+        this.canvas.addEventListener("pointercancel", event => this.pointerUp(event));
+        this.canvas.addEventListener("lostpointercapture", event => this.pointerUp(event));
+        this.canvas.addEventListener("pointerleave", () => { this.cursor = null; this.schedule(); });
+        this.canvas.addEventListener("wheel", event => this.wheel(event), { passive: false });
+        this.stage.addEventListener("dragover", event => { event.preventDefault(); event.stopPropagation(); this.stage.classList.add("dd-drop"); });
+        this.stage.addEventListener("dragleave", () => this.stage.classList.remove("dd-drop"));
+        this.stage.addEventListener("drop", event => {
+            event.preventDefault(); event.stopPropagation(); this.stage.classList.remove("dd-drop");
+            const file = [...event.dataTransfer.files].find(file => file.type.startsWith("image/"));
+            if (file) this.upload(file);
+        });
+        const actions = el("div", "dd-row dd-actions");
+        this.undoButton = this.button(actions, "撤销", "撤销 Ctrl+Z / Undo", () => this.undo());
+        this.redoButton = this.button(actions, "重做", "重做 Ctrl+Shift+Z / Redo", () => this.redo());
+        this.button(actions, "反转", "反转绘制的蒙版 / Invert painted mask", () => this.action({ type: "invert" }));
+        this.button(actions, "全选", "重绘整张图 / Fill mask", () => this.action({ type: "fill" }));
+        this.button(actions, "清空", "清空蒙版 / Clear mask", () => this.action({ type: "clear" }));
+        this.button(actions, "导入蒙版", "白色重绘，黑色保护 / Import mask", () => { if (this.ready) this.maskInput.click(); });
+        this.button(actions, "导出", "导出原始分辨率黑白蒙版 / Export mask PNG", () => this.download());
+        this.root.append(actions);
+        const footer = el("div", "dd-row dd-viewbar");
+        this.viewButtons = {};
+        for (const [name, label] of [["overlay", "叠加"], ["image", "原图"], ["mask", "蒙版"]]) {
+            this.viewButtons[name] = this.button(footer, label, `${label} / ${name}`, () => { this.view = name; this.updateButtons(); this.schedule(); });
+        }
+        const spacer = el("span", "dd-spacer");
+        footer.append(spacer);
+        this.zoomLabel = el("span", "dd-zoom", "100%");
+        footer.append(this.zoomLabel);
+        this.button(footer, "适应", "适应画布 / Fit image", () => this.fit());
+        this.root.append(footer);
+        const embedRow = el("label", "dd-embed");
+        this.embed = el("input");
+        this.embed.type = "checkbox";
+        this.embed.onchange = () => this.options.onEmbed?.(this.embed.checked);
+        embedRow.append(this.embed, document.createTextNode("原图嵌入工作流 · 分享时无需另传原图"));
+        this.root.append(embedRow);
+        this.message = el("div", "dd-status", "Alt 临时擦除 · Ctrl+滚轮调笔径 · 滚轮缩放 / 空格拖动");
+        this.root.append(this.message);
+        this.setTool("brush");
+        this.updateButtons();
+    }
+
+    addSlider(parent, title, key, min, max, unit) {
+        const label = el("label", "dd-slider");
+        const row = el("span", "dd-slider-label");
+        const value = el("output", "", `${this[key]}${unit}`);
+        const input = el("input");
+        input.type = "range"; input.min = min; input.max = max; input.value = this[key];
+        input.setAttribute("aria-label", title);
+        input.oninput = () => { this[key] = Number(input.value); value.textContent = `${this[key]}${unit}`; this.schedule(); };
+        row.append(document.createTextNode(title), value);
+        label.append(row, input);
+        parent.append(label);
+        this[`${key}Input`] = input;
+    }
+
+    status(message, error = false) {
+        this.message.textContent = message;
+        this.message.classList.toggle("dd-error", error);
+    }
+
+    async upload(file) {
+        if (file.size > 64 * 1024 * 1024) { this.status("图片文件不能超过 64 MB / File is too large", true); return; }
+        try {
+            this.status("正在载入原图… / Loading image…");
+            await this.options.onUpload?.(file);
+        } catch (error) { this.status(error.message, true); }
+    }
+
+    async setImage(url, maskData = "", name = "") {
+        const version = ++this.loadVersion;
+        this.ready = false;
+        try {
+            const [image, loadedMask] = await Promise.all([loadImage(url), maskData ? loadImage(maskData) : Promise.resolve(null)]);
+            if (version !== this.loadVersion || this.destroyed) return;
+            if (image.width * image.height > 32 * 1024 * 1024 || Math.max(image.width, image.height) > 16384) {
+                throw new Error("图像超过 3200 万像素或单边 16384px，请先缩小 / Image is too large");
+            }
+            this.image = image;
+            for (const canvas of [this.mask, this.baseMask]) { canvas.width = image.width; canvas.height = image.height; }
+            this.history = []; this.future = [];
+            const ctx = this.mask.getContext("2d", { willReadFrequently: true });
+            if (loadedMask) {
+                this.importMask(ctx, loadedMask);
+            } else {
+                // Match Comfy's LoadImage convention: transparent source pixels are masked.
+                ctx.drawImage(image, 0, 0);
+                const pixels = ctx.getImageData(0, 0, image.width, image.height);
+                for (let i = 0; i < pixels.data.length; i += 4) {
+                    const alpha = 255 - pixels.data[i + 3];
+                    pixels.data[i] = pixels.data[i + 1] = pixels.data[i + 2] = 255;
+                    pixels.data[i + 3] = alpha;
+                }
+                ctx.putImageData(pixels, 0, 0);
+            }
+            if (version !== this.loadVersion || this.destroyed) return;
+            this.baseMask.getContext("2d").drawImage(this.mask, 0, 0);
+            this.sizeLabel.textContent = `${image.width} × ${image.height}`;
+            this.filename.textContent = name || "内嵌原图 / Embedded image";
+            this.filename.title = this.filename.textContent;
+            this.empty.hidden = true;
+            this.ready = true;
+            this.dirty = false;
+            this.lastMask = maskData;
+            this.fit();
+            this.updateButtons();
+            this.status("橙色为绘制蒙版 · Alt 临时擦除 · Ctrl+滚轮调笔径");
+        } catch (error) {
+            if (version === this.loadVersion && !this.destroyed) this.status(error.message, true);
+            throw error;
+        }
+    }
+
+    importMask(ctx, image) {
+        const scratch = makeCanvas();
+        scratch.width = this.mask.width; scratch.height = this.mask.height;
+        const s = scratch.getContext("2d", { willReadFrequently: true });
+        s.drawImage(image, 0, 0, scratch.width, scratch.height);
+        const pixels = s.getImageData(0, 0, scratch.width, scratch.height);
+        let hasAlpha = false;
+        for (let i = 3; i < pixels.data.length; i += 4) if (pixels.data[i] !== 255) { hasAlpha = true; break; }
+        for (let i = 0; i < pixels.data.length; i += 4) {
+            const a = hasAlpha ? pixels.data[i + 3] : Math.round(pixels.data[i] * .299 + pixels.data[i + 1] * .587 + pixels.data[i + 2] * .114);
+            pixels.data[i] = pixels.data[i + 1] = pixels.data[i + 2] = 255;
+            pixels.data[i + 3] = a;
+        }
+        ctx.clearRect(0, 0, this.mask.width, this.mask.height);
+        ctx.putImageData(pixels, 0, 0);
+        scratch.width = scratch.height = 0;
+    }
+
+    setTool(tool) {
+        this.tool = tool;
+        if (this.stage) this.stage.classList.toggle("dd-pan", tool === "pan");
+        this.updateButtons();
+    }
+
+    updateButtons() {
+        for (const [name, button] of Object.entries(this.toolButtons || {})) {
+            const active = name === (this.altErase ? "erase" : this.tool);
+            button.classList.toggle("dd-active", active);
+            button.setAttribute("aria-pressed", String(active));
+        }
+        for (const [name, button] of Object.entries(this.viewButtons || {})) {
+            button.classList.toggle("dd-active", name === this.view);
+            button.setAttribute("aria-pressed", String(name === this.view));
+        }
+        if (this.undoButton) this.undoButton.disabled = !this.history.length;
+        if (this.redoButton) this.redoButton.disabled = !this.future.length;
+    }
+
+    dimensions() {
+        const r = this.canvas.getBoundingClientRect();
+        const scale = this.image ? Math.min(r.width / this.image.width, r.height / this.image.height) * this.zoom : 1;
+        return { width: r.width, height: r.height, scale, x: (r.width - (this.image?.width || 0) * scale) / 2 + this.pan.x, y: (r.height - (this.image?.height || 0) * scale) / 2 + this.pan.y };
+    }
+
+    point(event) {
+        const r = this.canvas.getBoundingClientRect();
+        const d = this.dimensions();
+        return { x: (event.clientX - r.left - d.x) / d.scale, y: (event.clientY - r.top - d.y) / d.scale, p: event.pointerType === "pen" ? Math.max(.05, event.pressure) : 1 };
+    }
+
+    pointerDown(event) {
+        if (!this.ready || this.pointerId != null) return;
+        event.preventDefault(); event.stopPropagation(); this.root.focus({ preventScroll: true });
+        this.altErase = !!event.altKey; this.updateButtons();
+        this.pointerId = event.pointerId;
+        this.canvas.setPointerCapture(event.pointerId);
+        this.cursor = this.point(event);
+        if (this.space || (!event.altKey && this.tool === "pan") || event.button === 1) {
+            this.drag = { x: event.clientX, y: event.clientY, pan: { ...this.pan } };
+            return;
+        }
+        if (this.view === "image") { this.view = "overlay"; this.updateButtons(); }
+        this.stroke = { type: event.button === 2 || event.altKey ? "erase" : this.tool, size: this.brushSize, hardness: this.hardness, opacity: this.brushOpacity, points: [this.cursor] };
+        if (["brush", "erase"].includes(this.stroke.type)) this.paintSegment(this.mask.getContext("2d"), this.stroke, this.cursor, this.cursor);
+        this.schedule();
+    }
+
+    pointerMove(event) {
+        if (!this.ready) return;
+        if (this.altErase !== !!event.altKey) { this.altErase = !!event.altKey; this.updateButtons(); }
+        this.cursor = this.point(event);
+        if (event.pointerId === this.pointerId) {
+            event.preventDefault(); event.stopPropagation();
+            if (this.drag) {
+                this.pan.x = this.drag.pan.x + event.clientX - this.drag.x;
+                this.pan.y = this.drag.pan.y + event.clientY - this.drag.y;
+            } else if (this.stroke) {
+                const events = event.getCoalescedEvents?.() || [event];
+                if (["brush", "erase"].includes(this.stroke.type)) {
+                    const type = event.altKey || (event.buttons & 2) ? "erase" : this.tool;
+                    if (["brush", "erase"].includes(type) && type !== this.stroke.type) {
+                        // Keep separate commands when Alt is pressed/released mid-stroke.
+                        const pivot = this.stroke.points.at(-1);
+                        this.remember(this.stroke);
+                        this.stroke = { ...this.stroke, type, points: [pivot] };
+                        this.paintSegment(this.mask.getContext("2d"), this.stroke, pivot, pivot);
+                    }
+                }
+                for (const e of events.length ? events : [event]) {
+                    const point = this.point(e);
+                    const previous = this.stroke.points.at(-1);
+                    if (Math.hypot(point.x - previous.x, point.y - previous.y) < .2) continue;
+                    if (["brush", "erase"].includes(this.stroke.type)) this.paintSegment(this.mask.getContext("2d"), this.stroke, previous, point);
+                    this.stroke.points.push(point);
+                }
+            }
+        }
+        this.schedule();
+    }
+
+    pointerUp(event) {
+        if (event.pointerId !== this.pointerId) return;
+        event.preventDefault(); event.stopPropagation();
+        if (this.stroke) {
+            const command = this.stroke;
+            this.stroke = null;
+            if (["rect", "lasso"].includes(command.type)) this.drawCommand(this.mask.getContext("2d"), command);
+            this.remember(command);
+            this.changed();
+        }
+        this.drag = null;
+        const id = this.pointerId; this.pointerId = null;
+        if (this.canvas.hasPointerCapture(id)) this.canvas.releasePointerCapture(id);
+        this.schedule();
+    }
+
+    paintSegment(ctx, command, a, b) {
+        ctx.save();
+        ctx.globalCompositeOperation = command.type === "erase" ? "destination-out" : "source-over";
+        ctx.globalAlpha = command.opacity / 100;
+        if (command.hardness >= 99 && a.p === 1 && b.p === 1) {
+            ctx.strokeStyle = "white"; ctx.fillStyle = "white"; ctx.lineWidth = command.size;
+            ctx.lineCap = "round"; ctx.lineJoin = "round";
+            if (a.x === b.x && a.y === b.y) { ctx.beginPath(); ctx.arc(a.x, a.y, command.size / 2, 0, Math.PI * 2); ctx.fill(); }
+            else { ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); }
+        } else {
+            const length = Math.hypot(b.x - a.x, b.y - a.y);
+            const count = Math.max(1, Math.ceil(length / Math.max(1, command.size * .15)));
+            for (let i = 0; i <= count; i++) {
+                const t = i / count, x = a.x + (b.x - a.x) * t, y = a.y + (b.y - a.y) * t;
+                const radius = Math.max(.5, command.size * (a.p + (b.p - a.p) * t) / 2);
+                if (command.hardness >= 99) {
+                    ctx.fillStyle = "white"; ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.fill();
+                } else {
+                    const gradient = ctx.createRadialGradient(x, y, radius * command.hardness / 100, x, y, radius);
+                    gradient.addColorStop(0, "rgba(255,255,255,1)"); gradient.addColorStop(1, "rgba(255,255,255,0)");
+                    ctx.fillStyle = gradient; ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+                }
+            }
+        }
+        ctx.restore();
+    }
+
+    drawCommand(ctx, command) {
+        const w = this.mask.width, h = this.mask.height;
+        if (["brush", "erase"].includes(command.type)) {
+            this.paintSegment(ctx, command, command.points[0], command.points[0]);
+            for (let i = 1; i < command.points.length; i++) this.paintSegment(ctx, command, command.points[i - 1], command.points[i]);
+        } else if (command.type === "clear") ctx.clearRect(0, 0, w, h);
+        else if (command.type === "fill") { ctx.save(); ctx.fillStyle = "white"; ctx.fillRect(0, 0, w, h); ctx.restore(); }
+        else if (command.type === "invert") {
+            ctx.save(); ctx.globalCompositeOperation = "xor"; ctx.fillStyle = "white"; ctx.fillRect(0, 0, w, h); ctx.restore();
+        } else if (command.type === "import") this.importMask(ctx, command.image);
+        else if (["rect", "lasso"].includes(command.type)) {
+            const a = command.points[0], b = command.points.at(-1);
+            ctx.save(); ctx.fillStyle = "white"; ctx.globalAlpha = command.opacity / 100;
+            if (command.type === "rect") ctx.fillRect(a.x, a.y, b.x - a.x, b.y - a.y);
+            else { ctx.beginPath(); ctx.moveTo(a.x, a.y); for (const p of command.points) ctx.lineTo(p.x, p.y); ctx.closePath(); ctx.fill(); }
+            ctx.restore();
+        }
+    }
+
+    remember(command) {
+        this.history.push(command); this.future = [];
+        // Keep commands rather than full-resolution pixel snapshots; memory stays small.
+        if (this.history.length > 500) this.drawCommand(this.baseMask.getContext("2d"), this.history.shift());
+        this.updateButtons();
+    }
+
+    action(command) {
+        if (!this.ready) return;
+        this.drawCommand(this.mask.getContext("2d"), command); this.remember(command); this.changed();
+    }
+
+    replay() {
+        const ctx = this.mask.getContext("2d");
+        ctx.clearRect(0, 0, this.mask.width, this.mask.height); ctx.drawImage(this.baseMask, 0, 0);
+        for (const command of this.history) this.drawCommand(ctx, command);
+        this.updateButtons(); this.changed();
+    }
+
+    undo() { if (this.history.length && !this.stroke) { this.future.push(this.history.pop()); this.replay(); } }
+    redo() { if (this.future.length && !this.stroke) { this.history.push(this.future.pop()); this.replay(); } }
+
+    changed() {
+        this.dirty = true;
+        this.flush();
+        this.schedule();
+        this.options.onDirty?.();
+    }
+
+    flush() {
+        if (!this.ready || (!this.dirty && !this.stroke)) return this.lastMask || "";
+        const output = makeCanvas();
+        output.width = this.mask.width; output.height = this.mask.height;
+        const ctx = output.getContext("2d");
+        if (this.stroke && ["rect", "lasso"].includes(this.stroke.type)) {
+            // Shape strokes are previews until pointer-up; include them in Save/Run.
+            ctx.drawImage(this.mask, 0, 0);
+            this.drawCommand(ctx, this.stroke);
+            ctx.globalCompositeOperation = "destination-over";
+            ctx.fillStyle = "black"; ctx.fillRect(0, 0, output.width, output.height);
+        } else {
+            ctx.fillStyle = "black"; ctx.fillRect(0, 0, output.width, output.height); ctx.drawImage(this.mask, 0, 0);
+        }
+        this.lastMask = output.toDataURL("image/png");
+        output.width = output.height = 0;
+        this.dirty = false;
+        this.options.onChange?.(this.lastMask);
+        return this.lastMask;
+    }
+
+    sourceData() {
+        if (!this.ready) return "";
+        const canvas = makeCanvas(); canvas.width = this.image.width; canvas.height = this.image.height;
+        canvas.getContext("2d").drawImage(this.image, 0, 0);
+        const data = canvas.toDataURL("image/png"); canvas.width = canvas.height = 0; return data;
+    }
+
+    download() {
+        if (!this.ready) return;
+        this.dirty = true;
+        const link = el("a"); link.download = "adachi-mask.png"; link.href = this.flush(); link.click();
+    }
+
+    fit() { this.zoom = 1; this.pan = { x: 0, y: 0 }; this.schedule(); }
+
+    setBrushSize(value) {
+        this.brushSizeInput.value = Math.max(1, Math.min(512, Math.round(value)));
+        this.brushSizeInput.dispatchEvent(new Event("input"));
+    }
+
+    wheel(event) {
+        if (!this.ready) return;
+        event.preventDefault(); event.stopPropagation();
+        if (event.ctrlKey) {
+            const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 100 : 1);
+            if (delta) {
+                const scaled = this.brushSize * Math.exp(Math.max(-4, Math.min(4, -delta * .002)));
+                // Small wheel deltas must still move by at least one pixel.
+                this.setBrushSize(delta < 0 ? Math.max(this.brushSize + 1, scaled) : Math.min(this.brushSize - 1, scaled));
+            }
+            this.cursor = this.point(event);
+            this.schedule();
+            return;
+        }
+        const before = this.point(event);
+        this.zoom = Math.max(.1, Math.min(32, this.zoom * Math.exp(-event.deltaY * .0015)));
+        const r = this.canvas.getBoundingClientRect(), d = this.dimensions();
+        this.pan.x += event.clientX - r.left - (before.x * d.scale + d.x);
+        this.pan.y += event.clientY - r.top - (before.y * d.scale + d.y);
+        this.schedule();
+    }
+
+    keydown(event) {
+        if (["INPUT", "TEXTAREA", "SELECT"].includes(event.target.tagName)) return;
+        if (event.key === "Alt") { event.preventDefault(); event.stopPropagation(); this.altErase = true; this.updateButtons(); this.schedule(); return; }
+        const key = event.key.toLowerCase();
+        if ((event.ctrlKey || event.metaKey) && key === "z") { event.preventDefault(); event.stopPropagation(); event.shiftKey ? this.redo() : this.undo(); }
+        else if ((event.ctrlKey || event.metaKey) && key === "y") { event.preventDefault(); event.stopPropagation(); this.redo(); }
+        else if (event.ctrlKey || event.metaKey || event.altKey) return;
+        else if (event.code === "Space") { event.preventDefault(); event.stopPropagation(); this.space = true; this.stage.classList.add("dd-pan"); }
+        else if ({ b: "brush", e: "erase", r: "rect", l: "lasso", h: "pan" }[key]) { event.preventDefault(); event.stopPropagation(); this.setTool({ b: "brush", e: "erase", r: "rect", l: "lasso", h: "pan" }[key]); }
+        else if (["[", "]"].includes(key)) { event.preventDefault(); event.stopPropagation(); this.setBrushSize(this.brushSize + (key === "]" ? 8 : -8)); }
+    }
+
+    schedule() { if (!this.frame && !this.destroyed) this.frame = requestAnimationFrame(() => { this.frame = 0; this.render(); }); }
+
+    render() {
+        const rect = this.canvas.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+        const ratio = Math.min(devicePixelRatio || 1, 2);
+        const w = Math.round(rect.width * ratio), h = Math.round(rect.height * ratio);
+        if (this.canvas.width !== w || this.canvas.height !== h) { this.canvas.width = w; this.canvas.height = h; this.overlay.width = w; this.overlay.height = h; }
+        const ctx = this.canvas.getContext("2d");
+        ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, w, h);
+        if (!this.ready) return;
+        const d = this.dimensions();
+        ctx.setTransform(ratio * d.scale, 0, 0, ratio * d.scale, ratio * d.x, ratio * d.y);
+        if (this.view !== "mask") ctx.drawImage(this.image, 0, 0);
+        else { ctx.fillStyle = "black"; ctx.fillRect(0, 0, this.image.width, this.image.height); }
+        if (this.view !== "image") {
+            const overlay = this.overlay.getContext("2d");
+            overlay.setTransform(1, 0, 0, 1, 0, 0); overlay.clearRect(0, 0, w, h);
+            overlay.setTransform(ratio * d.scale, 0, 0, ratio * d.scale, ratio * d.x, ratio * d.y);
+            overlay.drawImage(this.mask, 0, 0);
+            if (this.view === "overlay") { overlay.globalCompositeOperation = "source-in"; overlay.fillStyle = "#ffad45"; overlay.fillRect(0, 0, this.mask.width, this.mask.height); overlay.globalCompositeOperation = "source-over"; }
+            ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = this.view === "mask" ? 1 : this.overlayOpacity / 100; ctx.drawImage(this.overlay, 0, 0); ctx.globalAlpha = 1;
+        }
+        ctx.setTransform(ratio * d.scale, 0, 0, ratio * d.scale, ratio * d.x, ratio * d.y);
+        if (this.stroke && ["rect", "lasso"].includes(this.stroke.type)) {
+            ctx.save(); ctx.strokeStyle = "#ffcf85"; ctx.lineWidth = 1.5 / d.scale; ctx.setLineDash([5 / d.scale, 4 / d.scale]);
+            const a = this.stroke.points[0], b = this.stroke.points.at(-1);
+            if (this.stroke.type === "rect") ctx.strokeRect(a.x, a.y, b.x - a.x, b.y - a.y);
+            else { ctx.beginPath(); ctx.moveTo(a.x, a.y); for (const p of this.stroke.points) ctx.lineTo(p.x, p.y); ctx.stroke(); }
+            ctx.restore();
+        }
+        if (this.cursor && (this.altErase || ["brush", "erase"].includes(this.tool)) && !this.drag) {
+            ctx.beginPath(); ctx.arc(this.cursor.x, this.cursor.y, this.brushSize * this.cursor.p / 2, 0, Math.PI * 2);
+            ctx.strokeStyle = "#15191f"; ctx.lineWidth = 3 / d.scale; ctx.stroke(); ctx.strokeStyle = "white"; ctx.lineWidth = 1 / d.scale; ctx.stroke();
+        }
+        this.zoomLabel.textContent = `${Math.round(this.zoom * 100)}%`;
+    }
+
+    destroy() {
+        this.destroyed = true; ++this.loadVersion;
+        cancelAnimationFrame(this.frame); this.observer.disconnect();
+        window.removeEventListener("wheel", this.captureWheel, true);
+        for (const canvas of [this.mask, this.baseMask, this.overlay, this.canvas]) canvas.width = canvas.height = 0;
+        this.history = []; this.future = []; this.image = null; this.root.remove();
+    }
+}

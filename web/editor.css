@@ -1,0 +1,56 @@
+.dd-inpaint {
+    --dd-bg: #20242b; --dd-panel: #292f38; --dd-line: #414955; --dd-text: #edf0f4; --dd-muted: #a8b2c1; --dd-accent: #ffc079;
+    color-scheme: dark; color: var(--dd-text); background: var(--dd-bg); border: 1px solid var(--dd-line); border-radius: 8px;
+    font: 12px/1.4 "Segoe UI", "Microsoft YaHei", sans-serif; width: 100%; min-width: 0; height: 100%;
+    display: flex; flex-direction: column; overflow: hidden; box-sizing: border-box; outline: none; user-select: none; container-type: inline-size;
+}
+.dd-inpaint *, .dd-inpaint *::before, .dd-inpaint *::after { box-sizing: border-box; }
+.dd-inpaint:focus-within { border-color: #9f7950; }
+.dd-inpaint .dd-head { display: flex; flex-wrap: wrap; gap: 4px 14px; justify-content: space-between; padding: 11px 12px 6px; align-items: center; }
+.dd-inpaint .dd-brand { font-size: 11px; letter-spacing: 1.5px; font-weight: 700; color: var(--dd-accent); }
+.dd-inpaint .dd-dimensions, .dd-inpaint .dd-zoom { font-size: 11px; color: var(--dd-muted); font-variant-numeric: tabular-nums; }
+.dd-inpaint .dd-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 5px 10px; }
+.dd-inpaint button { color: var(--dd-text); background: var(--dd-panel); border: 1px solid var(--dd-line); border-radius: 4px; padding: 5px 9px; min-height: 28px; font: inherit; cursor: pointer; white-space: nowrap; }
+.dd-inpaint button:hover { background: #39424e; border-color: #707c8d; }
+.dd-inpaint button:focus-visible, .dd-inpaint input:focus-visible { outline: 2px solid var(--dd-accent); outline-offset: 2px; }
+.dd-inpaint button.dd-primary { background: #57432e; color: #ffe0b8; border-color: #87613b; }
+.dd-inpaint button.dd-active { color: #ffd8a4; background: #57432e; border-color: #b28552; }
+.dd-inpaint button:disabled { opacity: .38; cursor: default; }
+.dd-inpaint .dd-tools button { flex: 1; }
+.dd-inpaint .dd-files { flex-wrap: nowrap; }
+.dd-inpaint .dd-filename { font-size: 11px; color: var(--dd-muted); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; padding-left: 5px; }
+.dd-inpaint .dd-settings { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; padding: 6px 12px 9px; }
+.dd-inpaint .dd-slider { min-width: 0; }
+.dd-inpaint .dd-slider-label { display: flex; justify-content: space-between; gap: 4px; font-size: 11px; color: var(--dd-muted); }
+.dd-inpaint .dd-slider output { color: var(--dd-text); font-variant-numeric: tabular-nums; }
+.dd-inpaint input[type="range"] { display: block; width: 100%; min-width: 0; height: 18px; margin: 3px 0 0; accent-color: #f3b06a; cursor: pointer; }
+.dd-inpaint .dd-stage { position: relative; flex: 1 1 290px; min-height: 170px; overflow: hidden; border-top: 1px solid var(--dd-line); border-bottom: 1px solid var(--dd-line); background-color: #161a20; background-image: linear-gradient(45deg, #222831 25%, transparent 25%), linear-gradient(-45deg, #222831 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #222831 75%), linear-gradient(-45deg, transparent 75%, #222831 75%); background-size: 20px 20px; background-position: 0 0, 0 10px, 10px -10px, -10px 0; }
+.dd-inpaint .dd-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: crosshair; }
+.dd-inpaint .dd-stage.dd-pan canvas { cursor: grab; }
+.dd-inpaint .dd-stage.dd-drop { outline: 3px solid var(--dd-accent); outline-offset: -3px; }
+.dd-inpaint .dd-empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; gap: 6px; color: var(--dd-muted); padding: 15px; text-align: center; }
+.dd-inpaint .dd-empty[hidden] { display: none; }
+.dd-inpaint .dd-empty-symbol { font-size: 34px; color: var(--dd-accent); line-height: 1; font-weight: 200; }
+.dd-inpaint .dd-empty strong { font-weight: 500; color: var(--dd-text); }
+.dd-inpaint .dd-actions { padding-top: 8px; }
+.dd-inpaint .dd-actions button { font-size: 11px; padding-inline: 8px; }
+.dd-inpaint .dd-viewbar { padding-top: 2px; padding-bottom: 4px; }
+.dd-inpaint .dd-viewbar button { min-height: 24px; padding: 3px 7px; font-size: 11px; }
+.dd-inpaint .dd-spacer { flex: 1; }
+.dd-inpaint .dd-embed { display: flex; align-items: center; gap: 5px; padding: 4px 10px 0; font-size: 11px; color: var(--dd-muted); cursor: pointer; }
+.dd-inpaint .dd-embed input { accent-color: #e9ab68; margin: 0; }
+.dd-inpaint .dd-status { padding: 5px 11px 8px; color: var(--dd-muted); font-size: 10px; min-height: 27px; overflow-wrap: anywhere; }
+.dd-inpaint .dd-error { color: #ff9c92; }
+.dd-inpaint .dd-resize-handle { flex: 0 0 18px; display: flex; align-items: center; justify-content: center; color: var(--dd-muted); background: var(--dd-panel); border-top: 1px solid var(--dd-line); cursor: ns-resize; touch-action: none; font-size: 14px; line-height: 1; }
+.dd-inpaint .dd-resize-handle:hover, .dd-inpaint .dd-resize-handle:focus-visible { color: var(--dd-accent); background: #39424e; outline: none; }
+.dd-comparer .dd-compare-toolbar, .dd-comparer .dd-adoption { flex-wrap: nowrap; }
+.dd-comparer .dd-compare-label { color: var(--dd-muted); font-size: 11px; white-space: nowrap; }
+.dd-comparer select { min-width: 0; color: var(--dd-text); background: var(--dd-panel); border: 1px solid var(--dd-line); border-radius: 4px; padding: 5px; font: inherit; }
+.dd-comparer select:focus-visible { outline: 2px solid var(--dd-accent); }
+.dd-comparer .dd-adoption { padding-block: 10px 4px; }
+.dd-comparer .dd-adoption select { flex: 1; }
+.dd-comparer .dd-compare-stage { min-height: 220px; }
+.dd-comparer .dd-compare-stage canvas { cursor: ew-resize; }
+.dd-comparer .dd-compare-captions { position: absolute; top: 8px; left: 8px; right: 8px; display: flex; justify-content: space-between; pointer-events: none; }
+.dd-comparer .dd-compare-captions span { background: #171d27cc; color: #f1e3cf; padding: 3px 7px; border-radius: 3px; font-size: 11px; }
+@container (max-width: 380px) { .dd-inpaint .dd-settings { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px 12px; } }
