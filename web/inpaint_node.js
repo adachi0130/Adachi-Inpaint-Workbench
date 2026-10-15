@@ -10,7 +10,7 @@ export function installInpaintWorkbench(nodeType) {
         const root = document.createElement("div"); root.className = "dd-inpaint dd-workbench";
         const tools = document.createElement("div"); tools.className = "dd-workbench-tools";
         const placeholder = document.createElement("div"); placeholder.className = "dd-param-placeholder dd-tools-placeholder";
-        placeholder.textContent = "连接内联蒙版后显示画笔工具";
+        placeholder.textContent = "Connect an inline mask to show the painting tools";
         tools.append(placeholder); root.append(tools);
         let source = null, mountedEditor = null, frame = 0, removed = false;
         const markChanged = () => {
@@ -31,7 +31,7 @@ export function installInpaintWorkbench(nodeType) {
                 scheduleSize();
             }
             placeholder.hidden = !!next;
-            placeholder.textContent = editor ? "画笔工具位于连接此原图的另一个重绘节点" : "连接内联蒙版后显示画笔工具";
+            placeholder.textContent = editor ? "The painting tools live in the other inpaint node connected to this image" : "Connect an inline mask to show the painting tools";
         };
         const contentHeight = () => (tools.scrollHeight || 30) + (panel?.root.scrollHeight || 620);
         const scheduleSize = () => {

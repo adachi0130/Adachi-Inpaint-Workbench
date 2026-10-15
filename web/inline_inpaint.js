@@ -80,7 +80,7 @@ app.registerExtension({
                 if (!embedded && !filename) return;
                 restoring = true;
                 editor.embed.checked = !!embedded;
-                try { await editor.setImage(embedded || imageUrl(filename), maskWidget?.value || "", embedded ? "内嵌原图 / Embedded image" : filename); }
+                try { await editor.setImage(embedded || imageUrl(filename), maskWidget?.value || "", embedded ? "Embedded image" : filename); }
                 catch (error) { console.warn("[Adachi Inpaint]", error); }
                 finally { restoring = false; }
             };
@@ -97,7 +97,7 @@ app.registerExtension({
                     body.append("type", "input");
                     body.append("subfolder", "adachi-inpaint");
                     const response = await api.fetchApi("/upload/image", { method: "POST", body });
-                    if (!response.ok) throw new Error(`上传失败 / Upload failed (${response.status})`);
+                    if (!response.ok) throw new Error(`Upload failed (${response.status})`);
                     const uploaded = await response.json();
                     if (version !== uploadVersion || editor.destroyed) return;
                     const name = uploaded.subfolder ? `${uploaded.subfolder}/${uploaded.name}` : uploaded.name;
@@ -117,10 +117,10 @@ app.registerExtension({
             node.adachiEditor = editor;
             const stopWheelRouting = routeWheelOutsideImage(editor.root, editor.canvas, () => editor.ready);
             node.adachiUseResult = async file => {
-                if (editor.destroyed) throw new Error("内联蒙版节点已移除");
+                if (editor.destroyed) throw new Error("The inline mask node was removed");
                 await editor.options.onUpload(file);
                 editor.view = "overlay"; editor.updateButtons(); editor.schedule();
-                editor.status("已采用重绘结果作为新原图，旧蒙版已清空");
+                editor.status("Adopted the result as the new source image; the old mask was cleared");
             };
             const domWidget = node.addDOMWidget("adachi_canvas", "adachi_inline_mask", editor.root, {
                 serialize: false,
@@ -134,11 +134,11 @@ app.registerExtension({
             const resizeHandle = document.createElement("div");
             resizeHandle.className = "dd-resize-handle";
             resizeHandle.textContent = "↕";
-            resizeHandle.title = "上下拖动调整画布高度 / Drag to resize canvas height";
+            resizeHandle.title = "Drag to resize canvas height";
             resizeHandle.tabIndex = 0;
             resizeHandle.setAttribute("role", "separator");
             resizeHandle.setAttribute("aria-orientation", "horizontal");
-            resizeHandle.setAttribute("aria-label", "调整画布高度 / Resize canvas height");
+            resizeHandle.setAttribute("aria-label", "Resize canvas height");
             editor.root.append(resizeHandle);
             let resizing = null;
             const resizeHeight = height => {

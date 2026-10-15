@@ -20,7 +20,6 @@
       "mode": 0,
       "inputs": [
         {
-          "localized_name": "image",
           "name": "image",
           "type": "STRING",
           "widget": {
@@ -29,7 +28,6 @@
           "link": null
         },
         {
-          "localized_name": "mask_data",
           "name": "mask_data",
           "type": "STRING",
           "widget": {
@@ -38,7 +36,6 @@
           "link": null
         },
         {
-          "localized_name": "source_data",
           "name": "source_data",
           "type": "STRING",
           "widget": {
@@ -49,7 +46,6 @@
       ],
       "outputs": [
         {
-          "localized_name": "image",
           "name": "image",
           "type": "IMAGE",
           "links": [
@@ -58,7 +54,6 @@
           ]
         },
         {
-          "localized_name": "mask",
           "name": "mask",
           "type": "MASK",
           "links": [
@@ -91,7 +86,6 @@
       "mode": 0,
       "inputs": [
         {
-          "localized_name": "Checkpoint名称",
           "name": "ckpt_name",
           "type": "COMBO",
           "widget": {
@@ -102,7 +96,6 @@
       ],
       "outputs": [
         {
-          "localized_name": "模型",
           "name": "MODEL",
           "type": "MODEL",
           "links": [
@@ -110,7 +103,6 @@
           ]
         },
         {
-          "localized_name": "CLIP",
           "name": "CLIP",
           "type": "CLIP",
           "links": [
@@ -119,7 +111,6 @@
           ]
         },
         {
-          "localized_name": "VAE",
           "name": "VAE",
           "type": "VAE",
           "links": [
@@ -150,13 +141,11 @@
       "mode": 0,
       "inputs": [
         {
-          "localized_name": "clip",
           "name": "clip",
           "type": "CLIP",
           "link": 1
         },
         {
-          "localized_name": "文本",
           "name": "text",
           "type": "STRING",
           "widget": {
@@ -167,7 +156,6 @@
       ],
       "outputs": [
         {
-          "localized_name": "条件",
           "name": "CONDITIONING",
           "type": "CONDITIONING",
           "links": [
@@ -175,7 +163,7 @@
           ]
         }
       ],
-      "title": "正面提示词 / Positive",
+      "title": "Positive",
       "properties": {
         "Node name for S&R": "CLIPTextEncode"
       },
@@ -199,13 +187,11 @@
       "mode": 0,
       "inputs": [
         {
-          "localized_name": "clip",
           "name": "clip",
           "type": "CLIP",
           "link": 2
         },
         {
-          "localized_name": "文本",
           "name": "text",
           "type": "STRING",
           "widget": {
@@ -216,7 +202,6 @@
       ],
       "outputs": [
         {
-          "localized_name": "条件",
           "name": "CONDITIONING",
           "type": "CONDITIONING",
           "links": [
@@ -224,7 +209,7 @@
           ]
         }
       ],
-      "title": "负面提示词 / Negative",
+      "title": "Negative",
       "properties": {
         "Node name for S&R": "CLIPTextEncode"
       },
@@ -248,64 +233,54 @@
       "mode": 0,
       "inputs": [
         {
-          "localized_name": "model",
           "name": "model",
           "type": "MODEL",
           "link": 3
         },
         {
-          "localized_name": "positive",
           "name": "positive",
           "type": "CONDITIONING",
           "link": 5
         },
         {
-          "localized_name": "negative",
           "name": "negative",
           "type": "CONDITIONING",
           "link": 6
         },
         {
-          "localized_name": "vae",
           "name": "vae",
           "type": "VAE",
           "link": 4
         },
         {
-          "localized_name": "image",
           "name": "image",
           "type": "IMAGE",
           "link": 7
         },
         {
-          "localized_name": "mask",
           "name": "mask",
           "type": "MASK",
           "link": 8
         },
         {
-          "localized_name": "refiner_model",
           "name": "refiner_model",
           "shape": 7,
           "type": "MODEL",
           "link": null
         },
         {
-          "localized_name": "refiner_positive",
           "name": "refiner_positive",
           "shape": 7,
           "type": "CONDITIONING",
           "link": null
         },
         {
-          "localized_name": "refiner_negative",
           "name": "refiner_negative",
           "shape": 7,
           "type": "CONDITIONING",
           "link": null
         },
         {
-          "localized_name": "area",
           "name": "area",
           "type": "COMBO",
           "widget": {
@@ -314,7 +289,6 @@
           "link": null
         },
         {
-          "localized_name": "width",
           "name": "width",
           "type": "INT",
           "widget": {
@@ -323,7 +297,6 @@
           "link": null
         },
         {
-          "localized_name": "height",
           "name": "height",
           "type": "INT",
           "widget": {
@@ -332,7 +305,6 @@
           "link": null
         },
         {
-          "localized_name": "padding",
           "name": "padding",
           "type": "INT",
           "widget": {
@@ -341,7 +313,6 @@
           "link": null
         },
         {
-          "localized_name": "mask_blur",
           "name": "mask_blur",
           "type": "FLOAT",
           "widget": {
@@ -350,7 +321,6 @@
           "link": null
         },
         {
-          "localized_name": "mask_grow",
           "name": "mask_grow",
           "type": "INT",
           "widget": {
@@ -359,7 +329,6 @@
           "link": null
         },
         {
-          "localized_name": "mask_mode",
           "name": "mask_mode",
           "type": "COMBO",
           "widget": {
@@ -368,7 +337,6 @@
           "link": null
         },
         {
-          "localized_name": "fill",
           "name": "fill",
           "type": "COMBO",
           "widget": {
@@ -377,7 +345,6 @@
           "link": null
         },
         {
-          "localized_name": "resize_mode",
           "name": "resize_mode",
           "type": "COMBO",
           "widget": {
@@ -386,7 +353,6 @@
           "link": null
         },
         {
-          "localized_name": "seed",
           "name": "seed",
           "type": "INT",
           "widget": {
@@ -395,7 +361,6 @@
           "link": null
         },
         {
-          "localized_name": "steps",
           "name": "steps",
           "type": "INT",
           "widget": {
@@ -404,7 +369,6 @@
           "link": null
         },
         {
-          "localized_name": "cfg",
           "name": "cfg",
           "type": "FLOAT",
           "widget": {
@@ -413,7 +377,6 @@
           "link": null
         },
         {
-          "localized_name": "sampler_name",
           "name": "sampler_name",
           "type": "COMBO",
           "widget": {
@@ -422,7 +385,6 @@
           "link": null
         },
         {
-          "localized_name": "scheduler",
           "name": "scheduler",
           "type": "COMBO",
           "widget": {
@@ -431,7 +393,6 @@
           "link": null
         },
         {
-          "localized_name": "denoise",
           "name": "denoise",
           "type": "FLOAT",
           "widget": {
@@ -440,7 +401,6 @@
           "link": null
         },
         {
-          "localized_name": "batch_size",
           "name": "batch_size",
           "type": "INT",
           "widget": {
@@ -449,7 +409,6 @@
           "link": null
         },
         {
-          "localized_name": "refiner_switch",
           "name": "refiner_switch",
           "type": "FLOAT",
           "widget": {
@@ -458,7 +417,6 @@
           "link": null
         },
         {
-          "localized_name": "inpaint_model",
           "name": "inpaint_model",
           "shape": 7,
           "type": "BOOLEAN",
@@ -468,7 +426,6 @@
           "link": null
         },
         {
-          "localized_name": "soft_edge",
           "name": "soft_edge",
           "shape": 7,
           "type": "BOOLEAN",
@@ -478,7 +435,6 @@
           "link": null
         },
         {
-          "localized_name": "soft_strength",
           "name": "soft_strength",
           "shape": 7,
           "type": "FLOAT",
@@ -490,7 +446,6 @@
       ],
       "outputs": [
         {
-          "localized_name": "image",
           "name": "image",
           "type": "IMAGE",
           "links": [
@@ -498,13 +453,11 @@
           ]
         },
         {
-          "localized_name": "crop",
           "name": "crop",
           "type": "IMAGE",
           "links": null
         },
         {
-          "localized_name": "mask",
           "name": "mask",
           "type": "MASK",
           "links": null
@@ -553,13 +506,11 @@
       "mode": 0,
       "inputs": [
         {
-          "localized_name": "original",
           "name": "original",
           "type": "IMAGE",
           "link": 9
         },
         {
-          "localized_name": "result",
           "name": "result",
           "type": "IMAGE",
           "link": 10
@@ -567,7 +518,6 @@
       ],
       "outputs": [
         {
-          "localized_name": "image",
           "name": "image",
           "type": "IMAGE",
           "links": [
@@ -596,13 +546,11 @@
       "mode": 0,
       "inputs": [
         {
-          "localized_name": "图片",
           "name": "images",
           "type": "IMAGE",
           "link": 11
         },
         {
-          "localized_name": "文件名前缀",
           "name": "filename_prefix",
           "type": "STRING",
           "widget": {
@@ -635,7 +583,7 @@
       "outputs": [],
       "properties": {},
       "widgets_values": [
-        "安达工作台 / Adachi-Inpaint-Workbench\n1. 选择自己的 checkpoint\n2. 在左侧节点载入原图并直接涂抹\n3. 在 WebUI 重绘节点中选择画笔并调整重绘参数\n4. width/height 是采样分辨率，最终 image 回贴为原图尺寸\n分享时在重绘节点勾选「原图嵌入工作流」"
+        "Adachi-Inpaint-Workbench\n1. Pick your own checkpoint\n2. Load an image in the left node and paint directly on it\n3. Select the brush and adjust inpainting parameters in the WebUI Inpaint node\n4. width/height is the sampling resolution; the final image is composited back at the source size\nTick \"Embed source in workflow\" in the inpaint node before sharing"
       ],
       "color": "#432",
       "bgcolor": "#653"

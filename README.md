@@ -1,126 +1,135 @@
 # Adachi-Inpaint-Workbench
 
-直接在 ComfyUI 工作流节点里载入原图、涂抹蒙版、局部重绘，无需另开遮罩编辑器。
+Load an image, paint a mask and inpaint **directly inside the workflow node** — no modal mask editor and no save/load round-trip on every stroke.
 
-![内联蒙版与 WebUI 重绘工作台](preview/nodes2-inline.png)
+![Inline mask painting with WebUI-style inpainting](preview/nodes2-inline.png)
 
-由 Adachi（安达）开发，MIT 开源。
-支持整图范围与蒙版范围重绘、Alt 临时橡皮擦、Ctrl+滚轮笔径、图像对比及一键采用重绘结果。
+MIT licensed, by Adachi.
+Supports whole-image and masked-area sampling, an Alt temporary eraser, Ctrl+wheel brush size, image comparison and one-click adoption of a result as the next source image.
 
-## ComfyUI Manager 与安装
+## How this differs from other nodes
 
-Manager 的 Git URL 安装可使用 `https://github.com/adachi0130/Adachi-Inpaint-Workbench`；或在 `ComfyUI/custom_nodes` 中克隆。
+| | ComfyUI's built-in mask editing | This node pack |
+|---|---|---|
+| Where you paint | A **modal editor** opens over the graph (`MaskEditor`); you close it to get back to the workflow | You paint **on the node's own canvas**, and the mask lives in the workflow |
+| Per-stroke cost | Commit the mask in the dialog, then re-run | Every stroke updates the mask in the browser and is stored with the workflow; no disk save/load per stroke |
+| Sampling | Left to the workflow you build | The connected **WebUI Inpaint** node carries the sampling controls (`area`, `width/height`, `padding`, `mask_blur`, `mask_grow`, fill mode, sampler, Refiner) |
 
-```bash
-git clone https://github.com/adachi0130/Adachi-Inpaint-Workbench.git
-```
+The built-in `Painter` node draws an image and exposes a mask, but it stops there — it has no inpaint pipeline. The built-in `MaskEditor` edits masks in a modal dialog. `ComfyUI-Inpaint-CropAndStitch` does crop-and-stitch well but does not paint. This pack connects the whole loop in one place: **paint → sample → composite at original resolution → compare → adopt the result as the next source and keep painting.**
 
-Manager 搜索收录申请已提交：[ComfyUI-Manager PR #3378](https://github.com/Comfy-Org/ComfyUI-Manager/pull/3378)，仍需维护者合并及索引更新，尚不能保证搜索可见。
-当前尚未配置 Comfy Registry 发布者，Registry 发布流程见 [发布说明](registry/README.md)。
+## Install
 
-## 安装
+Copy the whole `Adachi-Inpaint-Workbench` folder into `ComfyUI/custom_nodes/`, keeping `web/`, `backend.py` and `__init__.py`.
+Restart ComfyUI, then hard-refresh the browser with `Ctrl+F5`.
+Search for `Inline Mask` or `WebUI Inpaint`; the category is **Adachi-Inpaint-Workbench**.
 
-将整个 `Adachi-Inpaint-Workbench` 文件夹复制到 `ComfyUI/custom_nodes/`，保留其中的 `web/`、`backend.py`、`__init__.py`。
-重启 ComfyUI，然后在浏览器按 `Ctrl+F5` 刷新前端缓存。
-在节点搜索中输入 `Inline Mask` 或 `WebUI Inpaint`，分类是 **安达工作台 / Adachi-Inpaint-Workbench**。
-
-Windows 也可以从解压后的插件文件夹运行安装脚本，将参数改为自己的、包含 `main.py` 的 ComfyUI 目录。
+On Windows you can instead run the installer from the unzipped plugin folder, pointing it at your ComfyUI directory (the one containing `main.py`).
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\install.ps1 -ComfyUIPath "D:\ComfyUI_windows_portable\ComfyUI"
 ```
 
-脚本只复制本插件；更新时会把旧插件压缩备份到所选 ComfyUI 的 `user/adachi-workbench-backups/`，不会自动重启服务。
-插件使用 ComfyUI 已有的 PyTorch、NumPy、Pillow，不需要额外 pip/npm 安装。
-卸载时关闭 ComfyUI，再删除 `custom_nodes/Adachi-Inpaint-Workbench` 即可。
+The installer only copies this plugin; on update it zips the previous installation into `user/adachi-workbench-backups/` and does not restart the server.
+The plugin uses ComfyUI's existing PyTorch, NumPy and Pillow — no extra pip or npm packages.
+To uninstall, close ComfyUI and delete `custom_nodes/Adachi-Inpaint-Workbench`.
 
-## 最快上手
+### ComfyUI Manager and Comfy Registry
 
-1. 将 `examples/01-inline-inpaint.json` 拖入 ComfyUI，选择自己的 checkpoint。
-2. 在 **内联蒙版 / Inline Mask** 节点载入、拖放或粘贴图片，直接在画布上涂抹需要重绘的部分。
-3. 修改正负提示词，在 **WebUI 局部重绘** 节点中选择画笔工具、重绘范围、采样分辨率、采样器与重绘幅度，然后运行。
-4. `image` 输出回贴后的完整原图，`crop` 输出实际采样画布，`mask` 输出该采样画布对应的蒙版。
+Manager **Git URL** installation can use `https://github.com/adachi0130/Adachi-Inpaint-Workbench`, or clone it into `ComfyUI/custom_nodes`:
 
-**白色蒙版重绘，黑色保护；画布中橙色代表绘制区域**。
-当 `mask_mode=outside` 时会反相，重绘橙色之外的部分。
-`mask_blur`、`mask_grow`、额外羽化会改变有效蒙版边界，边界内的混合像素也会变化；有效蒙版为零的像素逐值保留。
+```bash
+git clone https://github.com/adachi0130/Adachi-Inpaint-Workbench.git
+```
 
-## 两种重绘范围
+A Manager **listing** submission is open at [ComfyUI-Manager PR #3378](https://github.com/Comfy-Org/ComfyUI-Manager/pull/3378) and still needs the maintainer to merge it and refresh the index, so search visibility is not guaranteed yet. A Comfy Registry publisher is not configured; see [the publishing notes](registry/README.md).
 
-| `area` | 对应操作 | 实际行为 |
+## Quick start
+
+1. Drag `examples/01-inline-inpaint.json` into ComfyUI and pick your checkpoint.
+2. In **Inline Mask**, upload, drop or paste an image and paint the areas to repaint directly on the canvas.
+3. Edit the positive/negative prompts, then set the painting tools, sampling area, sampling resolution, sampler and denoise in the **WebUI Inpaint** node, and run.
+4. `image` outputs the full composited picture, `crop` outputs the actual sampling canvas, and `mask` outputs that canvas's mask.
+
+**White repaints, black preserves; orange is the painted area on the canvas.**
+With `mask_mode=outside` this inverts and everything outside the painted area is repainted.
+`mask_blur`, `mask_grow` and extra feathering change the effective mask boundary, so blend pixels at that boundary change too; pixels where the effective mask is zero are preserved exactly.
+
+## The two sampling areas
+
+| `area` | What it does | Behaviour |
 |---|---|---|
-| `whole_image` | 以原图范围重绘 | 将整张图缩放到 `width × height` 采样，再按照蒙版回贴原图 |
-| `only_masked` | 以蒙版范围重绘 | 取蒙版包围框，加 `padding` 上下文，尽量扩展到目标比例，将局部放大到采样尺寸，生成后贴回原位置 |
+| `whole_image` | Repaint at the source extent | Scales the whole image to `width × height`, samples, then composites back through the mask |
+| `only_masked` | Repaint at the mask extent | Takes the mask bounding box, adds `padding` context, expands toward the target ratio, upscales that region to the sampling size, and pastes the result back in place |
 
-`width/height` 指采样画布尺寸，须为 8 的倍数；两种模式的最终 `image` 都保持上传原图的分辨率。
-这一点与 WebUI 整图模式常以目标宽高输出的行为有区别；需要目标尺寸的图时，可取 `crop`，或在完整输出后连接缩放节点。
-`padding`、`mask_blur`、`mask_grow` 的单位都是原图像素。
-蒙版贴近图像边缘时，局部模式用保比例填充保住整块蒙版，不会为匹配比例切掉蒙版。
-`resize_mode` 的拉伸、居中裁剪、保比例填充作用于 `whole_image`；局部模式自动采用保留全部蒙版的变换。
+`width/height` are the sampling canvas size and must be multiples of 8; the final `image` keeps the uploaded image's resolution in both modes.
+That differs from the WebUI whole-image mode, which usually outputs at the target size — take `crop`, or add a resize node after the full output, if you want a target-size image.
+`padding`, `mask_blur` and `mask_grow` are all measured in source pixels.
+When the mask touches an image edge, masked-area mode uses aspect-preserving fill to keep the entire mask instead of cropping it to match the ratio.
+`resize_mode` (stretch, center crop, aspect fill) applies to `whole_image`; masked-area mode automatically uses the transform that keeps the whole mask.
 
-## 画布操作
+## Canvas controls
 
-| 操作 | 使用方式 |
+| Action | How |
 |---|---|
-| 画笔 / 橡皮 | 工具栏切换，`B` / `E`；按住 `Alt` 或鼠标右键临时擦除，松开恢复原工具；擦除时显示橡皮擦图标与淡粉色虚线范围 |
-| 矩形 / 自由套索 | `R` / `L`，拖动画出要重绘的区域 |
-| 笔径 / 硬度 / 笔触 | 分别控制原图像素笔径、边缘硬度、绘制不透明度 |
-| 橙色叠加 | 仅调节显示透明度，不改变真实蒙版 |
-| 撤销 / 重做 | `Ctrl+Z` / `Ctrl+Shift+Z`，或 `Ctrl+Y` |
-| 缩放 / 移动 | 滚轮缩放；空格拖动、鼠标中键或 `H` 移动；「适应」复位 |
-| 笔径快捷键 | `[` / `]` |
-| 快速调整笔径 | 鼠标放在画布上，按住 `Ctrl` 向上滚轮增大、向下滚轮减小；普通滚轮仍缩放图片 |
-| 编辑器高度 | 拖动编辑器底部 `↕` 条上下拉伸；尺寸随工作流保存 |
-| 反转 / 全选 / 清空 | 作用于当前绘制蒙版，可撤销 |
-| 导入 / 导出蒙版 | 原始分辨率 PNG；黑白图按亮度导入，带透明度的图按 alpha 导入 |
-| 原图 / 蒙版 / 叠加 | 切换预览，不改变输出 |
+| Brush / eraser | Toolbar toggle, `B` / `E`; hold `Alt` or use the right mouse button to erase temporarily and release to restore the previous tool; the eraser cursor and a pale pink dashed outline show the erase mode |
+| Rectangle / freehand lasso | `R` / `L`, drag out the region to repaint |
+| Brush size / hardness / brush opacity | Source-pixel brush size, edge hardness and painting opacity |
+| Orange overlay | Display opacity only; it never changes the real mask |
+| Undo / redo | `Ctrl+Z` / `Ctrl+Shift+Z`, or `Ctrl+Y` |
+| Zoom / pan | Wheel to zoom; drag with Space, the middle button or `H` to pan; **Fit** to reset |
+| Brush size keys | `[` / `]` |
+| Fast brush size | With the pointer over the canvas, hold `Ctrl` and wheel up/down; the plain wheel still zooms the image |
+| Editor height | Drag the `↕` bar at the bottom of the editor; the size is saved with the workflow |
+| Invert / fill / clear | Act on the current painted mask and are undoable |
+| Import / export mask | Full-resolution PNG; greyscale images import by brightness, images with alpha import by alpha |
+| Image / mask / overlay | Preview toggles only; they do not change the output |
 
-支持画笔压力和软笔刷；鼠标使用固定压力。
-内联蒙版仅保留图片编辑区与左上角的小型 **载入原图** 按钮，载入后按原图比例调整画布高度以减少空边。
-画笔、橡皮、矩形、套索、移动、四个笔刷滑条、撤销重做、蒙版操作、显示切换、适应与原图嵌入选项，均显示在连接的 **WebUI 局部重绘** 节点中，直接控制原来的内联画布。
-图片上传一次，之后每笔在浏览器内更新蒙版，并在工作流及运行参数中保存 PNG 数据，无需每画一笔都保存、重新加载磁盘文件。
-鼠标位于图片区域时滚轮缩放图片；位于工具栏、按钮、滑条或参数面板时，滚轮遵循 ComfyUI 的画布导航设置。
-从 ComfyUI 画布开始的连续滚轮手势移入图片时，继续导航外部画布；停下后再在图片里滚动才缩放图片。
-超大图仍会消耗浏览器内存，PNG 编码耗时取决于分辨率和设备，不能保证所有图像都瞬间完成。
+Brush pressure and soft brushes are supported; the mouse uses a fixed pressure.
+Inline Mask keeps only the image editing area and a small **Load image** button in the corner, and adjusts the canvas height to the image ratio after loading to reduce empty margins.
+The brush, eraser, rectangle, lasso, pan, four brush sliders, undo/redo, mask actions, view toggles, fit and the embed option all live in the connected **WebUI Inpaint** node and drive that same inline canvas.
+You upload the image once; every stroke then updates the mask in the browser and is stored as PNG data in the workflow and in the executed parameters, so there is no saving and reloading of files per stroke.
+Wheel events over the picture zoom it; over the toolbar, buttons, sliders or the parameter panel they follow ComfyUI's canvas navigation settings.
+A continuous wheel gesture that starts on the ComfyUI canvas keeps navigating the outer canvas when it moves over the picture; scrolling inside the picture again after stopping zooms the image.
+Very large images still use browser memory, and PNG encoding time depends on resolution and hardware, so instant completion is not guaranteed for every image.
 
-## 画笔工具与重绘参数
+## Painting tools and inpainting parameters
 
-内联蒙版连接 **WebUI 局部重绘** 的 `image` 输入后，原画笔控件自动显示在该重绘节点中；下方参数面板直接控制该节点的真实采样参数。
-宽度和高度各占一行，支持滑条及数值输入；重绘幅度也使用滑条，点击 **使用原图宽高** 可填入原图尺寸，按采样要求取最近的 8 的倍数。
-蒙版内外、填充、重绘范围、采样器、调度器、步数、CFG 和种子直接显示，蒙版处理、批量、Refiner 切换等位于 **蒙版、批量与高级设置** 中。
-如果一张内联原图连接多个重绘节点，画笔控件放在第一个 WebUI 重绘节点中，各节点保留自己的参数面板；断开或删除该节点后，工具自动迁移到下一个可用节点。
-外部连线控制的参数会禁用对应面板控件；模块化工作流将画笔工具放在 **重绘预处理 / Inpaint Prepare** 节点中，采样参数仍在独立采样节点中调整。
+Once Inline Mask is connected to the `image` input of **WebUI Inpaint**, the original painting controls appear in that inpaint node, and the parameter panel below drives the node's real sampling parameters.
+Width and height each get their own row with both a slider and a number field; denoise is a slider too, and **Use source size** fills in the source dimensions, rounded to the nearest multiple of 8 the sampler requires.
+Mask mode, fill, sampling area, sampler, scheduler, steps, CFG and seed are shown directly; mask processing, batch and Refiner switching live under **Mask, batch and advanced settings**.
+If one inline source feeds several inpaint nodes, the painting controls go to the first WebUI Inpaint node and each node keeps its own parameter panel; disconnecting or deleting that node moves the tools to the next available one.
+Parameters driven by an external link disable the matching panel control; a modular workflow puts the painting tools in **Inpaint Prepare** and keeps the sampling parameters in the separate sampler node.
 
-## 图像对比与连续重绘
+## Comparison and chained inpainting
 
-添加 **图像对比 / Image Compare** 节点，将内联蒙版的 `image` 接到 `original`，最终完整重绘图 `image` 接到 `result`，运行后即可对比。
-鼠标移入图片时，细竖线左边显示重绘结果、右边显示原图；移出后隐藏分割线，完整显示重绘结果，普通滚轮缩放图片；批量结果选择、尺寸和适应按钮位于图片下方。
-满意后点击 **采用此结果**，插件会把当前选中的结果上传为新的原图，回填到上游内联蒙版，并清空旧蒙版，随后可以继续涂抹下一处。
-原图连接经过中间 IMAGE 节点时会向上寻找内联蒙版；若存在多个目标，可以在“回填到”中明确选择。
-回填只在点击按钮时发生，不会自动开始下一轮生成；`image` 输出仍传递整个结果批次，可接保存图像。
-对比预览保存在 ComfyUI 临时目录，清理或重启后可能需要重新运行；点击采用后的原图保存在 `input/adachi-inpaint/`，不依赖临时预览文件。
+Add an **Image Compare** node and connect Inline Mask's `image` to `original` and the final full-size generated `image` to `result`, then run.
+With the pointer over the picture, the thin divider shows the generated result on the left and the original on the right; leaving the picture hides the divider and shows the full result, and the plain wheel zooms. Batch selection, dimensions and the fit button sit below the picture.
+When you are happy, click **Adopt this result**: the plugin uploads the selected result as the new source image, writes it back into the upstream inline editor and clears the old mask, so you can paint the next area straight away.
+If the original is routed through intermediate IMAGE nodes the plugin walks upstream to find the inline editor; when several candidates exist you can pick one explicitly under **Adopt into**.
+Adoption only happens when you click the button and never starts the next generation automatically; the `image` output still passes the whole result batch, so you can feed a Save Image node.
+Comparison previews live in ComfyUI's temp directory and may need a re-run after cleanup or restart; an adopted source image is stored in `input/adachi-inpaint/` and does not depend on temp previews.
 
-## 填充、批量与 Refiner
+## Fill, batch and Refiner
 
-| `fill` | 行为 |
+| `fill` | Behaviour |
 |---|---|
-| `original` | 使用原图像素编码 latent |
-| `fill` | 按蒙版周围颜色进行多尺度填充，再编码 latent |
-| `latent_noise` | 在 masked latent 内填入与 seed 相关的噪声 |
-| `latent_nothing` | 将 masked latent 置零 |
+| `original` | Encode the source pixels into the latent |
+| `fill` | Multi-scale fill from the colours surrounding the mask, then encode |
+| `latent_noise` | Fill the masked latent with seed-dependent noise |
+| `latent_nothing` | Zero the masked latent |
 
-后两种 latent 填充由 **WebUI 局部重绘** 一体节点实现；独立 **重绘预处理** 只处理像素与蒙版，使用标准节点组合时请选择 `original` 或 `fill`。
-`denoise=0` 与空蒙版会直接返回原图，跳过 VAE 和采样；`batch_size` 为每张输入图的变体数，使用相同 seed 可重现同一批次。
-多次批量运行可使用 ComfyUI 的队列数量以及 seed 的生成后控制；`batch_size` 控制单次运行数量。
-普通 SD/SDXL checkpoint 保持 `inpaint_model=false`；专用 inpainting 模型才开启，届时调用 ComfyUI 原生 `InpaintModelConditioning`。
+The two latent fills are implemented by the all-in-one **WebUI Inpaint** node; standalone **Inpaint Prepare** only handles pixels and masks, so choose `original` or `fill` in a standard-node pipeline.
+`denoise=0` and an empty mask return the source image directly and skip VAE and sampling; `batch_size` is the number of variants per input image, and the same seed reproduces the same batch.
+For repeated batches use ComfyUI's queue count together with the seed's after-generate control; `batch_size` controls a single run.
+Keep `inpaint_model=false` for ordinary SD/SDXL checkpoints; enable it only for dedicated inpainting models, which switches to ComfyUI's native `InpaintModelConditioning`.
 
-可选接入兼容的 `refiner_model`，用 `refiner_switch` 指定 base 采样步骤占比；`0.8` 表示约前 80% 步骤由 base 执行。
-建议用 Refiner 自身的 CLIP 编码并接入 `refiner_positive/refiner_negative`，未接入则沿用原条件，VAE 仍使用 base 侧的 VAE。
-`refiner_switch=1` 只用 base，`0` 只用 Refiner；已知 latent 格式不兼容时会报错。
+You can optionally attach a compatible `refiner_model` and use `refiner_switch` for the share of base sampling steps; `0.8` means roughly the first 80% of steps run on the base model.
+Encoding with the Refiner's own CLIP and wiring `refiner_positive`/`refiner_negative` is recommended; if left unconnected the original conditioning is reused and the VAE still comes from the base side.
+`refiner_switch=1` uses only the base model and `0` uses only the Refiner; a known-incompatible latent format raises an error.
 
-## 使用标准采样工作流
+## Using a standard sampling workflow
 
-`examples/02-modular-inpaint.json` 展示可自由更换采样器的连接方式。
+`examples/02-modular-inpaint.json` shows a wiring you can swap samplers into.
 
 ```text
 Inline Mask ── image/mask ──> Inpaint Prepare
@@ -133,53 +142,34 @@ Inline Mask ── image/mask ──> Inpaint Prepare
                                                                           Save Image
 ```
 
-务必将 `Prepare.context` 接回 **原图回贴 / Inpaint Composite**，这样局部结果会回到原图坐标和尺寸。
-标准示例针对普通 checkpoint；专用 inpainting checkpoint 应改用其需要的 conditioning 节点，或直接使用一体节点。
-多个输入图各生成多个变体时，Composite 需要变体按原图分组，例如 `A,A,B,B`；一体节点已按此排列，外部重复 latent 节点如果输出 `A,B,A,B`，需先调整批次顺序。
+Always wire `Prepare.context` back into **Inpaint Composite** so the local result returns to the source coordinates and size.
+The modular example targets ordinary checkpoints; a dedicated inpainting checkpoint should use the conditioning nodes it needs, or the all-in-one node directly.
+When several input images each produce several variants, Composite needs the variants grouped per source image (for example `A,A,B,B`); the all-in-one node already orders them that way, while an external latent-repeat node that outputs `A,B,A,B` needs its batch order adjusted first.
 
-## 分享与兼容性
+## Sharing and compatibility
 
-绘制蒙版自动写入工作流；默认原图只保存 ComfyUI `input/` 内的相对路径。
-要让别人直接打开同一张图，勾选画布下方 **原图嵌入工作流** 后再保存工作流 JSON；对方安装本插件并选择自己的模型即可继续编辑。
-不嵌入时，需要一并提供原图，并保持 `input/` 下的相对路径一致。
-嵌入会增大工作流文件，原图和蒙版也会随工作流分享，因此分享前请确认图片内容。
+The painted mask is written into the workflow automatically; by default only a relative path inside ComfyUI's `input/` is stored for the source image.
+To hand someone a workflow that opens on the same picture, tick **Embed source in workflow** below the canvas before saving the JSON; they install this plugin, pick their own model and can keep editing.
+Without embedding you have to supply the source image as well and keep the same relative path under `input/`.
+Embedding grows the workflow file, and the source and mask then travel with the shared workflow, so check the picture content before sharing.
 
-这是原创实现的 WebUI 风格工作流，不承诺与 AUTOMATIC1111/Forge 的结果逐像素一致。
-`soft_edge` 是额外高斯羽化，`soft_strength` 控制额外半径，**并未复刻 WebUI 的 Soft Inpainting 原算法及其完整参数**。
-采样器、调度器和 Refiner 使用当前 ComfyUI 的实现，填充算法也为本插件独立实现。
-目前支持静态图像与 4 维 latent；不支持视频 VAE、WebUI 脚本/扩展和自动读取 WebUI 插件配置。
-文件最大 64 MiB、图像最大 3200 万像素、单边最大 16384 像素；不附带模型或下载服务。
-已在本机 ComfyUI 的隔离 CPU 服务验证节点加载、画布编辑、工作流/运行参数保存与恢复，并用 mock VAE/采样器验证后端；尚未用实际 checkpoint 验证生成质量和各模型家族/Refiner 的兼容性。
+This is an original WebUI-style implementation and does not promise pixel-perfect agreement with AUTOMATIC1111/Forge results.
+`soft_edge` is extra Gaussian feathering with `soft_strength` controlling the extra radius; it **does not reimplement WebUI's Soft Inpainting algorithm or its full parameter set**.
+Samplers, schedulers and Refiner use the current ComfyUI implementations, and the fill algorithms are this plugin's own.
+Static images and 4-dimensional latents are supported; video VAEs, WebUI scripts/extensions and automatic reading of WebUI plugin configuration are not.
+Limits are 64 MiB per file, 32 megapixels per image and 16384 px per side; no models are bundled and nothing is downloaded.
+Node loading, canvas editing, workflow/executed-parameter save and restore have been verified in an isolated CPU ComfyUI service on the development machine, and the backend is verified with mock VAE/samplers; real-checkpoint image quality and compatibility across every model family and Refiner have not been tested.
 
-## English quick start
+## Tests
 
-**Adachi-Inpaint-Workbench** is an MIT-licensed ComfyUI custom node pack for direct mask painting, WebUI-style inpainting, result/original comparison, and adopting results for another edit pass.
-
-Copy the entire `Adachi-Inpaint-Workbench` folder into `ComfyUI/custom_nodes`, restart ComfyUI, then hard-refresh your browser.
-Search for `Inline Mask` or `WebUI Inpaint` under **安达工作台 / Adachi-Inpaint-Workbench**.
-No extra pip or npm packages are required beyond ComfyUI's PyTorch, NumPy and Pillow.
-
-Drag `examples/01-inline-inpaint.json` into ComfyUI, select a checkpoint, upload an image inside **Inline Mask**, paint, and run the workflow.
-White repaints and black preserves; orange is the visual mask overlay.
-Use `whole_image` to sample the full source extent, or `only_masked` to enlarge the padded mask bounding box for detailed local inpainting.
-Sampling uses `width × height`; the final `image` output is composited at the original image resolution in both modes, while `crop` exposes the generated sampling canvas.
-
-The editor supports brush/eraser, rectangles, freehand lasso, undo/redo, invert, mask import/export, brush size/hardness/opacity, zoom, pan, drag-and-drop and clipboard images.
-Inline Mask shows only the image and a small upload button; its original live painting controls and the sampling parameter panel are hosted in the connected WebUI Inpaint node (or Inpaint Prepare for modular workflows).
-Paint with the left button; hold Alt or use the right button to erase temporarily, use Ctrl+wheel for brush size, zoom with the plain wheel, and pan while holding Space.
-Enable **Embed source in workflow** before saving JSON to share the source image along with its mask.
-
-The **Image Compare** node takes `original` from Inline Mask and `result` from the final full-size generated image; hover to compare result on the left and original on the right, and leave the picture to see the full result.
-Select a batch result if needed, then click **采用此结果 / Adopt this result** to upload it as the upstream editor's new source and clear the old mask for another pass.
-
-The all-in-one node adds original/color-fill/noise/zero-latent modes, native ComfyUI sampling, per-image batch variants, dedicated inpaint conditioning and an optional compatible Refiner stage.
-`examples/02-modular-inpaint.json` demonstrates Prepare → standard VAE/KSampler nodes → Composite; use `original` or `fill` in that modular pipeline.
-`soft_edge` adds Gaussian feathering; it does not implement AUTOMATIC1111 Soft Inpainting or its complete parameter set.
-The plugin is an original MIT-licensed implementation and does not bundle WebUI/Forge source, models or extensions.
-Real-checkpoint image quality and every model/Refiner family have not been tested; browser integration and CPU/mock-sampler regression tests have been run.
-
-Run the CPU tests from this plugin directory with your ComfyUI Python.
+Run the CPU tests from this plugin directory with your ComfyUI Python:
 
 ```powershell
-python tests/test_backend.py -v
+python -m unittest discover -s tests -v
 ```
+
+## 中文简介
+
+本插件把蒙版绘制放在工作流节点内部，**不需要弹出遮罩编辑器**，也省去每画一笔就保存、加载磁盘文件的往返。
+连接 **WebUI 局部重绘** 节点后，画笔工具与采样参数都在该节点内，支持整图范围与蒙版范围重绘、原尺寸回贴、Alt 临时橡皮擦、Ctrl+滚轮笔径、图像对比，以及把满意的结果一键回填为新的原图继续重绘。
+界面与文档均为英文，以便 Manager 用户直接使用；节点搜索可输入 `Inline Mask`，分类为 **Adachi-Inpaint-Workbench**。

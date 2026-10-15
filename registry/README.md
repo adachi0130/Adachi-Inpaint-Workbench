@@ -1,22 +1,22 @@
-# Manager / Registry 发布
+# Manager / Registry publishing
 
-GitHub 仓库公开并不代表 Manager 搜索清单或 Comfy Registry 已收录。
-本插件的 Manager 收录申请见 [PR #3378](https://github.com/Comfy-Org/ComfyUI-Manager/pull/3378)，当前等待上游处理。
+A public GitHub repository does not by itself mean the plugin is listed in the Manager search index or in the Comfy Registry.
+The Manager listing submission for this plugin is [PR #3378](https://github.com/Comfy-Org/ComfyUI-Manager/pull/3378), currently waiting on the upstream maintainer.
 
-## Manager 清单
+## Manager listing
 
-[manager-entry.json](manager-entry.json) 是提交给 [ComfyUI-Manager](https://github.com/Comfy-Org/ComfyUI-Manager) 的条目，加入其根目录的 `custom-node-list.json` 并提交 PR，等待维护者合并及索引更新。
-提交方式以 [Manager 官方说明](https://github.com/Comfy-Org/ComfyUI-Manager#how-to-register-your-custom-node-into-comfyui-manager) 为准。
-收录前仍可使用 Manager 的 Git URL 安装，仓库地址为 `https://github.com/adachi0130/Adachi-Inpaint-Workbench`。
+[manager-entry.json](manager-entry.json) is the entry submitted to [ComfyUI-Manager](https://github.com/Comfy-Org/ComfyUI-Manager); it is added to the `custom-node-list.json` at the repository root in a pull request, and the maintainer merges it and refreshes the index.
+Follow the [official Manager instructions](https://github.com/Comfy-Org/ComfyUI-Manager#how-to-register-your-custom-node-into-comfyui-manager).
+Until it is listed you can still install through the Manager's Git URL option, using `https://github.com/adachi0130/Adachi-Inpaint-Workbench`.
 
 ## Comfy Registry
 
-根据 [官方发布指南](https://docs.comfy.org/registry/publishing)，首次发布需要开发者建立自己的 Publisher 及 API Key。
+Per the [official publishing guide](https://docs.comfy.org/registry/publishing), the first publish requires you to create your own Publisher and API key.
 
-1. 登录 [Comfy Registry](https://registry.comfy.org/)，创建自己的 Publisher，记录实际 Publisher ID。
-2. 将 `pyproject.toml` 中 `[tool.comfy].PublisherId` 的空值改成该 ID，提交到 GitHub。
-3. 在仓库 Settings → Secrets and variables → Actions 中添加 `REGISTRY_ACCESS_TOKEN`，值为 Registry 的发布 API Key。
-4. 在 Actions 中手动运行 **Publish to Comfy Registry**，查看发布和平台校验结果。
+1. Sign in at [Comfy Registry](https://registry.comfy.org/) and create a Publisher, then note the actual Publisher ID.
+2. Replace the empty `[tool.comfy].PublisherId` in `pyproject.toml` with that ID and push it to GitHub.
+3. In the repository Settings → Secrets and variables → Actions, add `REGISTRY_ACCESS_TOKEN` with the Registry publishing API key.
+4. Run **Publish to Comfy Registry** manually from the Actions tab and check the publish and platform validation results.
 
-当前工作流仅手动触发，不会在未配置 Publisher 或 API Key 时自动发布。
-Registry 的版本发布后不可覆盖，后续发布需要先递增 `pyproject.toml` 版本号。
+The workflow is manual-only today and will not publish while no Publisher ID or API key is configured.
+A Registry version cannot be overwritten once published, so later releases have to bump the version in `pyproject.toml`.

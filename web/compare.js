@@ -9,7 +9,7 @@ const element = (tag, className, text) => {
 const imageFrom = url => new Promise((resolve, reject) => {
     const image = new Image();
     image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error("预览已过期或无法加载，请重新运行 / Preview unavailable; run the workflow again"));
+    image.onerror = () => reject(new Error("Preview unavailable; run the workflow again"));
     image.src = url;
 });
 
@@ -22,30 +22,30 @@ export class ImageCompareView {
         this.version = 0; this.ready = false;
         this.dimensionsLabel = element("span", "dd-dimensions");
         const toolbar = element("div", "dd-row dd-compare-toolbar");
-        toolbar.append(element("span", "dd-compare-label", "结果"));
-        this.resultSelect = element("select"); this.resultSelect.setAttribute("aria-label", "选择重绘结果 / Choose result");
+        toolbar.append(element("span", "dd-compare-label", "Result"));
+        this.resultSelect = element("select"); this.resultSelect.setAttribute("aria-label", "Choose result");
         this.resultSelect.onchange = () => { this.index = Number(this.resultSelect.value); this.options.onSelect?.(this.index); this.loadSelected(); };
         toolbar.append(this.resultSelect, this.dimensionsLabel);
         const spacer = element("span", "dd-spacer"); toolbar.append(spacer);
-        const fit = element("button", "", "适应"); fit.type = "button";
+        const fit = element("button", "", "Fit"); fit.type = "button";
         fit.onclick = () => { this.zoom = 1; this.pan = { x: 0, y: 0 }; this.schedule(); }; toolbar.append(fit);
         this.stage = element("div", "dd-stage dd-compare-stage");
         this.canvas = document.createElement("canvas"); this.canvas.tabIndex = 0;
-        this.canvas.setAttribute("aria-label", "左重绘结果、右原图，移动鼠标竖线对比 / Result left, original right; hover to compare");
+        this.canvas.setAttribute("aria-label", "Result left, original right; hover to compare");
         this.canvas.oncontextmenu = event => event.preventDefault();
         this.canvas.addEventListener("pointerenter", event => { this.hovered = true; this.move(event); this.schedule(); });
         this.canvas.addEventListener("pointerleave", () => { this.hovered = false; this.schedule(); });
         this.stage.append(this.canvas);
-        this.empty = element("div", "dd-empty", "连接原图与重绘结果，然后运行工作流"); this.stage.append(this.empty);
+        this.empty = element("div", "dd-empty", "Connect an original image and a result, then run the workflow"); this.stage.append(this.empty);
         const adoption = element("div", "dd-row dd-adoption");
-        adoption.append(element("span", "dd-compare-label", "回填到"));
-        this.targetSelect = element("select"); this.targetSelect.setAttribute("aria-label", "接收结果的内联蒙版 / Target inline editor");
+        adoption.append(element("span", "dd-compare-label", "Adopt into"));
+        this.targetSelect = element("select"); this.targetSelect.setAttribute("aria-label", "Target inline editor");
         this.targetSelect.onfocus = () => this.refreshTargets();
         this.targetSelect.onchange = () => { this.manualTarget = true; this.updateButton(); };
         adoption.append(this.targetSelect);
-        this.adoptButton = element("button", "dd-primary", "采用此结果"); this.adoptButton.type = "button";
+        this.adoptButton = element("button", "dd-primary", "Adopt this result"); this.adoptButton.type = "button";
         this.adoptButton.onclick = () => this.adopt(); adoption.append(this.adoptButton);
-        this.message = element("div", "dd-status", "鼠标移动竖线对比 · 滚轮缩放 · 中键拖动");
+        this.message = element("div", "dd-status", "Move to compare · wheel to zoom · middle-drag to pan");
         this.message.hidden = true; this.message.setAttribute("role", "alert");
         this.root.append(this.stage, toolbar, adoption, this.message);
         this.canvas.addEventListener("pointermove", event => this.move(event));
@@ -83,7 +83,7 @@ export class ImageCompareView {
         const selected = this.targetSelect.value;
         const { editors = [], preferred = "" } = this.options.getTargets?.() || {};
         this.targetSelect.replaceChildren();
-        const placeholder = element("option", "", "选择内联蒙版"); placeholder.value = ""; this.targetSelect.append(placeholder);
+        const placeholder = element("option", "", "Select an inline mask"); placeholder.value = ""; this.targetSelect.append(placeholder);
         for (const editor of editors) {
             const option = element("option", "", editor.label); option.value = String(editor.id); this.targetSelect.append(option);
         }
@@ -92,7 +92,7 @@ export class ImageCompareView {
         this.updateButton();
     }
 
-    updateButton() { this.adoptButton.disabled = !this.ready || !this.targetSelect.value || !!this.busy; this.adoptButton.textContent = this.busy ? "采用中…" : "采用此结果"; }
+    updateButton() { this.adoptButton.disabled = !this.ready || !this.targetSelect.value || !!this.busy; this.adoptButton.textContent = this.busy ? "Adopting…" : "Adopt this result"; }
 
     async setData(data, index = this.index) {
         this.originals = Array.isArray(data?.originals) ? data.originals : [];
@@ -129,10 +129,10 @@ export class ImageCompareView {
         this.refreshTargets();
         if (!this.ready || !this.targetSelect.value || this.busy) return;
         const target = this.targetSelect.value, result = this.results[this.index];
-        this.busy = true; this.updateButton(); this.status("正在将结果设为新原图…");
+        this.busy = true; this.updateButton(); this.status("Setting the result as the new source image…");
         try {
             await this.options.onAdopt(target, result);
-            if (!this.destroyed) this.status("已采用：回到内联蒙版，可继续涂抹重绘");
+            if (!this.destroyed) this.status("Adopted: back in the inline mask, keep painting to inpaint again");
         } catch (error) { if (!this.destroyed) this.status(error.message, true); }
         finally { this.busy = false; if (!this.destroyed) this.updateButton(); }
     }

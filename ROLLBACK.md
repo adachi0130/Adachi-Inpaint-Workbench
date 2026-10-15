@@ -1,20 +1,21 @@
-# Git 版本与回滚
+# Git versions and rollback
 
-`v0.2.0` 是最早的界面回滚点，`v0.3.0` 包含内联参数面板、左右对比调整和滚轮路由修复；`v0.4.0` 将画笔与参数集中到 WebUI 重绘节点；`v0.4.1` 更新橡皮擦光标及公开名称。
-本机安装目录与源码目录均保留 Git 历史；普通发布 ZIP 不含 `.git`，可另用 Git bundle 恢复历史。
+`v0.2.0` is the first UI rollback point; `v0.3.0` added the inline parameter panel, the result/original comparison change and the wheel routing fix; `v0.4.0` moved the painting tools and parameters into the WebUI Inpaint node; `v0.4.1` refreshed the eraser cursor and the public name.
 
-在插件目录运行以下命令，先确认没有未保存改动，再切换版本。
+Both the local installation folder and the source folder keep Git history; a normal release ZIP does not contain `.git`, so use the Git bundle to restore history separately.
+
+Run these commands in the plugin folder. Check there are no unsaved changes before switching versions.
 
 ```powershell
 git status --short
-git switch --detach v0.4.0
-```
-
-恢复本版使用以下命令。
-
-```powershell
 git switch --detach v0.4.1
 ```
 
-切换后重启 ComfyUI 并在浏览器按 `Ctrl+F5` 刷新。
-已有本地修改时请先提交或备份，避免覆盖自己的改动。
+Return to the current version with:
+
+```powershell
+git switch main
+```
+
+Restart ComfyUI and refresh the browser with `Ctrl+F5` afterwards.
+If you have local modifications, commit or back them up first so they are not overwritten.

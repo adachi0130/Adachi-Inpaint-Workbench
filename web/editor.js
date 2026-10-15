@@ -10,7 +10,7 @@ const makeCanvas = () => document.createElement("canvas");
 const loadImage = (url) => new Promise((resolve, reject) => {
     const image = new Image();
     image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error("无法读取图像 / Cannot load image"));
+    image.onerror = () => reject(new Error("Cannot load image"));
     image.src = url;
 });
 
@@ -87,12 +87,12 @@ export class InlineMaskEditor {
 
     build() {
         const head = el("div", "dd-head");
-        this.sizeLabel = el("span", "dd-dimensions", "内联蒙版 · INLINE MASK");
+        this.sizeLabel = el("span", "dd-dimensions", "INLINE MASK");
         head.append(this.sizeLabel);
         this.root.append(head);
         const files = el("div", "dd-row dd-files");
-        this.loadButton = this.button(files, "载入原图", "上传图片，也可拖放或粘贴 / Upload image", () => this.imageInput.click(), "dd-primary");
-        this.filename = el("span", "dd-filename", "拖放图片到画布");
+        this.loadButton = this.button(files, "Load image", "Upload an image, or drop / paste one", () => this.imageInput.click(), "dd-primary");
+        this.filename = el("span", "dd-filename", "Drop an image onto the canvas");
         files.append(this.filename);
         this.root.append(files);
         this.imageInput = el("input");
@@ -118,22 +118,22 @@ export class InlineMaskEditor {
         const tools = el("div", "dd-row dd-tools");
         this.toolButtons = {};
         for (const [name, label, title] of [
-            ["brush", "画笔", "画笔 B / Brush"], ["erase", "橡皮", "橡皮 E，按住 Alt 或鼠标右键临时擦除 / Eraser"],
-            ["rect", "矩形", "矩形 R / Rectangle"], ["lasso", "套索", "自由套索 L / Freehand lasso"],
-            ["pan", "移动", "移动 H，或按住空格 / Pan"],
+            ["brush", "Brush", "Brush (B)"], ["erase", "Eraser", "Eraser (E); hold Alt or right-click for temporary erase"],
+            ["rect", "Rectangle", "Rectangle (R)"], ["lasso", "Lasso", "Freehand lasso (L)"],
+            ["pan", "Pan", "Pan (H), or hold Space"],
         ]) this.toolButtons[name] = this.button(tools, label, title, () => this.setTool(name));
         this.root.append(tools);
         const settings = el("div", "dd-settings");
-        this.addSlider(settings, "笔径", "brushSize", 1, 512, "px");
-        this.addSlider(settings, "硬度", "hardness", 0, 100, "%");
-        this.addSlider(settings, "笔触", "brushOpacity", 1, 100, "%");
-        this.addSlider(settings, "叠加", "overlayOpacity", 0, 100, "%");
+        this.addSlider(settings, "Brush size", "brushSize", 1, 512, "px");
+        this.addSlider(settings, "Hardness", "hardness", 0, 100, "%");
+        this.addSlider(settings, "Brush opacity", "brushOpacity", 1, 100, "%");
+        this.addSlider(settings, "Overlay", "overlayOpacity", 0, 100, "%");
         this.stage = el("div", "dd-stage");
         this.canvas = makeCanvas();
-        this.canvas.setAttribute("aria-label", "直接涂抹蒙版；橙色区域将被重绘 / Inline mask painting canvas");
+        this.canvas.setAttribute("aria-label", "Inline mask painting canvas; orange areas are repainted");
         this.stage.append(this.canvas);
         this.empty = el("div", "dd-empty");
-        this.empty.append(el("span", "dd-empty-symbol", "+"), el("strong", "", "把原图拖到这里"), el("span", "", "直接在节点中涂抹需要重绘的区域"));
+        this.empty.append(el("span", "dd-empty-symbol", "+"), el("strong", "", "Drop an image here"), el("span", "", "Paint the areas to repaint directly in this node"));
         this.stage.append(this.empty);
         this.root.append(this.stage, settings);
         this.canvas.oncontextmenu = event => event.preventDefault();
@@ -151,32 +151,32 @@ export class InlineMaskEditor {
             if (file) this.upload(file);
         });
         const actions = el("div", "dd-row dd-actions");
-        this.undoButton = this.button(actions, "撤销", "撤销 Ctrl+Z / Undo", () => this.undo());
-        this.redoButton = this.button(actions, "重做", "重做 Ctrl+Shift+Z / Redo", () => this.redo());
-        this.button(actions, "反转", "反转绘制的蒙版 / Invert painted mask", () => this.action({ type: "invert" }));
-        this.button(actions, "全选", "重绘整张图 / Fill mask", () => this.action({ type: "fill" }));
-        this.button(actions, "清空", "清空蒙版 / Clear mask", () => this.action({ type: "clear" }));
-        this.button(actions, "导入蒙版", "白色重绘，黑色保护 / Import mask", () => { if (this.ready) this.maskInput.click(); });
-        this.button(actions, "导出", "导出原始分辨率黑白蒙版 / Export mask PNG", () => this.download());
+        this.undoButton = this.button(actions, "Undo", "Undo (Ctrl+Z)", () => this.undo());
+        this.redoButton = this.button(actions, "Redo", "Redo (Ctrl+Shift+Z)", () => this.redo());
+        this.button(actions, "Invert", "Invert the painted mask", () => this.action({ type: "invert" }));
+        this.button(actions, "Fill", "Fill the whole image with mask", () => this.action({ type: "fill" }));
+        this.button(actions, "Clear", "Clear the mask", () => this.action({ type: "clear" }));
+        this.button(actions, "Import mask", "White repaints, black preserves", () => { if (this.ready) this.maskInput.click(); });
+        this.button(actions, "Export", "Export the mask PNG at full resolution", () => this.download());
         this.root.append(actions);
         const footer = el("div", "dd-row dd-viewbar");
         this.viewButtons = {};
-        for (const [name, label] of [["overlay", "叠加"], ["image", "原图"], ["mask", "蒙版"]]) {
+        for (const [name, label] of [["overlay", "Overlay"], ["image", "Image"], ["mask", "Mask"]]) {
             this.viewButtons[name] = this.button(footer, label, `${label} / ${name}`, () => { this.view = name; this.updateButtons(); this.schedule(); });
         }
         const spacer = el("span", "dd-spacer");
         footer.append(spacer);
         this.zoomLabel = el("span", "dd-zoom", "100%");
         footer.append(this.zoomLabel);
-        this.button(footer, "适应", "适应画布 / Fit image", () => this.fit());
+        this.button(footer, "Fit", "Fit the image to the canvas", () => this.fit());
         this.root.append(footer);
         const embedRow = el("label", "dd-embed");
         this.embed = el("input");
         this.embed.type = "checkbox";
         this.embed.onchange = () => this.options.onEmbed?.(this.embed.checked);
-        embedRow.append(this.embed, document.createTextNode("原图嵌入工作流 · 分享时无需另传原图"));
+        embedRow.append(this.embed, document.createTextNode("Embed the source image in the workflow; no separate file needed when sharing"));
         this.root.append(embedRow);
-        this.message = el("div", "dd-status", "Alt 临时擦除 · Ctrl+滚轮调笔径 · 滚轮缩放 / 空格拖动");
+        this.message = el("div", "dd-status", "Alt = temporary erase · Ctrl+wheel = brush size · wheel = zoom · Space = pan");
         this.message.hidden = true;
         this.message.setAttribute("role", "alert");
         this.root.append(this.message);
@@ -215,9 +215,9 @@ export class InlineMaskEditor {
     }
 
     async upload(file) {
-        if (file.size > 64 * 1024 * 1024) { this.status("图片文件不能超过 64 MB / File is too large", true); return; }
+        if (file.size > 64 * 1024 * 1024) { this.status("File is too large (max 64 MB)", true); return; }
         try {
-            this.status("正在载入原图… / Loading image…");
+            this.status("Loading image…");
             await this.options.onUpload?.(file);
         } catch (error) { this.status(error.message, true); }
     }
@@ -229,7 +229,7 @@ export class InlineMaskEditor {
             const [image, loadedMask] = await Promise.all([loadImage(url), maskData ? loadImage(maskData) : Promise.resolve(null)]);
             if (version !== this.loadVersion || this.destroyed) return;
             if (image.width * image.height > 32 * 1024 * 1024 || Math.max(image.width, image.height) > 16384) {
-                throw new Error("图像超过 3200 万像素或单边 16384px，请先缩小 / Image is too large");
+                throw new Error("Image is too large; keep it under 32 MP and 16384 px per side");
             }
             this.image = image;
             for (const canvas of [this.mask, this.baseMask]) { canvas.width = image.width; canvas.height = image.height; }
@@ -251,7 +251,7 @@ export class InlineMaskEditor {
             if (version !== this.loadVersion || this.destroyed) return;
             this.baseMask.getContext("2d").drawImage(this.mask, 0, 0);
             this.sizeLabel.textContent = `${image.width} × ${image.height}`;
-            this.filename.textContent = name || "内嵌原图 / Embedded image";
+            this.filename.textContent = name || "Embedded image";
             this.filename.title = this.filename.textContent;
             this.empty.hidden = true;
             this.ready = true;
@@ -260,7 +260,7 @@ export class InlineMaskEditor {
             this.fit();
             this.updateButtons();
             this.options.onImage?.(image);
-            this.status("橙色为绘制蒙版 · Alt 临时擦除 · Ctrl+滚轮调笔径");
+            this.status("Orange is the painted mask · Alt = temporary erase · Ctrl+wheel = brush size");
         } catch (error) {
             if (version === this.loadVersion && !this.destroyed) this.status(error.message, true);
             throw error;

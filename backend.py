@@ -21,7 +21,7 @@ import torch
 import torch.nn.functional as F
 
 
-CATEGORY = "安达工作台 / Adachi-Inpaint-Workbench"
+CATEGORY = "Adachi-Inpaint-Workbench"
 MAX_IMAGE_PIXELS = 32_000_000
 MAX_IMAGE_BYTES = 64 * 1024 * 1024
 MAX_DATA_URL_CHARS = 4 * ((MAX_IMAGE_BYTES + 2) // 3) + 128
@@ -289,17 +289,17 @@ def _composite(generated, context):
 
 def _prepare_inputs():
     return {
-        "image": ("IMAGE", {"tooltip": "原图 / Original image; output is restored to this exact size."}),
-        "mask": ("MASK", {"tooltip": "白色重绘，黑色保护 / White repaints; black preserves."}),
-        "area": (["whole_image", "only_masked"], {"default": "only_masked", "tooltip": "whole_image：整张原图缩放采样；only_masked：蒙版包围框加边距放大采样，再贴回原图 / Whole image or mask bounding-box inpainting."}),
-        "width": ("INT", {"default": 1024, "min": 64, "max": 8192, "step": 8, "tooltip": "采样画布宽度；最终输出仍为原图尺寸 / Sampling canvas width, independent of final image size."}),
-        "height": ("INT", {"default": 1024, "min": 64, "max": 8192, "step": 8, "tooltip": "采样画布高度 / Sampling canvas height."}),
-        "padding": ("INT", {"default": 32, "min": 0, "max": 2048, "step": 1, "tooltip": "仅蒙版区域：原图像素单位的上下文边距 / Mask-only context padding in original pixels."}),
-        "mask_blur": ("FLOAT", {"default": 4.0, "min": 0.0, "max": 128.0, "step": 0.5, "tooltip": "原图像素单位的高斯羽化半径 / Gaussian mask feathering in original pixels."}),
-        "mask_grow": ("INT", {"default": 0, "min": -128, "max": 128, "step": 1, "tooltip": "正数扩张，负数收缩 / Positive dilates; negative erodes the mask."}),
-        "mask_mode": (["inside", "outside"], {"default": "inside", "tooltip": "inside：蒙版内；outside：蒙版外 / Repaint inside or invert the mask."}),
-        "fill": (["original", "fill", "latent_noise", "latent_nothing"], {"default": "original", "tooltip": "原图像素、周围颜色填充、潜空间噪声、空白潜空间；后两项由一体采样节点在 latent 层实现 / Original, surrounding-color fill, latent noise, or zero latent. Latent modes require the all-in-one sampler."}),
-        "resize_mode": (["stretch", "crop", "fill"], {"default": "stretch", "tooltip": "整图模式：拉伸、居中裁剪、保比例填充；仅蒙版模式自动保留完整蒙版 / Whole-image resize mode; mask-only mode always retains the entire mask."}),
+        "image": ("IMAGE", {"tooltip": "Original image; output is restored to this exact size."}),
+        "mask": ("MASK", {"tooltip": "White repaints; black preserves."}),
+        "area": (["whole_image", "only_masked"], {"default": "only_masked", "tooltip": "Whole image or mask bounding-box inpainting."}),
+        "width": ("INT", {"default": 1024, "min": 64, "max": 8192, "step": 8, "tooltip": "Sampling canvas width, independent of final image size."}),
+        "height": ("INT", {"default": 1024, "min": 64, "max": 8192, "step": 8, "tooltip": "Sampling canvas height."}),
+        "padding": ("INT", {"default": 32, "min": 0, "max": 2048, "step": 1, "tooltip": "Mask-only context padding in original pixels."}),
+        "mask_blur": ("FLOAT", {"default": 4.0, "min": 0.0, "max": 128.0, "step": 0.5, "tooltip": "Gaussian mask feathering in original pixels."}),
+        "mask_grow": ("INT", {"default": 0, "min": -128, "max": 128, "step": 1, "tooltip": "Positive dilates; negative erodes the mask."}),
+        "mask_mode": (["inside", "outside"], {"default": "inside", "tooltip": "Repaint inside or invert the mask."}),
+        "fill": (["original", "fill", "latent_noise", "latent_nothing"], {"default": "original", "tooltip": "Original, surrounding-color fill, latent noise, or zero latent. Latent modes require the all-in-one sampler."}),
+        "resize_mode": (["stretch", "crop", "fill"], {"default": "stretch", "tooltip": "Whole-image resize mode; mask-only mode always retains the entire mask."}),
     }
 
 
@@ -307,16 +307,16 @@ class AdachiInlineMask:
     @classmethod
     def INPUT_TYPES(cls):
         return {"required": {
-            "image": ("STRING", {"default": "", "tooltip": "ComfyUI input 图片路径，由内联编辑器上传 / Input image path populated by inline upload."}),
-            "mask_data": ("STRING", {"default": "", "multiline": False, "tooltip": "编辑器保存的白底重绘蒙版 PNG / Editor mask PNG data URL; white repaints."}),
-            "source_data": ("STRING", {"default": "", "multiline": False, "tooltip": "嵌入原图以便工作流在其他机器使用 / Embedded source image for portable workflows."}),
+            "image": ("STRING", {"default": "", "tooltip": "Input image path populated by inline upload."}),
+            "mask_data": ("STRING", {"default": "", "multiline": False, "tooltip": "Editor mask PNG data URL; white repaints."}),
+            "source_data": ("STRING", {"default": "", "multiline": False, "tooltip": "Embedded source image for portable workflows."}),
         }}
 
     RETURN_TYPES = ("IMAGE", "MASK")
     RETURN_NAMES = ("image", "mask")
     FUNCTION = "load"
     CATEGORY = CATEGORY
-    DESCRIPTION = "直接在工作流节点内涂抹蒙版，无需打开独立编辑器 / Paint an inpaint mask directly in the workflow."
+    DESCRIPTION = "Paint an inpaint mask directly in the workflow."
     SEARCH_ALIASES = ["inline mask", "webui inpaint", "局部重绘", "安达", "adachi"]
 
     @classmethod
@@ -352,15 +352,15 @@ class AdachiInpaintPrepare:
     @classmethod
     def INPUT_TYPES(cls):
         return {"required": _prepare_inputs(), "optional": {
-            "soft_edge": ("BOOLEAN", {"default": False, "tooltip": "额外羽化；不是 A1111 Soft Inpainting 算法 / Extra feathering, not AUTOMATIC1111's Soft Inpainting algorithm."}),
-            "soft_strength": ("FLOAT", {"default": 0.5, "min": 0.0, "max": 1.0, "step": 0.05, "tooltip": "额外增加 0–16 像素羽化 / Adds 0–16 pixels of Gaussian feathering."}),
+            "soft_edge": ("BOOLEAN", {"default": False, "tooltip": "Extra feathering, not AUTOMATIC1111's Soft Inpainting algorithm."}),
+            "soft_strength": ("FLOAT", {"default": 0.5, "min": 0.0, "max": 1.0, "step": 0.05, "tooltip": "Adds 0–16 pixels of Gaussian feathering."}),
         }}
 
     RETURN_TYPES = ("IMAGE", "MASK", "ADACHI_INPAINT_CONTEXT")
     RETURN_NAMES = ("pixels", "mask", "context")
     FUNCTION = "prepare"
     CATEGORY = CATEGORY
-    DESCRIPTION = "局部重绘裁剪、蒙版处理与精确回贴上下文；latent 填充请使用一体采样节点 / Crop and prepare masks with exact compositing context; use the all-in-one sampler for latent fill modes."
+    DESCRIPTION = "Crop and prepare masks with exact compositing context; use the all-in-one sampler for latent fill modes."
     SEARCH_ALIASES = ["inpaint crop", "局部重绘预处理", "webui", "adachi"]
 
     def prepare(self, image, mask, **kwargs):
@@ -371,15 +371,15 @@ class AdachiInpaintComposite:
     @classmethod
     def INPUT_TYPES(cls):
         return {"required": {
-            "generated": ("IMAGE", {"tooltip": "采样后的裁剪图 / Generated sampling canvas."}),
-            "context": ("ADACHI_INPAINT_CONTEXT", {"tooltip": "预处理节点的裁剪和原图上下文 / Context from Adachi Inpaint Prepare."}),
+            "generated": ("IMAGE", {"tooltip": "Generated sampling canvas."}),
+            "context": ("ADACHI_INPAINT_CONTEXT", {"tooltip": "Context from Adachi Inpaint Prepare."}),
         }}
 
     RETURN_TYPES = ("IMAGE",)
     RETURN_NAMES = ("image",)
     FUNCTION = "composite"
     CATEGORY = CATEGORY
-    DESCRIPTION = "还原原图尺寸，软蒙版外保持原像素不变 / Restore original size and preserve pixels outside the effective mask exactly."
+    DESCRIPTION = "Restore original size and preserve pixels outside the effective mask exactly."
     SEARCH_ALIASES = ["inpaint paste", "局部重绘回贴", "adachi"]
 
     def composite(self, generated, context):
@@ -430,29 +430,29 @@ class AdachiWebUIInpaint:
         required = {
             "model": ("MODEL",), "positive": ("CONDITIONING",), "negative": ("CONDITIONING",), "vae": ("VAE",),
             **_prepare_inputs(),
-            "seed": ("INT", {"default": 0, "min": 0, "max": 0xFFFFFFFFFFFFFFFF, "control_after_generate": True, "tooltip": "可复现批量随机种子 / Seed for a reproducible batch of distinct samples."}),
+            "seed": ("INT", {"default": 0, "min": 0, "max": 0xFFFFFFFFFFFFFFFF, "control_after_generate": True, "tooltip": "Seed for a reproducible batch of distinct samples."}),
             "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
             "cfg": ("FLOAT", {"default": 7.0, "min": 0.0, "max": 100.0, "step": 0.1}),
             "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
             "scheduler": (comfy.samplers.KSampler.SCHEDULERS,),
-            "denoise": ("FLOAT", {"default": 0.75, "min": 0.0, "max": 1.0, "step": 0.01, "tooltip": "0 原样返回原图，1 完全重绘 / Zero returns the original exactly; one fully denoises."}),
-            "batch_size": ("INT", {"default": 1, "min": 1, "max": 16, "tooltip": "每张输入图生成数量 / Number of generated variants per input image."}),
-            "refiner_switch": ("FLOAT", {"default": 0.8, "min": 0.0, "max": 1.0, "step": 0.01, "tooltip": "接入 Refiner 时的采样切换比例；0全程refiner，1全程base / Fraction of steps on the base model when a refiner is connected."}),
+            "denoise": ("FLOAT", {"default": 0.75, "min": 0.0, "max": 1.0, "step": 0.01, "tooltip": "Zero returns the original exactly; one fully denoises."}),
+            "batch_size": ("INT", {"default": 1, "min": 1, "max": 16, "tooltip": "Number of generated variants per input image."}),
+            "refiner_switch": ("FLOAT", {"default": 0.8, "min": 0.0, "max": 1.0, "step": 0.01, "tooltip": "Fraction of steps on the base model when a refiner is connected."}),
         }
         return {"required": required, "optional": {
-            "inpaint_model": ("BOOLEAN", {"default": False, "tooltip": "仅专用 inpaint 模型开启，添加原生 inpaint conditioning / Enable only for dedicated inpainting models; uses ComfyUI's native InpaintModelConditioning."}),
-            "soft_edge": ("BOOLEAN", {"default": False, "tooltip": "额外羽化，并非 A1111 Soft Inpainting 原算法 / Extra feathering, not A1111 Soft Inpainting."}),
+            "inpaint_model": ("BOOLEAN", {"default": False, "tooltip": "Enable only for dedicated inpainting models; uses ComfyUI's native InpaintModelConditioning."}),
+            "soft_edge": ("BOOLEAN", {"default": False, "tooltip": "Extra feathering, not A1111 Soft Inpainting."}),
             "soft_strength": ("FLOAT", {"default": 0.5, "min": 0.0, "max": 1.0, "step": 0.05}),
-            "refiner_model": ("MODEL", {"tooltip": "可选的兼容 Refiner 模型（例如 SDXL refiner） / Optional compatible refiner model, e.g. SDXL refiner."}),
-            "refiner_positive": ("CONDITIONING", {"tooltip": "用 Refiner 的 CLIP 编码；未连接则沿用原始正面条件 / Encode using the refiner CLIP; defaults to original positive conditioning."}),
-            "refiner_negative": ("CONDITIONING", {"tooltip": "用 Refiner 的 CLIP 编码；未连接则沿用原始负面条件 / Encode using the refiner CLIP; defaults to original negative conditioning."}),
+            "refiner_model": ("MODEL", {"tooltip": "Optional compatible refiner model, e.g. SDXL refiner."}),
+            "refiner_positive": ("CONDITIONING", {"tooltip": "Encode using the refiner CLIP; defaults to original positive conditioning."}),
+            "refiner_negative": ("CONDITIONING", {"tooltip": "Encode using the refiner CLIP; defaults to original negative conditioning."}),
         }}
 
     RETURN_TYPES = ("IMAGE", "IMAGE", "MASK")
     RETURN_NAMES = ("image", "crop", "mask")
     FUNCTION = "sample"
     CATEGORY = CATEGORY
-    DESCRIPTION = "WebUI 式局部重绘：整图/蒙版区域、填充、采样和原尺寸回贴 / WebUI-style inpainting, crop, latent fill, sampling and original-size compositing."
+    DESCRIPTION = "WebUI-style inpainting, crop, latent fill, sampling and original-size compositing."
     SEARCH_ALIASES = ["webui", "img2img", "inpaint", "局部重绘", "安达", "adachi"]
 
     def sample(self, model, positive, negative, vae, image, mask, seed=0, steps=20, cfg=7.0,
@@ -525,8 +525,8 @@ class AdachiImageCompare:
     @classmethod
     def INPUT_TYPES(cls):
         return {"required": {
-            "original": ("IMAGE", {"tooltip": "右侧原图，连接内联蒙版的 image / Original image shown on the right."}),
-            "result": ("IMAGE", {"tooltip": "左侧完整重绘图，请连接最终 image 而非 crop / Full-size generated image shown on the left; use image, not crop."}),
+            "original": ("IMAGE", {"tooltip": "Original image shown on the right."}),
+            "result": ("IMAGE", {"tooltip": "Full-size generated image shown on the left; use image, not crop."}),
         }}
 
     RETURN_TYPES = ("IMAGE",)
@@ -534,7 +534,7 @@ class AdachiImageCompare:
     FUNCTION = "compare"
     OUTPUT_NODE = True
     CATEGORY = CATEGORY
-    DESCRIPTION = "鼠标竖线左右对比原图与重绘结果；点击采用此结果可送回上游内联蒙版 / Hover to compare; adopt a result into the upstream inline editor."
+    DESCRIPTION = "Hover to compare; adopt a result into the upstream inline editor."
     SEARCH_ALIASES = ["compare", "before after", "图像对比", "adachi", "安达工作台"]
 
     def compare(self, original, result):
@@ -542,9 +542,9 @@ class AdachiImageCompare:
 
         original, result = _image_tensor(original), _image_tensor(result)
         if original.shape[1:3] != result.shape[1:3]:
-            raise ValueError("原图与结果尺寸须一致，请连接最终 image 输出而非 crop / Image sizes must match. Connect the final image output, not crop.")
+            raise ValueError("Image sizes must match. Connect the final image output, not crop.")
         if result.shape[0] % original.shape[0]:
-            raise ValueError("结果批量须为原图批量的整数倍 / Result batch must be a multiple of the original batch.")
+            raise ValueError("Result batch must be a multiple of the original batch.")
         if original.shape[1] * original.shape[2] > MAX_IMAGE_PIXELS or max(original.shape[1:3]) > 16384:
             raise ValueError("Comparison images exceed the inline editor's 32 megapixel / 16384px limit.")
         preview = nodes.PreviewImage()
@@ -562,9 +562,9 @@ NODE_CLASS_MAPPINGS = {
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "AdachiInlineMask": "内联蒙版 / Inline Mask",
-    "AdachiInpaintPrepare": "重绘预处理 / Inpaint Prepare",
-    "AdachiInpaintComposite": "原图回贴 / Inpaint Composite",
-    "AdachiWebUIInpaint": "WebUI 局部重绘 / WebUI Inpaint",
-    "AdachiImageCompare": "图像对比 / Image Compare",
+    "AdachiInlineMask": "Inline Mask",
+    "AdachiInpaintPrepare": "Inpaint Prepare",
+    "AdachiInpaintComposite": "Inpaint Composite",
+    "AdachiWebUIInpaint": "WebUI Inpaint",
+    "AdachiImageCompare": "Image Compare",
 }

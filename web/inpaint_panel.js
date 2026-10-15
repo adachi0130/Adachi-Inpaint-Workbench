@@ -2,21 +2,21 @@
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; };
 export const INPAINT_FIELDS = ["mask_mode", "fill", "area", "padding", "width", "height", "denoise", "sampler_name", "scheduler", "steps", "cfg", "seed", "control_after_generate", "batch_size", "mask_blur", "mask_grow", "resize_mode", "inpaint_model", "soft_edge", "soft_strength", "refiner_switch"];
 const choices = {
-    mask_mode: { inside: "蒙版内", outside: "蒙版外" },
-    fill: { fill: "填充", original: "原图像素", latent_noise: "潜空间噪声", latent_nothing: "空白潜空间" },
-    area: { whole_image: "整图重绘", only_masked: "仅蒙版区域" },
-    resize_mode: { stretch: "拉伸", crop: "居中裁剪", fill: "保比例填充" },
-    control_after_generate: { fixed: "固定种子", increment: "生成后递增", decrement: "生成后递减", randomize: "生成后随机" },
+    mask_mode: { inside: "Inside mask", outside: "Outside mask" },
+    fill: { fill: "Fill", original: "Original pixels", latent_noise: "Latent noise", latent_nothing: "Empty latent" },
+    area: { whole_image: "Whole image", only_masked: "Masked area only" },
+    resize_mode: { stretch: "Stretch", crop: "Center crop", fill: "Aspect fill" },
+    control_after_generate: { fixed: "Fixed", increment: "Increment", decrement: "Decrement", randomize: "Randomize" },
 };
 
 export class InpaintParameterPanel {
     constructor(options) {
         this.options = options; this.bindings = []; this.root = el("section", "dd-parameters");
-        const header = el("div", "dd-param-header"); header.append(el("strong", "", "局部重绘"));
-        this.targetSelect = el("select"); this.targetSelect.setAttribute("aria-label", "控制的局部重绘节点");
+        const header = el("div", "dd-param-header"); header.append(el("strong", "", "WebUI Inpaint"));
+        this.targetSelect = el("select"); this.targetSelect.setAttribute("aria-label", "Controlled WebUI inpaint node");
         this.targetSelect.onchange = () => { this.preferred = this.targetSelect.value; this.options.onPreferred?.(this.preferred); this.refresh(); };
         header.append(this.targetSelect); this.root.append(header);
-        this.placeholder = el("div", "dd-param-placeholder", "连接 WebUI 局部重绘节点后，在这里调整参数");
+        this.placeholder = el("div", "dd-param-placeholder", "Connect a WebUI inpaint node to edit its parameters here");
         this.body = el("div", "dd-param-body"); this.root.append(this.placeholder, this.body);
         this.observer = new ResizeObserver(() => options.onHeight?.()); this.observer.observe(this.root);
         this.timer = setInterval(() => { if (this.root.isConnected && !document.hidden) this.refresh(); }, 350);
@@ -30,7 +30,7 @@ export class InpaintParameterPanel {
         const signature = targets.map(n => `${n.id}:${n.title}`).join("|");
         if (signature !== this.signature) {
             this.signature = signature; this.targetSelect.replaceChildren();
-            for (const n of targets) { const option = el("option", "", `${n.title || "局部重绘"} #${n.id}`); option.value = String(n.id); this.targetSelect.append(option); }
+            for (const n of targets) { const option = el("option", "", `${n.title || "WebUI Inpaint"} #${n.id}`); option.value = String(n.id); this.targetSelect.append(option); }
         }
         this.targetSelect.hidden = targets.length < 2;
         if (next) this.targetSelect.value = String(next.id);
@@ -90,7 +90,7 @@ export class InpaintParameterPanel {
         };
         input.oninput = () => update(input.value); input.onchange = () => { update(input.value); input.value = widget.value; this.options.onDirty?.(); };
         if (range) {
-            slider = el("input"); slider.type = "range"; slider.min = min; slider.max = rangeMax ?? max; slider.step = step; slider.setAttribute("aria-label", `${label}滑条`);
+            slider = el("input"); slider.type = "range"; slider.min = min; slider.max = rangeMax ?? max; slider.step = step; slider.setAttribute("aria-label", `${label} slider`);
             slider.oninput = () => { update(slider.value); input.value = widget.value; }; slider.onchange = () => this.options.onDirty?.(); wrapper.append(slider);
         }
         this.bindings.push({ sync: () => {
@@ -110,12 +110,12 @@ export class InpaintParameterPanel {
     grid(parent) { const grid = el("div", "dd-param-grid"); parent.append(grid); return grid; }
 
     build() {
-        this.enum(this.body, "mask_mode", "重绘区域", true);
-        this.enum(this.body, "fill", "重绘参考内容", true);
-        this.enum(this.body, "area", "重绘画布", true);
-        const resolution = el("div", "dd-param-resolution"); resolution.append(el("span", "dd-param-label", "采样分辨率"));
-        this.sourceSize = el("button", "", "使用原图宽高"); this.sourceSize.type = "button";
-        this.sourceSize.title = "填写当前原图宽高；按 8 的倍数对齐，并限制在 64–8192 像素";
+        this.enum(this.body, "mask_mode", "Mask mode", true);
+        this.enum(this.body, "fill", "Fill content", true);
+        this.enum(this.body, "area", "Sampling area", true);
+        const resolution = el("div", "dd-param-resolution"); resolution.append(el("span", "dd-param-label", "Sampling resolution"));
+        this.sourceSize = el("button", "", "Use source size"); this.sourceSize.type = "button";
+        this.sourceSize.title = "Fill width and height from the current source image; aligned to 8 px and clamped to 64-8192 px";
         this.sourceSize.onclick = () => {
             const image = this.options.getImage?.(); if (!image) return;
             const aligned = value => Math.max(64, Math.min(8192, Math.round(value / 8) * 8));
@@ -123,23 +123,23 @@ export class InpaintParameterPanel {
             this.options.onDirty?.(); this.refresh();
         };
         resolution.append(this.sourceSize); this.body.append(resolution);
-        this.number(this.body, "width", "宽度", { min: 64, max: 8192, step: 8, range: true });
-        this.number(this.body, "height", "高度", { min: 64, max: 8192, step: 8, range: true });
-        this.number(this.body, "denoise", "重绘幅度", { min: 0, max: 1, step: .01, range: true });
-        const sampling = this.grid(this.body); this.enum(sampling, "sampler_name", "采样器"); this.enum(sampling, "scheduler", "调度器");
+        this.number(this.body, "width", "Width", { min: 64, max: 8192, step: 8, range: true });
+        this.number(this.body, "height", "Height", { min: 64, max: 8192, step: 8, range: true });
+        this.number(this.body, "denoise", "Denoise", { min: 0, max: 1, step: .01, range: true });
+        const sampling = this.grid(this.body); this.enum(sampling, "sampler_name", "Sampler"); this.enum(sampling, "scheduler", "Scheduler");
         const scale = this.grid(this.body);
-        this.number(scale, "steps", "采样步数", { min: 1, max: 10000, range: true, rangeMax: 150 });
-        this.number(scale, "cfg", "提示词引导 CFG", { min: 0, max: 100, step: .1, range: true, rangeMax: 30 });
-        const seed = this.grid(this.body); this.number(seed, "seed", "随机种子", { min: 0, max: Number.MAX_SAFE_INTEGER }); this.enum(seed, "control_after_generate", "生成后种子");
-        const advanced = el("details", "dd-param-advanced"), summary = el("summary", "", "蒙版、批量与高级设置"); advanced.append(summary);
+        this.number(scale, "steps", "Steps", { min: 1, max: 10000, range: true, rangeMax: 150 });
+        this.number(scale, "cfg", "CFG scale", { min: 0, max: 100, step: .1, range: true, rangeMax: 30 });
+        const seed = this.grid(this.body); this.number(seed, "seed", "Seed", { min: 0, max: Number.MAX_SAFE_INTEGER }); this.enum(seed, "control_after_generate", "After generate");
+        const advanced = el("details", "dd-param-advanced"), summary = el("summary", "", "Mask, batch and advanced settings"); advanced.append(summary);
         const content = el("div", "dd-param-advanced-body"); advanced.append(content);
-        this.number(content, "padding", "蒙版外扩边距", { min: 0, max: 2048 });
+        this.number(content, "padding", "Context padding", { min: 0, max: 2048 });
         const masks = this.grid(content);
-        this.number(masks, "mask_blur", "蒙版模糊", { min: 0, max: 128, step: .5 }); this.number(masks, "mask_grow", "蒙版扩张 / 收缩", { min: -128, max: 128 });
-        const batch = this.grid(content); this.number(batch, "batch_size", "每张生成数量", { min: 1, max: 16 }); this.enum(batch, "resize_mode", "缩放方式");
-        this.toggle(content, "inpaint_model", "使用专用 Inpaint 模型"); this.toggle(content, "soft_edge", "额外羽化边缘");
-        this.number(content, "soft_strength", "额外羽化强度", { min: 0, max: 1, step: .05, range: true });
-        this.number(content, "refiner_switch", "Refiner 切换比例", { min: 0, max: 1, step: .01, range: true }); this.body.append(advanced);
+        this.number(masks, "mask_blur", "Mask blur", { min: 0, max: 128, step: .5 }); this.number(masks, "mask_grow", "Mask grow / shrink", { min: -128, max: 128 });
+        const batch = this.grid(content); this.number(batch, "batch_size", "Batch size", { min: 1, max: 16 }); this.enum(batch, "resize_mode", "Resize mode");
+        this.toggle(content, "inpaint_model", "Use dedicated inpaint model"); this.toggle(content, "soft_edge", "Extra edge feathering");
+        this.number(content, "soft_strength", "Feather strength", { min: 0, max: 1, step: .05, range: true });
+        this.number(content, "refiner_switch", "Refiner switch ratio", { min: 0, max: 1, step: .01, range: true }); this.body.append(advanced);
     }
 
     destroy() { clearInterval(this.timer); this.observer.disconnect(); this.options.onTargetChange?.(this.target, null); this.target = null; this.root.remove(); }

@@ -11,7 +11,7 @@ function viewUrl(image) {
 function targets(node) {
     const graph = node.graph;
     const editors = (graph?._nodes || []).filter(candidate => candidate.type === "AdachiInlineMask" && candidate.adachiUseResult)
-        .map(candidate => ({ id: candidate.id, label: `${candidate.title || "内联蒙版"} #${candidate.id}` }));
+        .map(candidate => ({ id: candidate.id, label: `${candidate.title || "Inline Mask"} #${candidate.id}` }));
     const sourceLink = graph?.links?.[node.inputs?.find(input => input.name === "original")?.link];
     const queue = sourceLink ? [sourceLink.origin_id] : [], seen = new Set(), upstream = new Set();
     while (queue.length && seen.size < 256) {
@@ -40,11 +40,11 @@ app.registerExtension({
                 onSelect: index => { node.properties.adachi_result_index = index; },
                 async onAdopt(id, image) {
                     const target = node.graph?.getNodeById(id);
-                    if (!target?.adachiUseResult) throw new Error("找不到接收结果的内联蒙版节点");
+                    if (!target?.adachiUseResult) throw new Error("No inline mask node is available to receive the result");
                     const response = await api.fetchApi(`/view?${new URLSearchParams({ filename: image.filename, subfolder: image.subfolder || "", type: image.type || "temp" })}`);
-                    if (!response.ok) throw new Error("结果预览已过期，请重新运行工作流");
+                    if (!response.ok) throw new Error("Result preview expired; run the workflow again");
                     const blob = await response.blob();
-                    if (blob.size > 64 * 1024 * 1024) throw new Error("结果图片超过 64 MiB，请先缩小");
+                    if (blob.size > 64 * 1024 * 1024) throw new Error("Result image exceeds 64 MiB; downscale it first");
                     await target.adachiUseResult(new File([blob], `adachi-result-${Date.now()}.png`, { type: "image/png" }));
                 },
             });
