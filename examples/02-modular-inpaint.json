@@ -445,7 +445,8 @@
       ],
       "properties": {
         "Node name for S&R": "VAEEncode"
-      }
+      },
+      "widgets_values": []
     },
     {
       "id": 7,
@@ -487,7 +488,8 @@
       ],
       "properties": {
         "Node name for S&R": "SetLatentNoiseMask"
-      }
+      },
+      "widgets_values": []
     },
     {
       "id": 8,
@@ -646,7 +648,8 @@
       ],
       "properties": {
         "Node name for S&R": "VAEDecode"
-      }
+      },
+      "widgets_values": []
     },
     {
       "id": 10,
@@ -688,7 +691,8 @@
       ],
       "properties": {
         "Node name for S&R": "AdachiInpaintComposite"
-      }
+      },
+      "widgets_values": []
     },
     {
       "id": 11,

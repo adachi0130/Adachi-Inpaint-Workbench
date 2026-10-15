@@ -1,4 +1,5 @@
 /* Original hover-comparison UI, MIT licensed. */
+import { registerImageWheel } from "./wheel_gestures.js";
 const element = (tag, className, text) => {
     const node = document.createElement(tag);
     if (className) node.className = className;
@@ -20,8 +21,7 @@ export class ImageCompareView {
         this.zoom = 1; this.pan = { x: 0, y: 0 }; this.split = .5;
         this.version = 0; this.ready = false;
         const head = element("div", "dd-head");
-        head.append(element("span", "dd-brand", "ADACHI / COMPARE"));
-        this.dimensionsLabel = element("span", "dd-dimensions", "原图 / 重绘结果"); head.append(this.dimensionsLabel);
+        this.dimensionsLabel = element("span", "dd-dimensions"); head.append(this.dimensionsLabel);
         const toolbar = element("div", "dd-row dd-compare-toolbar");
         toolbar.append(element("span", "dd-compare-label", "结果"));
         this.resultSelect = element("select"); this.resultSelect.setAttribute("aria-label", "选择重绘结果 / Choose result");
@@ -32,11 +32,11 @@ export class ImageCompareView {
         fit.onclick = () => { this.zoom = 1; this.pan = { x: 0, y: 0 }; this.schedule(); }; toolbar.append(fit);
         this.stage = element("div", "dd-stage dd-compare-stage");
         this.canvas = document.createElement("canvas"); this.canvas.tabIndex = 0;
-        this.canvas.setAttribute("aria-label", "左原图、右重绘结果，移动鼠标竖线对比 / Original left, result right; hover to compare");
+        this.canvas.setAttribute("aria-label", "左重绘结果、右原图，移动鼠标竖线对比 / Result left, original right; hover to compare");
         this.canvas.oncontextmenu = event => event.preventDefault();
+        this.canvas.addEventListener("pointerenter", event => { this.hovered = true; this.move(event); this.schedule(); });
+        this.canvas.addEventListener("pointerleave", () => { this.hovered = false; this.schedule(); });
         this.stage.append(this.canvas);
-        const captions = element("div", "dd-compare-captions");
-        captions.append(element("span", "", "原图"), element("span", "", "重绘结果")); this.stage.append(captions);
         this.empty = element("div", "dd-empty", "连接原图与重绘结果，然后运行工作流"); this.stage.append(this.empty);
         const adoption = element("div", "dd-row dd-adoption");
         adoption.append(element("span", "dd-compare-label", "回填到"));
@@ -47,6 +47,7 @@ export class ImageCompareView {
         this.adoptButton = element("button", "dd-primary", "采用此结果"); this.adoptButton.type = "button";
         this.adoptButton.onclick = () => this.adopt(); adoption.append(this.adoptButton);
         this.message = element("div", "dd-status", "鼠标移动竖线对比 · 滚轮缩放 · 中键拖动");
+        this.message.hidden = true; this.message.setAttribute("role", "alert");
         this.root.append(head, toolbar, this.stage, adoption, this.message);
         this.canvas.addEventListener("pointermove", event => this.move(event));
         this.canvas.addEventListener("pointerdown", event => {
@@ -63,9 +64,7 @@ export class ImageCompareView {
             if (this.canvas.hasPointerCapture(id)) this.canvas.releasePointerCapture(id);
         };
         for (const name of ["pointerup", "pointercancel", "lostpointercapture"]) this.canvas.addEventListener(name, finish);
-        this.canvas.addEventListener("wheel", event => this.wheel(event), { passive: false });
-        this.captureWheel = event => { if (event.target === this.canvas) this.wheel(event); };
-        window.addEventListener("wheel", this.captureWheel, { capture: true, passive: false });
+        this.stopWheelCapture = registerImageWheel(this.canvas, () => this.ready, event => this.wheel(event), options.onGraphWheel);
         this.canvas.addEventListener("keydown", event => {
             if (event.code === "Space") { event.preventDefault(); event.stopPropagation(); this.space = true; }
             else if (["ArrowLeft", "ArrowRight"].includes(event.key)) {
@@ -79,7 +78,7 @@ export class ImageCompareView {
         this.refreshTargets(); this.updateButton();
     }
 
-    status(text, error = false) { this.message.textContent = text; this.message.classList.toggle("dd-error", error); }
+    status(text, error = false) { this.message.textContent = text; this.message.classList.toggle("dd-error", error); this.message.hidden = !error; }
 
     refreshTargets() {
         const selected = this.targetSelect.value;
@@ -94,7 +93,7 @@ export class ImageCompareView {
         this.updateButton();
     }
 
-    updateButton() { this.adoptButton.disabled = !this.ready || !this.targetSelect.value || !!this.busy; }
+    updateButton() { this.adoptButton.disabled = !this.ready || !this.targetSelect.value || !!this.busy; this.adoptButton.textContent = this.busy ? "采用中…" : "采用此结果"; }
 
     async setData(data, index = this.index) {
         this.originals = Array.isArray(data?.originals) ? data.originals : [];
@@ -122,7 +121,7 @@ export class ImageCompareView {
             this.before = images[0]; this.after = images[1];
             this.ready = true; this.empty.hidden = true;
             this.dimensionsLabel.textContent = `${this.before.width} × ${this.before.height}`;
-            this.status("左原图 / 右重绘 · 滚轮缩放 · 满意后点击采用此结果");
+            this.status("");
             this.updateButton(); this.schedule();
         } catch (error) { if (version === this.version && !this.destroyed) this.status(error.message, true); }
     }
@@ -141,6 +140,11 @@ export class ImageCompareView {
 
     transform() {
         const rect = this.canvas.getBoundingClientRect();
+        if (this.viewport?.width && this.viewport?.height && rect.width && rect.height) {
+            this.pan.x *= rect.width / this.viewport.width;
+            this.pan.y *= rect.height / this.viewport.height;
+        }
+        this.viewport = { width: rect.width, height: rect.height };
         const scale = this.before ? Math.min(rect.width / this.before.width, rect.height / this.before.height) * this.zoom : 1;
         return { width: rect.width, height: rect.height, scale, x: (rect.width - (this.before?.width || 0) * scale) / 2 + this.pan.x, y: (rect.height - (this.before?.height || 0) * scale) / 2 + this.pan.y };
     }
@@ -160,6 +164,7 @@ export class ImageCompareView {
 
     move(event) {
         if (!this.ready) return;
+        this.hovered = true;
         if (this.drag) {
             event.preventDefault(); event.stopPropagation();
             this.pan.x = this.drag.pan.x + event.clientX - this.drag.x;
@@ -179,20 +184,20 @@ export class ImageCompareView {
         ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, width, height);
         if (!this.ready) return;
         ctx.setTransform(t.scale * ratio, 0, 0, t.scale * ratio, t.x * ratio, t.y * ratio);
-        ctx.drawImage(this.before, 0, 0);
+        ctx.drawImage(this.after, 0, 0, this.before.width, this.before.height);
+        if (!this.hovered) return;
         const split = this.split * this.before.width;
         ctx.save(); ctx.beginPath(); ctx.rect(split, 0, this.before.width - split, this.before.height); ctx.clip();
-        ctx.drawImage(this.after, 0, 0, this.before.width, this.before.height); ctx.restore();
-        ctx.beginPath(); ctx.moveTo(split, 0); ctx.lineTo(split, this.before.height);
-        ctx.strokeStyle = "#141820"; ctx.lineWidth = 3 / t.scale; ctx.stroke();
-        ctx.strokeStyle = "#ffe0b8"; ctx.lineWidth = 1 / t.scale; ctx.stroke();
-        ctx.beginPath(); ctx.arc(split, this.before.height / 2, 7 / t.scale, 0, Math.PI * 2);
-        ctx.fillStyle = "#272c35"; ctx.fill(); ctx.stroke();
+        ctx.drawImage(this.before, 0, 0); ctx.restore();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        const lineX = Math.round((t.x + split * t.scale) * ratio) + .5;
+        ctx.beginPath(); ctx.moveTo(lineX, t.y * ratio); ctx.lineTo(lineX, (t.y + this.before.height * t.scale) * ratio);
+        ctx.strokeStyle = "#ffffffb3"; ctx.lineWidth = 1; ctx.stroke();
     }
 
     destroy() {
         this.destroyed = true; ++this.version; cancelAnimationFrame(this.frame); this.observer.disconnect();
-        window.removeEventListener("wheel", this.captureWheel, true);
+        this.stopWheelCapture();
         this.before = this.after = null; this.canvas.width = this.canvas.height = 0; this.root.remove();
     }
 }

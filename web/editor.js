@@ -1,4 +1,5 @@
 /* Original implementation, MIT licensed. No WebUI source is bundled. */
+import { registerImageWheel } from "./wheel_gestures.js";
 const el = (tag, cls, text) => {
     const node = document.createElement(tag);
     if (cls) node.className = cls;
@@ -40,8 +41,7 @@ export class InlineMaskEditor {
         this.observer.observe(this.stage);
         // Nodes 2.0 captures wheel events before widget handlers. Route only
         // this canvas at window capture so image gestures stay inside it.
-        this.captureWheel = event => { if (event.target === this.canvas) this.wheel(event); };
-        window.addEventListener("wheel", this.captureWheel, { capture: true, passive: false });
+        this.stopWheelCapture = registerImageWheel(this.canvas, () => this.ready, event => this.wheel(event), options.onGraphWheel);
         this.root.addEventListener("keydown", (event) => this.keydown(event));
         this.root.addEventListener("keyup", (event) => {
             if (event.code === "Space") { this.space = false; this.stage.classList.remove("dd-pan"); }
@@ -66,7 +66,6 @@ export class InlineMaskEditor {
 
     build() {
         const head = el("div", "dd-head");
-        head.append(el("span", "dd-brand", "ADACHI WORKBENCH"));
         this.sizeLabel = el("span", "dd-dimensions", "内联蒙版 · INLINE MASK");
         head.append(this.sizeLabel);
         this.root.append(head);
@@ -123,7 +122,6 @@ export class InlineMaskEditor {
         this.canvas.addEventListener("pointercancel", event => this.pointerUp(event));
         this.canvas.addEventListener("lostpointercapture", event => this.pointerUp(event));
         this.canvas.addEventListener("pointerleave", () => { this.cursor = null; this.schedule(); });
-        this.canvas.addEventListener("wheel", event => this.wheel(event), { passive: false });
         this.stage.addEventListener("dragover", event => { event.preventDefault(); event.stopPropagation(); this.stage.classList.add("dd-drop"); });
         this.stage.addEventListener("dragleave", () => this.stage.classList.remove("dd-drop"));
         this.stage.addEventListener("drop", event => {
@@ -158,6 +156,8 @@ export class InlineMaskEditor {
         embedRow.append(this.embed, document.createTextNode("原图嵌入工作流 · 分享时无需另传原图"));
         this.root.append(embedRow);
         this.message = el("div", "dd-status", "Alt 临时擦除 · Ctrl+滚轮调笔径 · 滚轮缩放 / 空格拖动");
+        this.message.hidden = true;
+        this.message.setAttribute("role", "alert");
         this.root.append(this.message);
         this.setTool("brush");
         this.updateButtons();
@@ -180,6 +180,7 @@ export class InlineMaskEditor {
     status(message, error = false) {
         this.message.textContent = message;
         this.message.classList.toggle("dd-error", error);
+        this.message.hidden = !error;
     }
 
     async upload(file) {
@@ -227,6 +228,7 @@ export class InlineMaskEditor {
             this.lastMask = maskData;
             this.fit();
             this.updateButtons();
+            this.options.onImage?.(image);
             this.status("橙色为绘制蒙版 · Alt 临时擦除 · Ctrl+滚轮调笔径");
         } catch (error) {
             if (version === this.loadVersion && !this.destroyed) this.status(error.message, true);
@@ -274,6 +276,11 @@ export class InlineMaskEditor {
 
     dimensions() {
         const r = this.canvas.getBoundingClientRect();
+        if (this.viewport?.width && this.viewport?.height && r.width && r.height) {
+            this.pan.x *= r.width / this.viewport.width;
+            this.pan.y *= r.height / this.viewport.height;
+        }
+        this.viewport = { width: r.width, height: r.height };
         const scale = this.image ? Math.min(r.width / this.image.width, r.height / this.image.height) * this.zoom : 1;
         return { width: r.width, height: r.height, scale, x: (r.width - (this.image?.width || 0) * scale) / 2 + this.pan.x, y: (r.height - (this.image?.height || 0) * scale) / 2 + this.pan.y };
     }
@@ -541,7 +548,7 @@ export class InlineMaskEditor {
     destroy() {
         this.destroyed = true; ++this.loadVersion;
         cancelAnimationFrame(this.frame); this.observer.disconnect();
-        window.removeEventListener("wheel", this.captureWheel, true);
+        this.stopWheelCapture();
         for (const canvas of [this.mask, this.baseMask, this.overlay, this.canvas]) canvas.width = canvas.height = 0;
         this.history = []; this.future = []; this.image = null; this.root.remove();
     }

@@ -6,7 +6,7 @@
 }
 .dd-inpaint *, .dd-inpaint *::before, .dd-inpaint *::after { box-sizing: border-box; }
 .dd-inpaint:focus-within { border-color: #9f7950; }
-.dd-inpaint .dd-head { display: flex; flex-wrap: wrap; gap: 4px 14px; justify-content: space-between; padding: 11px 12px 6px; align-items: center; }
+.dd-inpaint .dd-head { display: flex; flex-wrap: wrap; gap: 4px 14px; justify-content: flex-end; padding: 6px 12px 2px; align-items: center; }
 .dd-inpaint .dd-brand { font-size: 11px; letter-spacing: 1.5px; font-weight: 700; color: var(--dd-accent); }
 .dd-inpaint .dd-dimensions, .dd-inpaint .dd-zoom { font-size: 11px; color: var(--dd-muted); font-variant-numeric: tabular-nums; }
 .dd-inpaint .dd-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 5px 10px; }
@@ -41,6 +41,28 @@
 .dd-inpaint .dd-embed input { accent-color: #e9ab68; margin: 0; }
 .dd-inpaint .dd-status { padding: 5px 11px 8px; color: var(--dd-muted); font-size: 10px; min-height: 27px; overflow-wrap: anywhere; }
 .dd-inpaint .dd-error { color: #ff9c92; }
+.dd-inpaint [hidden] { display: none !important; }
+.dd-inpaint .dd-parameters { flex: 0 0 auto; padding: 10px 12px 8px; border-top: 1px solid var(--dd-line); }
+.dd-inpaint .dd-param-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-bottom: 7px; }
+.dd-inpaint .dd-param-header strong { font-weight: 500; font-size: 12px; }
+.dd-inpaint .dd-param-placeholder { color: var(--dd-muted); padding-block: 4px; font-size: 11px; }
+.dd-inpaint .dd-param-body { display: flex; flex-direction: column; gap: 8px; }
+.dd-inpaint .dd-param-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.dd-inpaint .dd-param-label { color: var(--dd-muted); font-size: 11px; }
+.dd-inpaint .dd-param-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.dd-inpaint .dd-param-pills { display: flex; flex-wrap: wrap; gap: 4px; }
+.dd-inpaint .dd-param-pills button { flex: 1; font-size: 11px; padding: 5px 7px; }
+.dd-inpaint .dd-param-number-label { display: flex; align-items: center; justify-content: space-between; gap: 5px; color: var(--dd-muted); font-size: 11px; }
+.dd-inpaint .dd-param-field input[type="number"] { width: 86px; min-width: 0; padding: 4px 5px; border: 1px solid var(--dd-line); border-radius: 4px; background: var(--dd-panel); color: var(--dd-text); font: inherit; font-variant-numeric: tabular-nums; }
+.dd-inpaint .dd-param-field select, .dd-inpaint .dd-param-header select { min-width: 0; max-width: 100%; color: var(--dd-text); background: var(--dd-panel); border: 1px solid var(--dd-line); border-radius: 4px; padding: 5px; font: inherit; }
+.dd-inpaint .dd-param-field:has(input[aria-label="随机种子"]) input { width: 130px; }
+.dd-inpaint .dd-param-resolution { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.dd-inpaint .dd-param-resolution button { font-size: 11px; }
+.dd-inpaint .dd-param-advanced { border-top: 1px solid var(--dd-line); padding-top: 7px; }
+.dd-inpaint .dd-param-advanced summary { color: var(--dd-muted); cursor: pointer; font-size: 11px; }
+.dd-inpaint .dd-param-advanced-body { display: flex; flex-direction: column; gap: 8px; padding-top: 10px; }
+.dd-inpaint .dd-param-toggle { display: flex; gap: 6px; align-items: center; color: var(--dd-muted); font-size: 11px; }
+.dd-inpaint .dd-param-toggle input { margin: 0; accent-color: #e9ab68; }
 .dd-inpaint .dd-resize-handle { flex: 0 0 18px; display: flex; align-items: center; justify-content: center; color: var(--dd-muted); background: var(--dd-panel); border-top: 1px solid var(--dd-line); cursor: ns-resize; touch-action: none; font-size: 14px; line-height: 1; }
 .dd-inpaint .dd-resize-handle:hover, .dd-inpaint .dd-resize-handle:focus-visible { color: var(--dd-accent); background: #39424e; outline: none; }
 .dd-comparer .dd-compare-toolbar, .dd-comparer .dd-adoption { flex-wrap: nowrap; }

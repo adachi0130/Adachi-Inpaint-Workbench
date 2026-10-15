@@ -22,7 +22,7 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1 -ComfyUIPath "D:\ComfyUI_
 
 1. 将 `examples/01-inline-inpaint.json` 拖入 ComfyUI，选择自己的 checkpoint 喵。
 2. 在 **内联蒙版 / Inline Mask** 节点载入、拖放或粘贴图片，直接在画布上涂抹需要重绘的部分喵。
-3. 修改正负提示词，在 **WebUI 局部重绘 / WebUI Inpaint** 中选择 `area`、采样分辨率、采样器与重绘幅度，然后运行喵。
+3. 修改正负提示词，在 **内联蒙版** 图片下方选择重绘范围、采样分辨率、采样器与重绘幅度，然后运行喵。
 4. `image` 输出回贴后的完整原图，`crop` 输出实际采样画布，`mask` 输出该采样画布对应的蒙版喵。
 
 **白色蒙版重绘，黑色保护；画布中橙色代表绘制区域** 喵。
@@ -62,12 +62,22 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1 -ComfyUIPath "D:\ComfyUI_
 支持画笔压力和软笔刷；鼠标使用固定压力喵。
 笔径、硬度、笔触和叠加四个滑条位于图片编辑区下方喵。
 图片上传一次，之后每笔在浏览器内更新蒙版，并在工作流及运行参数中保存 PNG 数据，无需每画一笔都保存、重新加载磁盘文件喵。
+鼠标位于图片区域时滚轮缩放图片；位于工具栏、按钮、滑条或参数面板时，滚轮遵循 ComfyUI 的画布导航设置喵。
+从 ComfyUI 画布开始的连续滚轮手势移入图片时，继续导航外部画布；停下后再在图片里滚动才缩放图片喵。
 超大图仍会消耗浏览器内存，PNG 编码耗时取决于分辨率和设备，不能保证所有图像都瞬间完成喵。
+
+## 内联重绘参数
+
+内联蒙版连接 **WebUI 局部重绘** 的 `image` 输入后，采样参数自动移到内联蒙版底部，直接控制原采样节点的真实参数喵。
+宽度和高度各占一行，支持滑条及数值输入；重绘幅度也使用滑条，点击 **使用原图宽高** 可填入原图尺寸，按采样要求取最近的 8 的倍数喵。
+蒙版内外、填充、重绘范围、采样器、调度器、步数、CFG 和种子直接显示，蒙版处理、批量、Refiner 切换等位于 **蒙版、批量与高级设置** 中喵。
+如果一个内联蒙版连接多个采样节点，可在参数面板上方切换控制目标；断开连接后，采样节点恢复显示自身参数喵。
+外部连线控制的参数会禁用对应面板控件；模块化工作流仍使用各独立节点的参数喵。
 
 ## 图像对比与连续重绘
 
 添加 **图像对比 / Image Compare** 节点，将内联蒙版的 `image` 接到 `original`，最终完整重绘图 `image` 接到 `result`，运行后即可对比喵。
-鼠标移动时，竖线左边显示原图、右边显示重绘结果，普通滚轮缩放图片；批量结果可在上方选择喵。
+鼠标移入图片时，细竖线左边显示重绘结果、右边显示原图；移出后隐藏分割线，完整显示重绘结果，普通滚轮缩放图片；批量结果可在上方选择喵。
 满意后点击 **采用此结果**，插件会把当前选中的结果上传为新的原图，回填到上游内联蒙版，并清空旧蒙版，随后可以继续涂抹下一处喵。
 原图连接经过中间 IMAGE 节点时会向上寻找内联蒙版；若存在多个目标，可以在“回填到”中明确选择喵。
 回填只在点击按钮时发生，不会自动开始下一轮生成；`image` 输出仍传递整个结果批次，可接保存图像喵。
@@ -139,7 +149,7 @@ The editor supports brush/eraser, rectangles, freehand lasso, undo/redo, invert,
 Paint with the left button; hold Alt or use the right button to erase temporarily, use Ctrl+wheel for brush size, zoom with the plain wheel, and pan while holding Space喵.
 Enable **Embed source in workflow** before saving JSON to share the source image along with its mask喵.
 
-The **Image Compare** node takes `original` from Inline Mask and `result` from the final full-size generated image; hover to compare original on the left and result on the right喵.
+The **Image Compare** node takes `original` from Inline Mask and `result` from the final full-size generated image; hover to compare result on the left and original on the right, and leave the picture to see the full result喵.
 Select a batch result if needed, then click **采用此结果 / Adopt this result** to upload it as the upstream editor's new source and clear the old mask for another pass喵.
 
 The all-in-one node adds original/color-fill/noise/zero-latent modes, native ComfyUI sampling, per-image batch variants, dedicated inpaint conditioning and an optional compatible Refiner stage喵.

@@ -13,7 +13,7 @@
       ],
       "size": [
         660,
-        700
+        1276
       ],
       "flags": {},
       "order": 0,
@@ -67,7 +67,8 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "AdachiInlineMask"
+        "Node name for S&R": "AdachiInlineMask",
+        "adachi_inline_parameters": true
       },
       "widgets_values": [
         "",
@@ -84,7 +85,7 @@
       ],
       "size": [
         340,
-        110
+        130.65625
       ],
       "flags": {},
       "order": 1,
@@ -241,7 +242,7 @@
       ],
       "size": [
         430,
-        780
+        244
       ],
       "flags": {},
       "order": 5,
@@ -635,7 +636,7 @@
       "outputs": [],
       "properties": {},
       "widgets_values": [
-        "安达工作台 / Adachi Workbench\n1. 选择自己的 checkpoint 喵\n2. 在左侧节点载入原图并直接涂抹喵\n3. only_masked = 蒙版区域放大采样，whole_image = 整图采样喵\n4. width/height 是采样分辨率，最终 image 回贴为原图尺寸喵\n分享时勾选「原图嵌入工作流」喵"
+        "安达工作台 / Adachi Workbench\n1. 选择自己的 checkpoint 喵\n2. 在左侧节点载入原图并直接涂抹喵\n3. 在内联蒙版底部调整重绘参数喵\n4. width/height 是采样分辨率，最终 image 回贴为原图尺寸喵\n分享时勾选「原图嵌入工作流」喵"
       ],
       "color": "#432",
       "bgcolor": "#653"

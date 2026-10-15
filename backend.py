@@ -525,8 +525,8 @@ class AdachiImageCompare:
     @classmethod
     def INPUT_TYPES(cls):
         return {"required": {
-            "original": ("IMAGE", {"tooltip": "左侧原图，连接内联蒙版的 image / Original image shown on the left."}),
-            "result": ("IMAGE", {"tooltip": "右侧完整重绘图，请连接最终 image 而非 crop / Full-size generated image shown on the right; use image, not crop."}),
+            "original": ("IMAGE", {"tooltip": "右侧原图，连接内联蒙版的 image / Original image shown on the right."}),
+            "result": ("IMAGE", {"tooltip": "左侧完整重绘图，请连接最终 image 而非 crop / Full-size generated image shown on the left; use image, not crop."}),
         }}
 
     RETURN_TYPES = ("IMAGE",)

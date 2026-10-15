@@ -1,6 +1,7 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
 import { ImageCompareView } from "./compare.js";
+import { routeWheelOutsideImage } from "./wheel_routing.js";
 
 function viewUrl(image) {
     const type = ["input", "output", "temp"].includes(image?.type) ? image.type : "temp";
@@ -34,6 +35,7 @@ app.registerExtension({
             const value = created?.apply(this, arguments), node = this;
             const compare = new ImageCompareView({
                 resolveUrl: viewUrl,
+                onGraphWheel: event => app.canvas?.processMouseWheel(event),
                 getTargets: () => targets(node),
                 onSelect: index => { node.properties.adachi_result_index = index; },
                 async onAdopt(id, image) {
@@ -47,6 +49,7 @@ app.registerExtension({
                 },
             });
             node.adachiCompare = compare;
+            const stopWheelRouting = routeWheelOutsideImage(compare.root, compare.canvas, () => compare.ready);
             const widget = node.addDOMWidget("adachi_compare", "adachi_compare_view", compare.root, {
                 serialize: false, hideOnZoom: false, getMinHeight: () => 420, getMaxHeight: () => 4096,
             });
@@ -66,7 +69,7 @@ app.registerExtension({
                 return result;
             };
             const removed = node.onRemoved;
-            node.onRemoved = function () { compare.destroy(); return removed?.apply(this, arguments); };
+            node.onRemoved = function () { stopWheelRouting(); compare.destroy(); return removed?.apply(this, arguments); };
             node.setSize([Math.max(550, node.size[0]), Math.max(550, node.size[1])]);
             return value;
         };
