@@ -22,7 +22,7 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1 -ComfyUIPath "D:\ComfyUI_
 
 1. 将 `examples/01-inline-inpaint.json` 拖入 ComfyUI，选择自己的 checkpoint 喵。
 2. 在 **内联蒙版 / Inline Mask** 节点载入、拖放或粘贴图片，直接在画布上涂抹需要重绘的部分喵。
-3. 修改正负提示词，在 **内联蒙版** 图片下方选择重绘范围、采样分辨率、采样器与重绘幅度，然后运行喵。
+3. 修改正负提示词，在 **WebUI 局部重绘** 节点中选择画笔工具、重绘范围、采样分辨率、采样器与重绘幅度，然后运行喵。
 4. `image` 输出回贴后的完整原图，`crop` 输出实际采样画布，`mask` 输出该采样画布对应的蒙版喵。
 
 **白色蒙版重绘，黑色保护；画布中橙色代表绘制区域** 喵。
@@ -60,24 +60,25 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1 -ComfyUIPath "D:\ComfyUI_
 | 原图 / 蒙版 / 叠加 | 切换预览，不改变输出 |
 
 支持画笔压力和软笔刷；鼠标使用固定压力喵。
-笔径、硬度、笔触和叠加四个滑条位于图片编辑区下方喵。
+内联蒙版仅保留图片编辑区与左上角的小型 **载入原图** 按钮，载入后按原图比例调整画布高度以减少空边喵。
+画笔、橡皮、矩形、套索、移动、四个笔刷滑条、撤销重做、蒙版操作、显示切换、适应与原图嵌入选项，均显示在连接的 **WebUI 局部重绘** 节点中，直接控制原来的内联画布喵。
 图片上传一次，之后每笔在浏览器内更新蒙版，并在工作流及运行参数中保存 PNG 数据，无需每画一笔都保存、重新加载磁盘文件喵。
 鼠标位于图片区域时滚轮缩放图片；位于工具栏、按钮、滑条或参数面板时，滚轮遵循 ComfyUI 的画布导航设置喵。
 从 ComfyUI 画布开始的连续滚轮手势移入图片时，继续导航外部画布；停下后再在图片里滚动才缩放图片喵。
 超大图仍会消耗浏览器内存，PNG 编码耗时取决于分辨率和设备，不能保证所有图像都瞬间完成喵。
 
-## 内联重绘参数
+## 画笔工具与重绘参数
 
-内联蒙版连接 **WebUI 局部重绘** 的 `image` 输入后，采样参数自动移到内联蒙版底部，直接控制原采样节点的真实参数喵。
+内联蒙版连接 **WebUI 局部重绘** 的 `image` 输入后，原画笔控件自动显示在该重绘节点中；下方参数面板直接控制该节点的真实采样参数喵。
 宽度和高度各占一行，支持滑条及数值输入；重绘幅度也使用滑条，点击 **使用原图宽高** 可填入原图尺寸，按采样要求取最近的 8 的倍数喵。
 蒙版内外、填充、重绘范围、采样器、调度器、步数、CFG 和种子直接显示，蒙版处理、批量、Refiner 切换等位于 **蒙版、批量与高级设置** 中喵。
-如果一个内联蒙版连接多个采样节点，可在参数面板上方切换控制目标；断开连接后，采样节点恢复显示自身参数喵。
-外部连线控制的参数会禁用对应面板控件；模块化工作流仍使用各独立节点的参数喵。
+如果一张内联原图连接多个重绘节点，画笔控件放在第一个 WebUI 重绘节点中，各节点保留自己的参数面板；断开或删除该节点后，工具自动迁移到下一个可用节点喵。
+外部连线控制的参数会禁用对应面板控件；模块化工作流将画笔工具放在 **重绘预处理 / Inpaint Prepare** 节点中，采样参数仍在独立采样节点中调整喵。
 
 ## 图像对比与连续重绘
 
 添加 **图像对比 / Image Compare** 节点，将内联蒙版的 `image` 接到 `original`，最终完整重绘图 `image` 接到 `result`，运行后即可对比喵。
-鼠标移入图片时，细竖线左边显示重绘结果、右边显示原图；移出后隐藏分割线，完整显示重绘结果，普通滚轮缩放图片；批量结果可在上方选择喵。
+鼠标移入图片时，细竖线左边显示重绘结果、右边显示原图；移出后隐藏分割线，完整显示重绘结果，普通滚轮缩放图片；批量结果选择、尺寸和适应按钮位于图片下方喵。
 满意后点击 **采用此结果**，插件会把当前选中的结果上传为新的原图，回填到上游内联蒙版，并清空旧蒙版，随后可以继续涂抹下一处喵。
 原图连接经过中间 IMAGE 节点时会向上寻找内联蒙版；若存在多个目标，可以在“回填到”中明确选择喵。
 回填只在点击按钮时发生，不会自动开始下一轮生成；`image` 输出仍传递整个结果批次，可接保存图像喵。
@@ -146,6 +147,7 @@ Use `whole_image` to sample the full source extent, or `only_masked` to enlarge 
 Sampling uses `width × height`; the final `image` output is composited at the original image resolution in both modes, while `crop` exposes the generated sampling canvas喵.
 
 The editor supports brush/eraser, rectangles, freehand lasso, undo/redo, invert, mask import/export, brush size/hardness/opacity, zoom, pan, drag-and-drop and clipboard images喵.
+Inline Mask shows only the image and a small upload button; its original live painting controls and the sampling parameter panel are hosted in the connected WebUI Inpaint node (or Inpaint Prepare for modular workflows)喵.
 Paint with the left button; hold Alt or use the right button to erase temporarily, use Ctrl+wheel for brush size, zoom with the plain wheel, and pan while holding Space喵.
 Enable **Embed source in workflow** before saving JSON to share the source image along with its mask喵.
 

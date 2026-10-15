@@ -48,10 +48,20 @@ export class InlineMaskEditor {
             if (event.key === "Alt") { this.altErase = false; this.updateButtons(); this.schedule(); }
         });
         this.root.addEventListener("blur", () => { this.space = false; this.altErase = false; this.updateButtons(); this.schedule(); }, true);
-        this.root.addEventListener("paste", (event) => {
+        const paste = event => {
             const file = [...(event.clipboardData?.files || [])].find(f => f.type.startsWith("image/"));
             if (file) { event.preventDefault(); event.stopPropagation(); this.upload(file); }
-        });
+        };
+        this.root.addEventListener("paste", paste);
+        if (this.controls) {
+            this.controls.addEventListener("paste", paste);
+            this.controls.addEventListener("blur", () => { this.space = false; this.altErase = false; this.updateButtons(); this.schedule(); }, true);
+            this.controls.addEventListener("keydown", event => this.keydown(event));
+            this.controls.addEventListener("keyup", event => {
+                if (event.code === "Space") { this.space = false; this.stage.classList.remove("dd-pan"); }
+                if (event.key === "Alt") { this.altErase = false; this.updateButtons(); this.schedule(); }
+            });
+        }
     }
 
     button(parent, label, title, action, cls = "") {
@@ -70,7 +80,7 @@ export class InlineMaskEditor {
         head.append(this.sizeLabel);
         this.root.append(head);
         const files = el("div", "dd-row dd-files");
-        this.button(files, "载入原图", "上传图片，也可拖放或粘贴 / Upload image", () => this.imageInput.click(), "dd-primary");
+        this.loadButton = this.button(files, "载入原图", "上传图片，也可拖放或粘贴 / Upload image", () => this.imageInput.click(), "dd-primary");
         this.filename = el("span", "dd-filename", "拖放图片到画布");
         files.append(this.filename);
         this.root.append(files);
@@ -159,6 +169,16 @@ export class InlineMaskEditor {
         this.message.hidden = true;
         this.message.setAttribute("role", "alert");
         this.root.append(this.message);
+        if (this.options.compact) {
+            this.root.classList.add("dd-inline-minimal");
+            this.empty.hidden = true;
+            this.controls = el("div", "dd-inpaint dd-editor-controls");
+            const info = el("div", "dd-row dd-source-info"); info.append(this.filename, this.sizeLabel);
+            head.remove();
+            this.controls.append(info, tools, settings, actions, footer, embedRow);
+            // These are the original live controls; the sampler mounts this
+            // same DOM tree so brush state and callbacks are preserved.
+        }
         this.setTool("brush");
         this.updateButtons();
     }
@@ -550,6 +570,6 @@ export class InlineMaskEditor {
         cancelAnimationFrame(this.frame); this.observer.disconnect();
         this.stopWheelCapture();
         for (const canvas of [this.mask, this.baseMask, this.overlay, this.canvas]) canvas.width = canvas.height = 0;
-        this.history = []; this.future = []; this.image = null; this.root.remove();
+        this.history = []; this.future = []; this.image = null; this.controls?.remove(); this.root.remove();
     }
 }

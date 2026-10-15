@@ -12,9 +12,8 @@ function setHiddenOption(widget, value) {
     if (value === undefined) delete widget.options.hidden; else widget.options.hidden = value;
 }
 
-export function connectedSamplers(source) {
-    const graph = source.graph; if (!graph) return [];
-    const originatesFromSource = target => {
+export function connectedEditor(target) {
+    const graph = target.graph; if (!graph) return null;
         const input = target.inputs?.find(input => input.name === "image");
         const link = graph.links?.[input?.link]; const queue = link ? [link.origin_id] : [], seen = new Set(), sources = new Set();
         while (queue.length && seen.size < 256) {
@@ -27,9 +26,13 @@ export function connectedSamplers(source) {
                 const next = graph.links?.[input.link]; if (next) queue.push(next.origin_id);
             }
         }
-        return sources.size === 1 && sources.has(source.id);
-    };
-    return (graph._nodes || []).filter(node => node.type === "AdachiWebUIInpaint" && originatesFromSource(node));
+        return sources.size === 1 ? graph.getNodeById([...sources][0]) : null;
+}
+
+export function connectedSamplers(source) {
+    return (source.graph?._nodes || [])
+        .filter(node => ["AdachiWebUIInpaint", "AdachiInpaintPrepare"].includes(node.type) && connectedEditor(node) === source)
+        .sort((a, b) => Number(b.type === "AdachiWebUIInpaint") - Number(a.type === "AdachiWebUIInpaint"));
 }
 
 export function relocateWidgets(owner, previous, next) {

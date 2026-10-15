@@ -1,8 +1,7 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
 import { InlineMaskEditor } from "./editor.js";
-import { InpaintParameterPanel } from "./inpaint_panel.js";
-import { connectedSamplers, relocateWidgets } from "./parameter_bridge.js";
+import { installInpaintWorkbench } from "./inpaint_node.js";
 import { routeWheelOutsideImage } from "./wheel_routing.js";
 
 const styleId = "adachi-inpaint-style";
@@ -40,6 +39,7 @@ function imageUrl(value) {
 app.registerExtension({
     name: "Adachi.InlineInpaint",
     async beforeRegisterNodeDef(nodeType, nodeData) {
+        if (["AdachiWebUIInpaint", "AdachiInpaintPrepare"].includes(nodeData.name)) { installInpaintWorkbench(nodeType); return; }
         if (nodeData.name !== "AdachiInlineMask") return;
         const originalCreated = nodeType.prototype.onNodeCreated;
         nodeType.prototype.onNodeCreated = function () {
@@ -59,7 +59,21 @@ app.registerExtension({
             let restoring = false;
             let restoreFrame = 0;
             let uploadVersion = 0;
-            let panelBaseHeight = null;
+            let fitFrame = 0;
+            const fitNodeToImage = () => {
+                cancelAnimationFrame(fitFrame);
+                fitFrame = requestAnimationFrame(() => {
+                    if (!editor.ready || editor.destroyed || !node.graph) return;
+                    const rect = editor.canvas.getBoundingClientRect();
+                    const scale = app.canvas?.ds?.scale || 1;
+                    if (!rect.width || !rect.height) return;
+                    const overhead = node.size[1] - rect.height / scale;
+                    const height = overhead + rect.width / scale * editor.image.height / editor.image.width;
+                    node.setSize([node.size[0], Math.max(240, Math.min(4200, Math.ceil(height)))]);
+                    node.properties.adachi_compact_ui = true;
+                    editor.schedule();
+                });
+            };
             const restore = async () => {
                 const embedded = sourceWidget?.value;
                 const filename = imageWidget?.value;
@@ -71,9 +85,10 @@ app.registerExtension({
                 finally { restoring = false; }
             };
             const editor = new InlineMaskEditor({
+                compact: true,
                 onChange(data) { if (maskWidget && !restoring) maskWidget.value = data; },
                 onDirty() { markChanged(); },
-                onImage() { node.adachiParameters?.refresh(); },
+                onImage() { if (!restoring || !node.properties.adachi_compact_ui) fitNodeToImage(); },
                 onGraphWheel: event => app.canvas?.processMouseWheel(event),
                 async onUpload(file) {
                     const version = ++uploadVersion;
@@ -101,33 +116,6 @@ app.registerExtension({
             });
             node.adachiEditor = editor;
             const stopWheelRouting = routeWheelOutsideImage(editor.root, editor.canvas, () => editor.ready);
-            const panel = new InpaintParameterPanel({
-                getTargets: () => connectedSamplers(node),
-                getPreferred: () => node.properties.adachi_settings_target,
-                onPreferred: id => { node.properties.adachi_settings_target = id; markChanged(); },
-                getImage: () => editor.ready ? editor.image : null,
-                onTargetChange: (previous, next) => {
-                    if (next && !node.properties.adachi_inline_parameters) panelBaseHeight = node.size[1];
-                    relocateWidgets(node, previous, next);
-                },
-                onDirty: markChanged,
-                onHeight: () => {
-                    const parameters = node.adachiParameters;
-                    const panelHeight = parameters?.root.scrollHeight || 40;
-                    if (node.graph) {
-                        // Add the panel once when migrating an older workflow.
-                        // Reopening an already-migrated workflow must keep its saved size.
-                        const migrate = parameters?.target && panelHeight > 100 && !node.properties.adachi_inline_parameters;
-                        const migratedHeight = migrate ? (panelBaseHeight ?? node.size[1]) + Math.max(0, panelHeight - 40) : node.size[1];
-                        if (migrate) node.properties.adachi_inline_parameters = true;
-                        const height = Math.max(620 + panelHeight, migratedHeight);
-                        if (Math.abs(node.size[1] - height) > 1) node.setSize([node.size[0], height]);
-                    }
-                    editor.schedule();
-                },
-            });
-            node.adachiParameters = panel;
-            editor.root.append(panel.root);
             node.adachiUseResult = async file => {
                 if (editor.destroyed) throw new Error("内联蒙版节点已移除");
                 await editor.options.onUpload(file);
@@ -137,7 +125,7 @@ app.registerExtension({
             const domWidget = node.addDOMWidget("adachi_canvas", "adachi_inline_mask", editor.root, {
                 serialize: false,
                 hideOnZoom: false,
-                getMinHeight: () => 520 + (panel.root.scrollHeight || 40),
+                getMinHeight: () => 170,
                 getMaxHeight: () => 4096,
             });
             domWidget.serialize = false;
@@ -154,7 +142,7 @@ app.registerExtension({
             editor.root.append(resizeHandle);
             let resizing = null;
             const resizeHeight = height => {
-                node.setSize([node.size[0], Math.max(620, Math.min(4200, height))]);
+                node.setSize([node.size[0], Math.max(240, Math.min(4200, height))]);
                 node.graph?.setDirtyCanvas(true, true);
                 editor.schedule();
             };
@@ -201,20 +189,14 @@ app.registerExtension({
             const previousConfigure = node.onConfigure;
             node.onConfigure = function () {
                 const configured = previousConfigure?.apply(this, arguments);
-                cancelAnimationFrame(restoreFrame); restoreFrame = requestAnimationFrame(() => { restore(); panel.refresh(); });
+                cancelAnimationFrame(restoreFrame); restoreFrame = requestAnimationFrame(restore);
                 return configured;
-            };
-            const previousConnections = node.onConnectionsChange;
-            node.onConnectionsChange = function () {
-                const result = previousConnections?.apply(this, arguments);
-                queueMicrotask(() => { if (!editor.destroyed) panel.refresh(); });
-                return result;
             };
             const previousImageCallback = imageWidget.callback;
             imageWidget.callback = function () { previousImageCallback?.apply(this, arguments); restore(); };
             const previousRemoved = node.onRemoved;
-            node.onRemoved = function () { cancelAnimationFrame(restoreFrame); panel.destroy(); stopWheelRouting(); editor.destroy(); return previousRemoved?.apply(this, arguments); };
-            node.setSize([Math.max(510, node.size[0]), Math.max(650, node.size[1])]);
+            node.onRemoved = function () { cancelAnimationFrame(restoreFrame); cancelAnimationFrame(fitFrame); stopWheelRouting(); editor.destroy(); return previousRemoved?.apply(this, arguments); };
+            node.setSize([Math.max(380, node.size[0]), Math.max(480, node.size[1])]);
             restoreFrame = requestAnimationFrame(restore);
             return result;
         };

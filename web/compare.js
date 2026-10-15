@@ -20,13 +20,12 @@ export class ImageCompareView {
         this.originals = []; this.results = []; this.index = 0;
         this.zoom = 1; this.pan = { x: 0, y: 0 }; this.split = .5;
         this.version = 0; this.ready = false;
-        const head = element("div", "dd-head");
-        this.dimensionsLabel = element("span", "dd-dimensions"); head.append(this.dimensionsLabel);
+        this.dimensionsLabel = element("span", "dd-dimensions");
         const toolbar = element("div", "dd-row dd-compare-toolbar");
         toolbar.append(element("span", "dd-compare-label", "结果"));
         this.resultSelect = element("select"); this.resultSelect.setAttribute("aria-label", "选择重绘结果 / Choose result");
         this.resultSelect.onchange = () => { this.index = Number(this.resultSelect.value); this.options.onSelect?.(this.index); this.loadSelected(); };
-        toolbar.append(this.resultSelect);
+        toolbar.append(this.resultSelect, this.dimensionsLabel);
         const spacer = element("span", "dd-spacer"); toolbar.append(spacer);
         const fit = element("button", "", "适应"); fit.type = "button";
         fit.onclick = () => { this.zoom = 1; this.pan = { x: 0, y: 0 }; this.schedule(); }; toolbar.append(fit);
@@ -48,7 +47,7 @@ export class ImageCompareView {
         this.adoptButton.onclick = () => this.adopt(); adoption.append(this.adoptButton);
         this.message = element("div", "dd-status", "鼠标移动竖线对比 · 滚轮缩放 · 中键拖动");
         this.message.hidden = true; this.message.setAttribute("role", "alert");
-        this.root.append(head, toolbar, this.stage, adoption, this.message);
+        this.root.append(this.stage, toolbar, adoption, this.message);
         this.canvas.addEventListener("pointermove", event => this.move(event));
         this.canvas.addEventListener("pointerdown", event => {
             if (!this.ready) return;
