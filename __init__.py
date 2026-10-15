@@ -1,4 +1,4 @@
-"""Adachi Inline Inpaint custom-node package for ComfyUI."""
+"""Adachi-Inpaint-Workbench custom-node package for ComfyUI."""
 
 from .backend import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS
 

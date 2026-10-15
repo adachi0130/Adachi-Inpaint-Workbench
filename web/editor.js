@@ -42,6 +42,17 @@ export class InlineMaskEditor {
         // Nodes 2.0 captures wheel events before widget handlers. Route only
         // this canvas at window capture so image gestures stay inside it.
         this.stopWheelCapture = registerImageWheel(this.canvas, () => this.ready, event => this.wheel(event), options.onGraphWheel);
+        this.modifierDown = event => {
+            if (event.key !== "Alt" || !this.ready || !this.canvas.matches(":hover")) return;
+            event.preventDefault(); this.altErase = true; this.updateButtons(); this.schedule();
+        };
+        this.modifierUp = event => {
+            if (event.type !== "blur" && event.key !== "Alt") return;
+            this.altErase = false; this.updateButtons(); this.schedule();
+        };
+        window.addEventListener("keydown", this.modifierDown, true);
+        window.addEventListener("keyup", this.modifierUp, true);
+        window.addEventListener("blur", this.modifierUp);
         this.root.addEventListener("keydown", (event) => this.keydown(event));
         this.root.addEventListener("keyup", (event) => {
             if (event.code === "Space") { this.space = false; this.stage.classList.remove("dd-pan"); }
@@ -281,6 +292,7 @@ export class InlineMaskEditor {
     }
 
     updateButtons() {
+        this.stage?.classList.toggle("dd-erasing", !!(this.altErase || this.tool === "erase" || this.stroke?.type === "erase"));
         for (const [name, button] of Object.entries(this.toolButtons || {})) {
             const active = name === (this.altErase ? "erase" : this.tool);
             button.classList.toggle("dd-active", active);
@@ -324,6 +336,7 @@ export class InlineMaskEditor {
         }
         if (this.view === "image") { this.view = "overlay"; this.updateButtons(); }
         this.stroke = { type: event.button === 2 || event.altKey ? "erase" : this.tool, size: this.brushSize, hardness: this.hardness, opacity: this.brushOpacity, points: [this.cursor] };
+        this.updateButtons();
         if (["brush", "erase"].includes(this.stroke.type)) this.paintSegment(this.mask.getContext("2d"), this.stroke, this.cursor, this.cursor);
         this.schedule();
     }
@@ -374,6 +387,7 @@ export class InlineMaskEditor {
         this.drag = null;
         const id = this.pointerId; this.pointerId = null;
         if (this.canvas.hasPointerCapture(id)) this.canvas.releasePointerCapture(id);
+        this.updateButtons();
         this.schedule();
     }
 
@@ -559,8 +573,12 @@ export class InlineMaskEditor {
             ctx.restore();
         }
         if (this.cursor && (this.altErase || ["brush", "erase"].includes(this.tool)) && !this.drag) {
+            const erasing = this.altErase || this.tool === "erase" || this.stroke?.type === "erase";
+            ctx.save();
+            if (erasing) ctx.setLineDash([4 / d.scale, 3 / d.scale]);
             ctx.beginPath(); ctx.arc(this.cursor.x, this.cursor.y, this.brushSize * this.cursor.p / 2, 0, Math.PI * 2);
-            ctx.strokeStyle = "#15191f"; ctx.lineWidth = 3 / d.scale; ctx.stroke(); ctx.strokeStyle = "white"; ctx.lineWidth = 1 / d.scale; ctx.stroke();
+            ctx.strokeStyle = "#15191f"; ctx.lineWidth = 3 / d.scale; ctx.stroke(); ctx.strokeStyle = erasing ? "#ffd0d7" : "white"; ctx.lineWidth = 1 / d.scale; ctx.stroke();
+            ctx.restore();
         }
         this.zoomLabel.textContent = `${Math.round(this.zoom * 100)}%`;
     }
@@ -569,6 +587,9 @@ export class InlineMaskEditor {
         this.destroyed = true; ++this.loadVersion;
         cancelAnimationFrame(this.frame); this.observer.disconnect();
         this.stopWheelCapture();
+        window.removeEventListener("keydown", this.modifierDown, true);
+        window.removeEventListener("keyup", this.modifierUp, true);
+        window.removeEventListener("blur", this.modifierUp);
         for (const canvas of [this.mask, this.baseMask, this.overlay, this.canvas]) canvas.width = canvas.height = 0;
         this.history = []; this.future = []; this.image = null; this.controls?.remove(); this.root.remove();
     }

@@ -21,7 +21,7 @@ import torch
 import torch.nn.functional as F
 
 
-CATEGORY = "安达工作台 / Adachi Workbench"
+CATEGORY = "安达工作台 / Adachi-Inpaint-Workbench"
 MAX_IMAGE_PIXELS = 32_000_000
 MAX_IMAGE_BYTES = 64 * 1024 * 1024
 MAX_DATA_URL_CHARS = 4 * ((MAX_IMAGE_BYTES + 2) // 3) + 128

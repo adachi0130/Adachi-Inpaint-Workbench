@@ -1,11 +1,27 @@
 [project]
-name = "comfyui-adachi-workbench"
-version = "0.4.0"
+name = "adachi-inpaint-workbench"
+version = "0.4.1"
 description = "Inline mask painting and WebUI-style inpainting nodes for ComfyUI"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
 readme = "README.md"
 authors = [{ name = "Adachi" }]
+dependencies = ["numpy", "Pillow", "torch"]
+classifiers = [
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+]
+
+[project.urls]
+Repository = "https://github.com/adachi0130/Adachi-Inpaint-Workbench"
+Documentation = "https://github.com/adachi0130/Adachi-Inpaint-Workbench#readme"
+"Bug Tracker" = "https://github.com/adachi0130/Adachi-Inpaint-Workbench/issues"
+
+[tool.comfy]
+# Set this to your actual Comfy Registry publisher ID before Registry publishing.
+# GitHub publication and the Manager legacy-list submission do not require it.
+PublisherId = ""
+DisplayName = "Adachi-Inpaint-Workbench"
 
 [tool.adachi-workbench]
 frontend = "web"

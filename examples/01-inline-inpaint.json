@@ -635,7 +635,7 @@
       "outputs": [],
       "properties": {},
       "widgets_values": [
-        "安达工作台 / Adachi Workbench\n1. 选择自己的 checkpoint 喵\n2. 在左侧节点载入原图并直接涂抹喵\n3. 在 WebUI 重绘节点中选择画笔并调整重绘参数喵\n4. width/height 是采样分辨率，最终 image 回贴为原图尺寸喵\n分享时在重绘节点勾选「原图嵌入工作流」喵"
+        "安达工作台 / Adachi-Inpaint-Workbench\n1. 选择自己的 checkpoint 喵\n2. 在左侧节点载入原图并直接涂抹喵\n3. 在 WebUI 重绘节点中选择画笔并调整重绘参数喵\n4. width/height 是采样分辨率，最终 image 回贴为原图尺寸喵\n分享时在重绘节点勾选「原图嵌入工作流」喵"
       ],
       "color": "#432",
       "bgcolor": "#653"

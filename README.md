@@ -1,12 +1,28 @@
-# 安达工作台 / Adachi Workbench
+# Adachi-Inpaint-Workbench
 
 直接在 ComfyUI 工作流节点里载入原图、涂抹蒙版、局部重绘，无需另开遮罩编辑器喵。
 
+![内联蒙版与 WebUI 重绘工作台](preview/nodes2-inline.png)
+
+由 Adachi（安达）开发，MIT 开源喵。
+支持整图范围与蒙版范围重绘、Alt 临时橡皮擦、Ctrl+滚轮笔径、图像对比及一键采用重绘结果喵。
+
+## ComfyUI Manager 与安装
+
+Manager 的 Git URL 安装可使用 `https://github.com/adachi0130/Adachi-Inpaint-Workbench`；或在 `ComfyUI/custom_nodes` 中克隆喵。
+
+```bash
+git clone https://github.com/adachi0130/Adachi-Inpaint-Workbench.git
+```
+
+Manager 搜索收录需要其维护者合并节点清单申请；仅有 GitHub 仓库不会立即出现在搜索结果中喵。
+当前尚未配置 Comfy Registry 发布者，Registry 发布流程见 [发布说明](registry/README.md) 喵。
+
 ## 安装
 
-将整个 `ComfyUI-Adachi-Workbench` 文件夹复制到 `ComfyUI/custom_nodes/`，保留其中的 `web/`、`backend.py`、`__init__.py` 喵。
+将整个 `Adachi-Inpaint-Workbench` 文件夹复制到 `ComfyUI/custom_nodes/`，保留其中的 `web/`、`backend.py`、`__init__.py` 喵。
 重启 ComfyUI，然后在浏览器按 `Ctrl+F5` 刷新前端缓存喵。
-在节点搜索中输入 `Inline Mask` 或 `WebUI Inpaint`，分类是 **安达工作台 / Adachi Workbench** 喵。
+在节点搜索中输入 `Inline Mask` 或 `WebUI Inpaint`，分类是 **安达工作台 / Adachi-Inpaint-Workbench** 喵。
 
 Windows 也可以从解压后的插件文件夹运行安装脚本，将参数改为自己的、包含 `main.py` 的 ComfyUI 目录喵。
 
@@ -16,7 +32,7 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1 -ComfyUIPath "D:\ComfyUI_
 
 脚本只复制本插件；更新时会把旧插件压缩备份到所选 ComfyUI 的 `user/adachi-workbench-backups/`，不会自动重启服务喵。
 插件使用 ComfyUI 已有的 PyTorch、NumPy、Pillow，不需要额外 pip/npm 安装喵。
-卸载时关闭 ComfyUI，再删除 `custom_nodes/ComfyUI-Adachi-Workbench` 即可喵。
+卸载时关闭 ComfyUI，再删除 `custom_nodes/Adachi-Inpaint-Workbench` 即可喵。
 
 ## 最快上手
 
@@ -46,7 +62,7 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1 -ComfyUIPath "D:\ComfyUI_
 
 | 操作 | 使用方式 |
 |---|---|
-| 画笔 / 橡皮 | 工具栏切换，`B` / `E`；按住 `Alt` 或鼠标右键临时擦除，松开恢复原工具 |
+| 画笔 / 橡皮 | 工具栏切换，`B` / `E`；按住 `Alt` 或鼠标右键临时擦除，松开恢复原工具；擦除时显示橡皮擦图标与淡粉色虚线范围 |
 | 矩形 / 自由套索 | `R` / `L`，拖动画出要重绘的区域 |
 | 笔径 / 硬度 / 笔触 | 分别控制原图像素笔径、边缘硬度、绘制不透明度 |
 | 橙色叠加 | 仅调节显示透明度，不改变真实蒙版 |
@@ -137,8 +153,10 @@ Inline Mask ── image/mask ──> Inpaint Prepare
 
 ## English quick start
 
-Copy the entire `ComfyUI-Adachi-Workbench` folder into `ComfyUI/custom_nodes`, restart ComfyUI, then hard-refresh your browser喵.
-Search for `Inline Mask` or `WebUI Inpaint` under **安达工作台 / Adachi Workbench**喵.
+**Adachi-Inpaint-Workbench** is an MIT-licensed ComfyUI custom node pack for direct mask painting, WebUI-style inpainting, result/original comparison, and adopting results for another edit pass喵.
+
+Copy the entire `Adachi-Inpaint-Workbench` folder into `ComfyUI/custom_nodes`, restart ComfyUI, then hard-refresh your browser喵.
+Search for `Inline Mask` or `WebUI Inpaint` under **安达工作台 / Adachi-Inpaint-Workbench**喵.
 No extra pip or npm packages are required beyond ComfyUI's PyTorch, NumPy and Pillow喵.
 
 Drag `examples/01-inline-inpaint.json` into ComfyUI, select a checkpoint, upload an image inside **Inline Mask**, paint, and run the workflow喵.
