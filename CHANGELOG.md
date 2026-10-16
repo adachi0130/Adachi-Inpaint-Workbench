@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.10
+
+- Add a pin toggle beside Fit in Inline Mask: keep the image fitted, route plain wheel to the workflow, retain Ctrl+wheel brush sizing and save the toggle with the workflow.
+- Shorten the inline load button to Upload (上传).
+- Bound inline preview bitmap allocation to source detail and an 8 Mi-pixel budget; cache the source/mask composite during cursor movement. Full-resolution mask data remains unchanged.
+- Successful adoption resets comparison history to the accepted image as 1/1. The next generation starts a fresh result list; failed adoption preserves history.
+
 ## 0.5.9
 
 - Bound comparison bitmap resolution to source detail, 8192 pixels per edge and a 16 Mi-pixel allocation budget, avoiding quadratic bitmap growth at large workflow zoom.

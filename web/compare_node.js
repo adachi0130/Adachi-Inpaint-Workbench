@@ -49,6 +49,14 @@ app.registerExtension({
                     const blob = await response.blob();
                     if (blob.size > 64 * 1024 * 1024) throw new Error(T("Result image exceeds 64 MiB; downscale it first"));
                     await target.adachiUseResult(new File([blob], `adachi-result-${Date.now()}.png`, { type: "image/png" }));
+                    // Adoption starts a new round. Keep the accepted image visible
+                    // as 1/1, then replace it with the next round's first outputs.
+                    const data = { originals: [image], results: [image] };
+                    node.properties.adachi_compare = data;
+                    node.properties.adachi_result_index = 0;
+                    node.properties.adachi_compare_new_round = true;
+                    await compare.setData(data, 0);
+                    app.graph?.change?.();
                 },
             });
             node.adachiCompare = compare;
@@ -62,11 +70,13 @@ app.registerExtension({
             node.onExecuted = function (output) {
                 const result = executed?.apply(this, arguments);
                 if (!output?.adachi_originals?.length || !output?.adachi_results?.length) return result;
-                const previous = appendComparison(node.properties.adachi_compare);
+                const previous = node.properties.adachi_compare_new_round
+                    ? appendComparison() : appendComparison(node.properties.adachi_compare);
                 const data = appendComparison(previous, {
                     originals: output.adachi_originals, results: output.adachi_results,
                 });
                 node.properties.adachi_compare = data;
+                node.properties.adachi_compare_new_round = false;
                 node.properties.adachi_result_index = data.results.length > previous.results.length
                     ? data.results.length - 1 : Math.max(0, Math.min(data.results.length - 1, node.properties.adachi_result_index || 0));
                 compare.setData(data, node.properties.adachi_result_index);

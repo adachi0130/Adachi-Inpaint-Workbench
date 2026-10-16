@@ -86,6 +86,8 @@ const ZH = {
   "Image": "原图",
   "Mask": "蒙版",
   "Fit": "适应",
+  "Keep": "保持",
+  "Upload": "上传",
   "Fit the image to the canvas": "适应画布",
   "File is too large (max 64 MB)": "图片文件不能超过 64 MB",
   "Loading image…": "正在载入原图…",

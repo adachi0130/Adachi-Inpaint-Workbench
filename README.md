@@ -86,7 +86,7 @@ When the mask touches an image edge, masked-area mode uses aspect-preserving fil
 | Image / mask / overlay | Preview toggles only; they do not change the output |
 
 Brush pressure and soft brushes are supported; the mouse uses a fixed pressure.
-Inline Mask keeps only the image editing area and small **Load image** / **Fit** buttons in the corner, and adjusts the canvas height to the image ratio after loading to reduce empty margins.
+Inline Mask keeps the image editing area and small **Upload** / **Fit** / pin buttons in the corner, and adjusts the canvas height to the image ratio after loading to reduce empty margins.
 The brush, eraser, rectangle, lasso, pan, four brush sliders, undo/redo, mask actions, view toggles, fit and the embed option all live in the connected **WebUI Inpaint** node and drive that same inline canvas.
 You upload the image once; every stroke then updates the mask in the browser and is stored as PNG data in the workflow and in the executed parameters, so there is no saving and reloading of files per stroke.
 Wheel events over the picture zoom it; over the toolbar, buttons, sliders or the parameter panel they follow ComfyUI's canvas navigation settings.
@@ -94,6 +94,8 @@ A continuous wheel gesture that starts on the ComfyUI canvas keeps navigating th
 Very large images still use browser memory, and PNG encoding time depends on resolution and hardware, so instant completion is not guaranteed for every image.
 
 ## Painting tools and inpainting parameters
+
+The Inline Mask header has **Upload**, **Fit** and a pin toggle (**Keep** / **保持**). Enable the pin to keep the picture fitted and centered: plain wheel navigates the workflow, Ctrl+wheel still adjusts the brush, and image panning is disabled. Disable the pin to resume image zoom and pan. The pin state is saved with the workflow. Display buffers are bounded during workflow zoom; the saved mask retains its original resolution.
 
 Once Inline Mask is connected to the `image` input of **WebUI Inpaint**, the original painting controls appear in that inpaint node, and the parameter panel below drives the node's real sampling parameters.
 Width and height each get their own row with both a slider and a number field; denoise is a slider too, and **Use source size** fills in the source dimensions, rounded to the nearest multiple of 8 the sampler requires.
@@ -105,11 +107,11 @@ Parameters driven by an external link disable the matching panel control; a modu
 
 Add an **Image Compare** node and connect Inline Mask's `image` to `original` and the final full-size generated `image` to `result`, then run.
 With the pointer over the picture, the thin divider shows the generated result on the left and the original on the right; leaving the picture hides the divider and shows the full result, and the image always remains fitted and centered in its canvas. Scrolling over the comparison image navigates the ComfyUI workflow background using the current navigation settings; comparison images do not zoom or pan independently. Batch selection, dimensions and the fit button sit below the picture.
-When you are happy, click **Adopt this result**: the plugin uploads the selected result as the new source image and writes it back into the upstream inline editor while preserving the painted mask, current undo/redo history and viewport. Use **Clear** when you want to start a new mask; a normal **Load image** upload still starts a fresh mask.
+When you are happy, click **Adopt this result**: the plugin uploads the selected result as the new source image and writes it back into the upstream inline editor while preserving the painted mask, current undo/redo history and viewport. Use **Clear** when you want to start a new mask; a normal **Upload** still starts a fresh mask.
 To preserve mask coordinates, an adopted result must match the source dimensions; a mismatched result is rejected without changing the current source or mask. The mask remains embedded in saved workflow data; command-level undo history is retained during adoption in the current session.
 If the original is routed through intermediate IMAGE nodes the plugin walks upstream to find the inline editor; when several candidates exist you can pick one explicitly under **Adopt into**.
 Adoption only happens when you click the button and never starts the next generation automatically; the `image` output still passes the whole result batch, so you can feed a Save Image node.
-The result list accumulates images across runs and selects the newest result automatically. Each result keeps its original from that run, including when adopting results for further inpainting. Saving the workflow also saves this history's preview references and selection.
+The result list accumulates images across runs and selects the newest result automatically. Each result keeps its original from that run. Successful adoption clears the old list and displays the accepted image as 1/1; the next generation starts a fresh list using the new source. Failed adoption leaves the old list intact. Saving the workflow also saves preview references, selection and the pending new-round state.
 
 Comparison previews live in ComfyUI's temp directory and may need a re-run after cleanup or restart; an adopted source image is stored in `input/adachi-inpaint/` and does not depend on temp previews.
 
@@ -212,7 +214,7 @@ python -m unittest discover -s tests -v
 想用中文界面时，把 ComfyUI 的语言切成中文即可，插件会自动跟随：
 在 ComfyUI 设置里找到 **Locale / 语言**（设置项 `Comfy.Locale`）选择 `zh`，然后刷新浏览器（`Ctrl+F5`）。
 节点名称、分类、输入输出名与提示由 `locales/zh/` 提供，通过 ComfyUI 的 `/i18n` 机制加载；
-画布按钮与参数面板由 `web/i18n.js` 读取同一个语言设置翻译，因此「宽度」「高度」「载入原图」等也会一起变回中文。
+画布按钮与参数面板由 `web/i18n.js` 读取同一个语言设置翻译，因此「宽度」「高度」「上传」等也会一起变回中文。
 英文用户看到的一直是英文（英文是内置默认值）；某个词条若没有对应翻译，会自动回退为英文。
 两套语言共用同一个节点类 ID 和参数键名，所以已保存的工作流不受语言切换影响。
 

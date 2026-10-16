@@ -1,6 +1,6 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
-import { InlineMaskEditor } from "./editor.js?v=0.5.5";
+import { InlineMaskEditor } from "./editor.js?v=0.5.10";
 import { installInpaintWorkbench } from "./inpaint_node.js?v=0.5.5";
 import { bindWidgetToNodeWidth } from "./widget_layout.js?v=0.5.5";
 import { routeWheelOutsideImage } from "./wheel_routing.js";
@@ -87,6 +87,7 @@ app.registerExtension({
                 compact: true,
                 onChange(data) { if (maskWidget && !restoring) maskWidget.value = data; },
                 onDirty() { markChanged(); },
+                onKeepFit(enabled) { node.properties.adachi_keep_fit = enabled; markChanged(); },
                 onImage() { if (!restoring || !node.properties.adachi_compact_ui) fitNodeToImage(); },
                 onGraphWheel: event => app.canvas?.processMouseWheel(event),
                 async onUpload(file, { preserveMask = false } = {}) {
@@ -115,7 +116,7 @@ app.registerExtension({
                     markChanged();
                 },
             });
-            editor.root.dataset.adachiVersion = "0.5.5";
+            editor.root.dataset.adachiVersion = "0.5.10";
             node.adachiEditor = editor;
             const stopWheelRouting = routeWheelOutsideImage(editor.root, editor.canvas, () => editor.ready);
             node.adachiUseResult = async file => {
@@ -192,6 +193,7 @@ app.registerExtension({
             const previousConfigure = node.onConfigure;
             node.onConfigure = function () {
                 const configured = previousConfigure?.apply(this, arguments);
+                editor.setKeepFit(!!node.properties.adachi_keep_fit, false);
                 cancelAnimationFrame(restoreFrame); restoreFrame = requestAnimationFrame(restore);
                 return configured;
             };

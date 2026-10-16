@@ -24,6 +24,8 @@ export class InlineMaskEditor {
         this.mask = makeCanvas();
         this.baseMask = makeCanvas();
         this.overlay = makeCanvas();
+        this.scene = makeCanvas();
+        this.maskRevision = 0;
         this.tool = "brush";
         this.view = "overlay";
         this.brushSize = 64;
@@ -92,7 +94,7 @@ export class InlineMaskEditor {
         head.append(this.sizeLabel);
         this.root.append(head);
         const files = el("div", "dd-row dd-files");
-        this.loadButton = this.button(files, T("Load image"), T("Upload an image, or drop / paste one"), () => this.imageInput.click(), "dd-primary");
+        this.loadButton = this.button(files, T("Upload"), T("Upload an image, or drop / paste one"), () => this.imageInput.click(), "dd-primary");
         this.filename = el("span", "dd-filename", T("Drop an image onto the canvas"));
         files.append(this.filename);
         this.root.append(files);
@@ -171,6 +173,8 @@ export class InlineMaskEditor {
         this.zoomLabel = el("span", "dd-zoom", "100%");
         footer.append(this.zoomLabel);
         this.fitButton = this.button(footer, T("Fit"), T("Fit the image to the canvas"), () => this.fit());
+        this.keepButton = this.button(footer, "", T("Keep"), event => { event.stopPropagation(); this.setKeepFit(!this.keepFit); });
+        this.keepButton.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 3 5 5-4 1-4 4 1 4-3 3-3-6-6-3 3-3 4 1 4-4zM8 16l-6 6"/></svg>';
         // The inline button must not select/bring forward the ComfyUI node:
         // newer frontends can remeasure its DOM widget on that bubbling click.
         const fitAction = this.fitButton.onclick;
@@ -194,6 +198,7 @@ export class InlineMaskEditor {
             head.remove();
             this.controls.append(info, tools, settings, actions, footer, embedRow);
             this.loadButton.after(this.fitButton);
+            this.fitButton.after(this.keepButton);
             // These are the original live controls; the sampler mounts this
             // same DOM tree so brush state and callbacks are preserved.
         }
@@ -315,6 +320,8 @@ export class InlineMaskEditor {
     }
 
     updateButtons() {
+        this.keepButton?.classList.toggle("dd-active", !!this.keepFit);
+        this.keepButton?.setAttribute("aria-pressed", String(!!this.keepFit));
         this.stage?.classList.toggle("dd-erasing", !!(this.altErase || this.tool === "erase" || this.stroke?.type === "erase"));
         for (const [name, button] of Object.entries(this.toolButtons || {})) {
             const active = name === (this.altErase ? "erase" : this.tool);
@@ -331,6 +338,7 @@ export class InlineMaskEditor {
 
     dimensions() {
         const r = this.canvas.getBoundingClientRect();
+        if (this.keepFit) { this.zoom = 1; this.pan = { x: 0, y: 0 }; }
         if (this.viewport?.width && this.viewport?.height && r.width && r.height) {
             this.pan.x *= r.width / this.viewport.width;
             this.pan.y *= r.height / this.viewport.height;
@@ -348,6 +356,7 @@ export class InlineMaskEditor {
 
     pointerDown(event) {
         if (!this.ready || this.pointerId != null) return;
+        if (this.keepFit && (this.space || (!event.altKey && this.tool === "pan") || event.button === 1)) return;
         event.preventDefault(); event.stopPropagation(); this.root.focus({ preventScroll: true });
         this.altErase = !!event.altKey; this.updateButtons();
         this.pointerId = event.pointerId;
@@ -415,6 +424,7 @@ export class InlineMaskEditor {
     }
 
     paintSegment(ctx, command, a, b) {
+        if (ctx.canvas === this.mask) this.maskRevision++;
         ctx.save();
         ctx.globalCompositeOperation = command.type === "erase" ? "destination-out" : "source-over";
         ctx.globalAlpha = command.opacity / 100;
@@ -483,6 +493,7 @@ export class InlineMaskEditor {
     redo() { if (this.future.length && !this.stroke) { this.history.push(this.future.pop()); this.replay(); } }
 
     changed() {
+        this.maskRevision++;
         this.dirty = true;
         this.flush();
         this.schedule();
@@ -525,6 +536,13 @@ export class InlineMaskEditor {
 
     fit() { this.zoom = 1; this.pan = { x: 0, y: 0 }; this.schedule(); }
 
+    setKeepFit(enabled, notify = true) {
+        this.keepFit = !!enabled;
+        if (this.keepFit) this.fit();
+        this.updateButtons(); this.schedule();
+        if (notify) this.options.onKeepFit?.(this.keepFit);
+    }
+
     setBrushSize(value) {
         this.brushSizeInput.value = Math.max(1, Math.min(512, Math.round(value)));
         this.brushSizeInput.dispatchEvent(new Event("input"));
@@ -533,6 +551,7 @@ export class InlineMaskEditor {
     wheel(event) {
         if (!this.ready) return;
         event.preventDefault(); event.stopPropagation();
+        if (this.keepFit && !event.ctrlKey) { this.options.onGraphWheel?.(event); return; }
         if (event.ctrlKey) {
             const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 100 : 1);
             if (delta) {
@@ -569,24 +588,33 @@ export class InlineMaskEditor {
     render() {
         const rect = this.canvas.getBoundingClientRect();
         if (!rect.width || !rect.height) return;
-        const ratio = Math.min(devicePixelRatio || 1, 2);
-        const w = Math.round(rect.width * ratio), h = Math.round(rect.height * ratio);
-        if (this.canvas.width !== w || this.canvas.height !== h) { this.canvas.width = w; this.canvas.height = h; this.overlay.width = w; this.overlay.height = h; }
-        const ctx = this.canvas.getContext("2d");
-        ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, w, h);
-        if (!this.ready) return;
         const d = this.dimensions();
-        ctx.setTransform(ratio * d.scale, 0, 0, ratio * d.scale, ratio * d.x, ratio * d.y);
-        if (this.view !== "mask") ctx.drawImage(this.image, 0, 0);
-        else { ctx.fillStyle = "black"; ctx.fillRect(0, 0, this.image.width, this.image.height); }
-        if (this.view !== "image") {
-            const overlay = this.overlay.getContext("2d");
-            overlay.setTransform(1, 0, 0, 1, 0, 0); overlay.clearRect(0, 0, w, h);
-            overlay.setTransform(ratio * d.scale, 0, 0, ratio * d.scale, ratio * d.x, ratio * d.y);
-            overlay.drawImage(this.mask, 0, 0);
-            if (this.view === "overlay") { overlay.globalCompositeOperation = "source-in"; overlay.fillStyle = "#ffad45"; overlay.fillRect(0, 0, this.mask.width, this.mask.height); overlay.globalCompositeOperation = "source-over"; }
-            ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = this.view === "mask" ? 1 : this.overlayOpacity / 100; ctx.drawImage(this.overlay, 0, 0); ctx.globalAlpha = 1;
+        const ratio = Math.min(devicePixelRatio || 1, 2, this.ready ? 1 / d.scale : 2,
+            8192 / rect.width, 8192 / rect.height, Math.sqrt(8 * 1024 * 1024 / (rect.width * rect.height)));
+        const w = Math.max(1, Math.round(rect.width * ratio)), h = Math.max(1, Math.round(rect.height * ratio));
+        if (this.canvas.width !== w || this.canvas.height !== h) { this.canvas.width = w; this.canvas.height = h; this.overlay.width = w; this.overlay.height = h; }
+        const display = this.canvas.getContext("2d");
+        if (!this.ready) { display.clearRect(0, 0, w, h); this.sceneKey = null; return; }
+        const key = [this.loadVersion, this.maskRevision, w, h, d.scale * ratio, d.x * ratio, d.y * ratio, this.view, this.overlayOpacity].join(":");
+        if (key !== this.sceneKey) {
+            if (this.scene.width !== w || this.scene.height !== h) { this.scene.width = w; this.scene.height = h; }
+            const ctx = this.scene.getContext("2d");
+            ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, w, h);
+            ctx.setTransform(ratio * d.scale, 0, 0, ratio * d.scale, ratio * d.x, ratio * d.y);
+            if (this.view !== "mask") ctx.drawImage(this.image, 0, 0);
+            else { ctx.fillStyle = "black"; ctx.fillRect(0, 0, this.image.width, this.image.height); }
+            if (this.view !== "image") {
+                const overlay = this.overlay.getContext("2d");
+                overlay.setTransform(1, 0, 0, 1, 0, 0); overlay.clearRect(0, 0, w, h);
+                overlay.setTransform(ratio * d.scale, 0, 0, ratio * d.scale, ratio * d.x, ratio * d.y);
+                overlay.drawImage(this.mask, 0, 0);
+                if (this.view === "overlay") { overlay.globalCompositeOperation = "source-in"; overlay.fillStyle = "#ffad45"; overlay.fillRect(0, 0, this.mask.width, this.mask.height); overlay.globalCompositeOperation = "source-over"; }
+                ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = this.view === "mask" ? 1 : this.overlayOpacity / 100; ctx.drawImage(this.overlay, 0, 0); ctx.globalAlpha = 1;
+            }
+            this.sceneKey = key;
         }
+        const ctx = display;
+        ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, w, h); ctx.drawImage(this.scene, 0, 0);
         ctx.setTransform(ratio * d.scale, 0, 0, ratio * d.scale, ratio * d.x, ratio * d.y);
         if (this.stroke && ["rect", "lasso"].includes(this.stroke.type)) {
             ctx.save(); ctx.strokeStyle = "#ffcf85"; ctx.lineWidth = 1.5 / d.scale; ctx.setLineDash([5 / d.scale, 4 / d.scale]);
@@ -613,7 +641,7 @@ export class InlineMaskEditor {
         window.removeEventListener("keydown", this.modifierDown, true);
         window.removeEventListener("keyup", this.modifierUp, true);
         window.removeEventListener("blur", this.modifierUp);
-        for (const canvas of [this.mask, this.baseMask, this.overlay, this.canvas]) canvas.width = canvas.height = 0;
+        for (const canvas of [this.mask, this.baseMask, this.overlay, this.scene, this.canvas]) canvas.width = canvas.height = 0;
         this.history = []; this.future = []; this.image = null; this.controls?.remove(); this.root.remove();
     }
 }
