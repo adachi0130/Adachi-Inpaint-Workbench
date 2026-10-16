@@ -171,6 +171,10 @@ export class InlineMaskEditor {
         this.zoomLabel = el("span", "dd-zoom", "100%");
         footer.append(this.zoomLabel);
         this.fitButton = this.button(footer, T("Fit"), T("Fit the image to the canvas"), () => this.fit());
+        // The inline button must not select/bring forward the ComfyUI node:
+        // newer frontends can remeasure its DOM widget on that bubbling click.
+        const fitAction = this.fitButton.onclick;
+        this.fitButton.onclick = event => { event.stopPropagation(); fitAction(event); };
         this.root.append(footer);
         const embedRow = el("label", "dd-embed");
         this.embed = el("input");

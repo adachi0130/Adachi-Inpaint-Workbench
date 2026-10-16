@@ -37,6 +37,9 @@ Environment: Windows, local ComfyUI 0.19.3, ComfyUI frontend 1.42.11, PyTorch 2.
 
 - 0.5.3: in classic nodes and Nodes 2.0, the inline Fit button is on the same row immediately to the right of Load image, and is absent from the connected inpaint controls. Actual browser clicks reset zoom/pan and preserve the painted mask PNG exactly.
 
+- 0.5.4: frontend 1.52.7 was downloaded as a wheel and extracted into an isolated test directory, leaving the installed frontend unchanged. With saved node dimensions from the user's workflow, the previous bubbling Fit click changed the classic editor viewport from 396x625 to 396x594. Stopping propagation keeps it at 396x625. Nodes 2.0 also retains its viewport and node dimensions.
+- 0.5.4: actual browser clicks pass with the saved workflow geometry on frontend 1.42.11 and 1.52.7 in both renderers. Fit resets zoom/pan, remains immediately after Load image, and the inpaint panel occupies over 94% of its node's logical width. The remote server and its installed extension set were not accessed, so the separate narrow-panel screenshot cannot be claimed reproduced/resolved remotely.
+
 The sampling path was also checked for noise-schedule continuity against the real `common_ksampler`/`KSampler` functions in the local ComfyUI; an actual checkpoint has not been loaded to test GPU image quality or every model family, so CPU/interface tests must not be treated as model-quality verification.
 
 References used during implementation:

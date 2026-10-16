@@ -1,17 +1,15 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
-import { InlineMaskEditor } from "./editor.js";
+import { InlineMaskEditor } from "./editor.js?v=0.5.4";
 import { installInpaintWorkbench } from "./inpaint_node.js";
 import { routeWheelOutsideImage } from "./wheel_routing.js";
 import { T } from "./i18n.js";
 
 const styleId = "adachi-inpaint-style";
-if (!document.getElementById(styleId)) {
-    const link = document.createElement("link");
-    link.id = styleId; link.rel = "stylesheet";
-    link.href = new URL("./editor.css", import.meta.url).href;
-    document.head.append(link);
-}
+const stylesheet = document.getElementById(styleId) || document.createElement("link");
+stylesheet.id = styleId; stylesheet.rel = "stylesheet";
+stylesheet.href = new URL("./editor.css?v=0.5.4", import.meta.url).href;
+if (!stylesheet.isConnected) document.head.append(stylesheet);
 
 function hide(widget) {
     if (!widget) return;
@@ -117,6 +115,7 @@ app.registerExtension({
                     markChanged();
                 },
             });
+            editor.root.dataset.adachiVersion = "0.5.4";
             node.adachiEditor = editor;
             const stopWheelRouting = routeWheelOutsideImage(editor.root, editor.canvas, () => editor.ready);
             node.adachiUseResult = async file => {

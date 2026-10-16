@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.4
+
+- Prevent the inline Fit button click from bubbling into ComfyUI node selection / bring-to-front handlers, which can remeasure a saved node's DOM editor.
+- Keep node and editor dimensions unchanged when fitting the image. Fit still resets only image zoom and pan.
+- Version the inline editor module and stylesheet URLs to refresh imported assets on upgrades; update an existing shared stylesheet link as well.
+- Verify actual clicks on saved workflow node geometry in frontend 1.42.11 and 1.52.7, with classic nodes and Nodes 2.0.
+
 ## 0.5.3
 
 - Move the image Fit button from the inpaint painting controls to the inline mask, immediately after Load image.
