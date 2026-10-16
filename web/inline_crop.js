@@ -71,7 +71,9 @@ export class InlineCropController {
     };
     editor.options.sceneRevision = () =>
       `${this.mode}:${this.target}:${this.revision}`;
-    editor.options.drawSource = (ctx) => this.drawSource(ctx);
+    editor.options.drawSource = (ctx) => this.drawSource(ctx, {preview:this.previewOriginal});
+    editor.options.displayView = () => this.previewOriginal ? "image" : editor.view;
+    editor.options.showCursor = () => !this.previewOriginal;
     editor.options.showMask = () =>
       this.mode !== "crop" || (this.target === "mask" && this.region?.locked);
     editor.options.drawOverlay = (ctx, d) => this.drawOverlay(ctx, d);
@@ -81,6 +83,7 @@ export class InlineCropController {
       move = editor.pointerMove.bind(editor);
     editor.pointerDown = (e) => {
       if (!editor.ready) return;
+      if (this.previewOriginal) { e.preventDefault(); e.stopPropagation(); return; }
       if (this.busy) {
         e.preventDefault();
         e.stopPropagation();
@@ -90,7 +93,14 @@ export class InlineCropController {
         e.preventDefault();
         e.stopPropagation();
         editor.root.focus({ preventScroll: true });
-        if (this.region.locked) this.run(() => this.reselect());
+        if (this.layer && this.region.locked && !editor.stroke && editor.pointerId == null) {
+          this.previewOriginal = true;
+          this.originalPreviewPointer = e.pointerId;
+          editor.canvas.setPointerCapture(e.pointerId);
+          editor.cursor = null;
+          this.revision++;
+          editor.schedule();
+        } else if (!this.layer && this.region.locked) this.run(() => this.reselect());
         return;
       }
       if (
@@ -117,6 +127,7 @@ export class InlineCropController {
       down(e);
     };
     editor.pointerMove = (e) => {
+      if (this.previewOriginal) { editor.cursor = null; return; }
       if (
         this.mode === "crop" &&
         editor.ready &&
@@ -135,6 +146,18 @@ export class InlineCropController {
       }
       move(e);
     };
+    this.finishPreview = event => {
+      if (event.pointerId !== this.originalPreviewPointer) return;
+      if (event.type === "pointerup" && (event.buttons & 2)) return;
+      event.preventDefault(); event.stopPropagation();
+      this.stopOriginalPreview();
+    };
+    for (const name of ["pointerup", "pointercancel"]) {
+      window.addEventListener(name, this.finishPreview, true);
+    }
+    editor.canvas.addEventListener("lostpointercapture", this.finishPreview, true);
+    this.previewBlur = () => this.stopOriginalPreview();
+    window.addEventListener("blur", this.previewBlur);
     editor.canvas.addEventListener("pointerleave", () => {
       this.hover = null;
       editor.schedule();
@@ -150,6 +173,17 @@ export class InlineCropController {
 
   get mode() {
     return this.widgets.edit_mode.value || "mask";
+  }
+  stopOriginalPreview() {
+    if (!this.previewOriginal) return;
+    const pointer = this.originalPreviewPointer;
+    this.previewOriginal = false;
+    this.originalPreviewPointer = null;
+    if (pointer != null && this.editor.canvas.hasPointerCapture(pointer)) {
+      this.editor.canvas.releasePointerCapture(pointer);
+    }
+    this.revision++;
+    this.editor.schedule();
   }
   get region() {
     try {
@@ -182,6 +216,7 @@ export class InlineCropController {
     const e = this.editor;
     this.modeSelect = make("select", "dd-mode-select");
     this.modeSelect.setAttribute("aria-label", T("Editing mode"));
+    this.modeSelect.title = T("Mask: paint the full image. Crop & Blend: select a region, inpaint it, then adopt and blend the result.");
     for (const [value, label] of [
       ["mask", "Mask"],
       ["crop", "Crop & Blend"],
@@ -196,6 +231,7 @@ export class InlineCropController {
     this.bar = make("div", "dd-crop-bar");
     this.preset = make("select", "");
     this.preset.setAttribute("aria-label", T("Crop size"));
+    this.preset.title = T("Crop resolution presets. Changing size releases the current selection; left-click the image to place a new region. Inpaint dimensions follow when selected.");
     for (const [w, h] of CROP_PRESETS) {
       const o = document.createElement("option");
       o.value = `${w}x${h}`;
@@ -216,27 +252,28 @@ export class InlineCropController {
     this.bar.append(this.preset);
     const button = (text, title, action) =>
       e.button(this.bar, text, T(title), () => this.run(action));
-    this.swapButton = button("⇄", "Swap crop dimensions", () =>
+    this.swapButton = button("⇄", "Swap width and height, release the current selection, then left-click to place the new region.", () =>
       this.changeSize(this.cropHeight, this.cropWidth),
     );
-    this.maskButton = button("◌", "Repaint mask", () => {
+    this.maskButton = button("◌", "Edit the repaint mask: paint the area to regenerate; Alt erases. This mask is separate from layer blending.", () => {
       this.activate("mask");
       this.changed();
     });
     this.blendButton = button(
       "◐",
-      "Blend layers: brush keeps new pixels; Alt restores original",
+      "Edit layer blending: brush keeps the new result; Alt restores original pixels. Hold right-click to preview the original, release to return.",
       () => {
         this.activate("blend");
         this.changed();
       },
     );
-    this.commitButton = button("✓", "Merge the visible layers", () =>
+    this.commitButton = button("✓", "Merge the visible result and blend mask into the source image. After merging, right-click releases the selected region.", () =>
       this.flatten(),
     );
     // Move the original live button, retaining its history and disabled state.
     this.undoButton = e.undoButton;
     this.undoButton.textContent = "↶";
+    this.undoButton.title = T("Undo the last stroke in the active repaint or blend mask (Ctrl+Z). Redo with Ctrl+Shift+Z.");
     this.commitButton.after(this.undoButton);
     this.custom = make("div", "dd-crop-custom");
     this.custom.hidden = true;
@@ -251,6 +288,7 @@ export class InlineCropController {
         "aria-label",
         T(key === "cropWidth" ? "Width" : "Height"),
       );
+      input.title = T("Custom crop dimension in 64-pixel steps. Changing it releases the selected region.");
       input.onchange = () => this.run(() => {
         const value = Math.max(64, Math.min(16384, Math.round(Number(input.value) / 64) * 64));
         return this.changeSize(key === "cropWidth" ? value : this.cropWidth,
@@ -277,6 +315,15 @@ export class InlineCropController {
   sync() {
     this.editor.root.classList.toggle("dd-crop-mode", this.mode === "crop");
     this.modeSelect.value = this.mode;
+    this.editor.canvas.title = T(!this.editor.ready
+      ? "Upload an image, or drop / paste one"
+      : this.mode !== "crop"
+        ? "Paint a mask. Alt: temporary eraser. Ctrl+wheel: brush size. Shift+wheel: hardness. Undo: bottom return arrow or Ctrl+Z."
+        : this.layer
+          ? "Unmerged result: hold right-click to see the original; release to see the workspace. In the blend mask, brush keeps new pixels and Alt restores old pixels. Ctrl+wheel: size; Shift+wheel: hardness. Click the check mark to merge."
+          : this.region.locked
+            ? "Paint inside the selected region. Right-click releases the selection; left-click places a new one. Alt: erase. Ctrl+wheel: brush size; Shift+wheel: hardness."
+            : "Move the dashed frame and left-click to select a region. Paint a mask inside it, generate, then use Adopt this result in Image Compare.");
     for (const control of [this.preset, this.swapButton, this.maskButton, this.blendButton, this.commitButton]) {
       control.hidden = this.mode !== "crop";
     }
@@ -305,6 +352,7 @@ export class InlineCropController {
       return;
     }
     const apply = () => {
+      this.stopOriginalPreview();
       this.activate("mask");
       this.widgets.edit_mode.value = mode;
       this.state({ ...this.region, job: crypto.randomUUID() });
@@ -363,6 +411,7 @@ export class InlineCropController {
     }
   }
   reset() {
+    this.stopOriginalPreview();
     this.layer = null;
     this.widgets.layer_image.value = "";
     this.widgets.blend_data.value = "";
@@ -438,6 +487,7 @@ export class InlineCropController {
     });
   }
   async restore() {
+    this.stopOriginalPreview();
     this.target = "mask";
     this.contexts = {};
     this.layer = null;
@@ -500,12 +550,12 @@ export class InlineCropController {
     this.editor.schedule();
     this.changed();
   }
-  drawSource(ctx) {
+  drawSource(ctx, {preview = false} = {}) {
     if (this.mode !== "crop") return false;
     const e = this.editor,
       r = this.region;
     ctx.drawImage(e.image, 0, 0);
-    if (this.layer && r.locked) {
+    if (!preview && this.layer && r.locked) {
       const key = `${this.revision}:${e.maskRevision}`;
       if (this.patchKey !== key) {
         this.patchCanvas.width = r.width;
@@ -555,6 +605,7 @@ export class InlineCropController {
   }
   async flatten() {
     if (!this.layer) return;
+    this.stopOriginalPreview();
     this.editor.flush();
     this.busy = true;
     this.sync();
@@ -600,6 +651,12 @@ export class InlineCropController {
     this.changed();
   }
   destroy() {
+    this.stopOriginalPreview();
+    window.removeEventListener("blur", this.previewBlur);
+    for (const name of ["pointerup", "pointercancel"]) {
+      window.removeEventListener(name, this.finishPreview, true);
+    }
+    this.editor.canvas.removeEventListener("lostpointercapture", this.finishPreview, true);
     clearTimeout(this.resultTimer);
     this.pendingResult = null;
     this.acceptVersion++;

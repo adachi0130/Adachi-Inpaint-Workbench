@@ -6,6 +6,19 @@
 // buttons are drawn by this plugin, so they translate here by reading Comfy.Locale.
 
 const ZH = {
+  "Mask: paint the full image. Crop & Blend: select a region, inpaint it, then adopt and blend the result.": "普通蒙版：在整图涂抹。裁切融合：选定局部、重绘，再从图像对比采用结果并融合图层。",
+  "Crop resolution presets. Changing size releases the current selection; left-click the image to place a new region. Inpaint dimensions follow when selected.": "裁切分辨率预设。切换尺寸会取消当前选定，再左键点击图片定位新区域；选定后自动填写 Inpaint 宽高。",
+  "Swap width and height, release the current selection, then left-click to place the new region.": "交换宽高并取消当前选定，再左键点击图片选择新区域。",
+  "Edit the repaint mask: paint the area to regenerate; Alt erases. This mask is separate from layer blending.": "编辑重绘蒙版：涂抹需要重新生成的区域，Alt 临时擦除；与图层融合蒙版相互独立。",
+  "Edit layer blending: brush keeps the new result; Alt restores original pixels. Hold right-click to preview the original, release to return.": "编辑融合蒙版：画笔保留重绘结果，Alt 擦回原图。按住右键查看原图，松开恢复当前工作区。",
+  "Merge the visible result and blend mask into the source image. After merging, right-click releases the selected region.": "将当前可见结果和融合蒙版合并到原图。合并后，右键恢复为取消选区。",
+  "Undo the last stroke in the active repaint or blend mask (Ctrl+Z). Redo with Ctrl+Shift+Z.": "撤销当前重绘蒙版或融合蒙版的上一笔（Ctrl+Z）；Ctrl+Shift+Z 可重做。",
+  "Custom crop dimension in 64-pixel steps. Changing it releases the selected region.": "自定义裁切宽高，按 64 像素递增；修改尺寸会取消当前选定。",
+  "Paint a mask. Alt: temporary eraser. Ctrl+wheel: brush size. Shift+wheel: hardness. Undo: bottom return arrow or Ctrl+Z.": "涂抹蒙版。Alt 临时擦除；Ctrl+滚轮调笔径；Shift+滚轮调硬度；下方返回箭头或 Ctrl+Z 撤销。",
+  "Unmerged result: hold right-click to see the original; release to see the workspace. In the blend mask, brush keeps new pixels and Alt restores old pixels. Ctrl+wheel: size; Shift+wheel: hardness. Click the check mark to merge.": "结果尚未合并：按住右键看原图，松开恢复当前工作区。融合蒙版中画笔保留新图、Alt 擦回原图；Ctrl+滚轮调笔径，Shift+滚轮调硬度；点击 √ 合并。",
+  "Paint inside the selected region. Right-click releases the selection; left-click places a new one. Alt: erase. Ctrl+wheel: brush size; Shift+wheel: hardness.": "在选区内涂蒙版。右键取消选定，再左键选择新区域；Alt 擦除；Ctrl+滚轮调笔径，Shift+滚轮调硬度。",
+  "Move the dashed frame and left-click to select a region. Paint a mask inside it, generate, then use Adopt this result in Image Compare.": "移动虚线框，左键点击选定区域；在里面画蒙版并生成，再到图像对比点击「采用此结果」回贴。",
+
   "Select a crop region before adopting a result": "请先选择裁切区域再采用结果",
   "Finish editing before adopting a result": "请结束当前编辑后再采用结果",
   "This result belongs to another crop; generate a result for the current region": "该结果来自其他选区，请为当前选区重新生成",

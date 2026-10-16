@@ -1,11 +1,13 @@
 # Git versions and rollback
 
-The current version is **v0.6.6**. Git history lives in the source repository. The installed custom-node folder may be a ZIP/file copy without its own `.git`; do not run rollback commands in ComfyUI's parent repository.
+The current version is **v0.6.7**. Git history lives in the source repository. The installed custom-node folder may be a ZIP/file copy without its own `.git`; do not run rollback commands in ComfyUI's parent repository.
 
 Before installing, the installer saves the previous plugin directory under `ComfyUI/user/adachi-workbench-backups/`. Restore that ZIP to roll back a copied installation. For a Git clone, use the tags below.
 
 | Tag | Contents |
 |---|---|
+| `v0.6.7` | Hold right mouse to preview the original before merging; contextual hover help |
+| `local-before-v0.6.7` | Source before original-layer preview and expanded hover instructions |
 | `v0.6.6` | Right-click releases crops; move mask Undo beside Merge |
 | `local-before-v0.6.6` | Source before right-click reselection and inline Undo |
 | `v0.6.5` | Change crop dimensions while selected, automatically return to selection |
@@ -37,13 +39,13 @@ To undo only this update, run in the plugin folder:
 
 ```powershell
 git status --short
-git switch --detach local-before-v0.6.6
+git switch --detach local-before-v0.6.7
 ```
 
 Return to this version with:
 
 ```powershell
-git switch --detach v0.6.6
+git switch --detach v0.6.7
 ```
 
 Restart ComfyUI and hard-refresh the browser (`Ctrl+F5`) after switching versions.

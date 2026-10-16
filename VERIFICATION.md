@@ -1,5 +1,7 @@
 # Verification record
 
+- 0.6.7: real Chrome mouse interactions on frontend 1.52.7 pass in classic nodes and Nodes 2.0. Display pixel checks verify hold-right original preview and release restoration, including release outside the picture, pointer cancellation and window blur. Preview overrides mask-only display temporarily, leaves serialized image/mask/crop state unchanged, and does not affect composite export pixels. After Merge, right-click still releases the selection; normal-mode right-click does not erase. Bottom controls have hover instructions and canvas help follows the editing stage. These checks use solid-color image fixtures, not model generation.
+
 - 0.6.6: real mouse checks in classic nodes and Nodes 2.0 on frontend 1.52.7 verify right-click release without erasing, right-click while unselected, left-click relocking, preserved adopted pixels after merge, Alt temporary erase in both modes, and a functional live Undo button directly after Merge. The old reselect button and inpaint-panel Undo are absent. Canvas context menus are stopped from bubbling to the outer node. Frontend syntax and diff whitespace checks pass.
 
 - 0.6.5: classic and Nodes 2.0 browser checks on frontend 1.52.7 verify changing a locked preset, pointer-following replacement selection, automatic inpaint dimensions after relocking, preservation of an adopted patch by merging, retention of the old selection/resolution after an upload failure, and reselection through swap/custom controls. Frontend syntax and diff whitespace checks pass.

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.7
+
+- Before merging an adopted crop layer, hold the right mouse button to preview the original; release, pointer cancellation or window blur restores the workspace. Preview changes display only. After merge, right-click again releases the crop selection.
+- Add English/Chinese hover instructions for bottom controls and state-specific canvas gestures, including size/hardness shortcuts, masks, adoption, merging and Undo.
+
 ## 0.6.6
 
 - Right-click releases a locked crop without painting; the next plain click selects a new region. Adopted layer effects are merged before reselection. Right-click no longer paints or erases in either mode; Alt remains the temporary eraser.

@@ -614,6 +614,7 @@ export class InlineMaskEditor {
     schedule() { if (!this.frame && !this.destroyed) this.frame = requestAnimationFrame(() => { this.frame = 0; this.render(); }); }
 
     render() {
+        const view = this.options.displayView?.() || this.view;
         const rect = this.canvas.getBoundingClientRect();
         if (!rect.width || !rect.height) return;
         const d = this.dimensions();
@@ -623,21 +624,21 @@ export class InlineMaskEditor {
         if (this.canvas.width !== w || this.canvas.height !== h) { this.canvas.width = w; this.canvas.height = h; this.overlay.width = w; this.overlay.height = h; }
         const display = this.canvas.getContext("2d");
         if (!this.ready) { display.clearRect(0, 0, w, h); this.sceneKey = null; return; }
-        const key = [this.loadVersion, this.maskRevision, w, h, d.scale * ratio, d.x * ratio, d.y * ratio, this.view, this.overlayOpacity, this.options.sceneRevision?.() || 0].join(":");
+        const key = [this.loadVersion, this.maskRevision, w, h, d.scale * ratio, d.x * ratio, d.y * ratio, view, this.overlayOpacity, this.options.sceneRevision?.() || 0].join(":");
         if (key !== this.sceneKey) {
             if (this.scene.width !== w || this.scene.height !== h) { this.scene.width = w; this.scene.height = h; }
             const ctx = this.scene.getContext("2d");
             ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, w, h);
             ctx.setTransform(ratio * d.scale, 0, 0, ratio * d.scale, ratio * d.x, ratio * d.y);
-            if (this.view !== "mask") { if (!this.options.drawSource?.(ctx)) ctx.drawImage(this.image, 0, 0); }
+            if (view !== "mask") { if (!this.options.drawSource?.(ctx)) ctx.drawImage(this.image, 0, 0); }
             else { ctx.fillStyle = "black"; ctx.fillRect(0, 0, this.image.width, this.image.height); }
-            if (this.view !== "image" && (this.view === "mask" || this.options.showMask?.() !== false)) {
+            if (view !== "image" && (view === "mask" || this.options.showMask?.() !== false)) {
                 const overlay = this.overlay.getContext("2d");
                 overlay.setTransform(1, 0, 0, 1, 0, 0); overlay.clearRect(0, 0, w, h);
                 overlay.setTransform(ratio * d.scale, 0, 0, ratio * d.scale, ratio * d.x, ratio * d.y);
                 overlay.drawImage(this.mask, 0, 0);
-                if (this.view === "overlay") { overlay.globalCompositeOperation = "source-in"; overlay.fillStyle = "#ffad45"; overlay.fillRect(0, 0, this.mask.width, this.mask.height); overlay.globalCompositeOperation = "source-over"; }
-                ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = this.view === "mask" ? 1 : this.overlayOpacity / 100; ctx.drawImage(this.overlay, 0, 0); ctx.globalAlpha = 1;
+                if (view === "overlay") { overlay.globalCompositeOperation = "source-in"; overlay.fillStyle = "#ffad45"; overlay.fillRect(0, 0, this.mask.width, this.mask.height); overlay.globalCompositeOperation = "source-over"; }
+                ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = view === "mask" ? 1 : this.overlayOpacity / 100; ctx.drawImage(this.overlay, 0, 0); ctx.globalAlpha = 1;
             }
             this.sceneKey = key;
         }
@@ -652,7 +653,7 @@ export class InlineMaskEditor {
             else { ctx.beginPath(); ctx.moveTo(a.x, a.y); for (const p of this.stroke.points) ctx.lineTo(p.x, p.y); ctx.stroke(); }
             ctx.restore();
         }
-        if (this.cursor && (this.altErase || ["brush", "erase"].includes(this.tool)) && !this.drag) {
+        if (this.cursor && (this.altErase || ["brush", "erase"].includes(this.tool)) && !this.drag && this.options.showCursor?.() !== false) {
             const erasing = this.altErase || this.tool === "erase" || this.stroke?.type === "erase";
             ctx.save();
             if (erasing) ctx.setLineDash([4 / d.scale, 3 / d.scale]);
