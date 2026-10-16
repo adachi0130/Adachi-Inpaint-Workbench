@@ -1,6 +1,7 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
-import { ImageCompareView } from "./compare.js";
+import { ImageCompareView } from "./compare.js?v=0.5.7";
+import { appendComparison } from "./compare_history.js?v=0.5.7";
 import { routeWheelOutsideImage } from "./wheel_routing.js";
 import { T } from "./i18n.js";
 import { bindWidgetToNodeWidth } from "./widget_layout.js?v=0.5.5";
@@ -51,7 +52,7 @@ app.registerExtension({
                 },
             });
             node.adachiCompare = compare;
-            const stopWheelRouting = routeWheelOutsideImage(compare.root, compare.canvas, () => compare.ready);
+            const stopWheelRouting = routeWheelOutsideImage(compare.root, null, () => false);
             const widget = node.addDOMWidget("adachi_compare", "adachi_compare_view", compare.root, {
                 serialize: false, hideOnZoom: false, getMinHeight: () => 420, getMaxHeight: () => 4096,
             });
@@ -60,9 +61,13 @@ app.registerExtension({
             const executed = node.onExecuted;
             node.onExecuted = function (output) {
                 const result = executed?.apply(this, arguments);
-                const data = { originals: output?.adachi_originals || [], results: output?.adachi_results || [] };
+                if (!output?.adachi_originals?.length || !output?.adachi_results?.length) return result;
+                const data = appendComparison(node.properties.adachi_compare, {
+                    originals: output.adachi_originals, results: output.adachi_results,
+                });
                 node.properties.adachi_compare = data;
-                compare.setData(data, node.properties.adachi_result_index || 0);
+                node.properties.adachi_result_index = data.results.length - 1;
+                compare.setData(data, node.properties.adachi_result_index);
                 return result;
             };
             const configured = node.onConfigure;

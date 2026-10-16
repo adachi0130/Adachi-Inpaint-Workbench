@@ -1,5 +1,4 @@
 /* Original hover-comparison UI, MIT licensed. */
-import { registerImageWheel } from "./wheel_gestures.js";
 import { T } from "./i18n.js";
 const element = (tag, className, text) => {
     const node = document.createElement(tag);
@@ -19,7 +18,7 @@ export class ImageCompareView {
         this.options = options;
         this.root = element("div", "dd-inpaint dd-comparer");
         this.originals = []; this.results = []; this.index = 0;
-        this.zoom = 1; this.pan = { x: 0, y: 0 }; this.split = .5;
+        this.split = .5;
         this.version = 0; this.ready = false;
         this.dimensionsLabel = element("span", "dd-dimensions");
         const toolbar = element("div", "dd-row dd-compare-toolbar");
@@ -29,7 +28,7 @@ export class ImageCompareView {
         toolbar.append(this.resultSelect, this.dimensionsLabel);
         const spacer = element("span", "dd-spacer"); toolbar.append(spacer);
         const fit = element("button", "", T("Fit")); fit.type = "button";
-        fit.onclick = () => { this.zoom = 1; this.pan = { x: 0, y: 0 }; this.schedule(); }; toolbar.append(fit);
+        fit.onclick = event => { event.preventDefault(); event.stopPropagation(); this.schedule(); }; toolbar.append(fit);
         this.stage = element("div", "dd-stage dd-compare-stage");
         this.canvas = document.createElement("canvas"); this.canvas.tabIndex = 0;
         this.canvas.setAttribute("aria-label", T("Result left, original right; hover to compare"));
@@ -46,34 +45,22 @@ export class ImageCompareView {
         adoption.append(this.targetSelect);
         this.adoptButton = element("button", "dd-primary", T("Adopt this result")); this.adoptButton.type = "button";
         this.adoptButton.onclick = () => this.adopt(); adoption.append(this.adoptButton);
-        this.message = element("div", "dd-status", T("Move to compare · wheel to zoom · middle-drag to pan"));
+        this.message = element("div", "dd-status", T("Result left, original right; hover to compare"));
         this.message.hidden = true; this.message.setAttribute("role", "alert");
         this.root.append(this.stage, toolbar, adoption, this.message);
         this.canvas.addEventListener("pointermove", event => this.move(event));
         this.canvas.addEventListener("pointerdown", event => {
-            if (!this.ready) return;
+            if (!this.ready || event.button !== 0) return;
             event.preventDefault(); event.stopPropagation(); this.canvas.focus({ preventScroll: true });
-            if (event.button === 1 || this.space) {
-                this.drag = { id: event.pointerId, x: event.clientX, y: event.clientY, pan: { ...this.pan } };
-                this.canvas.setPointerCapture(event.pointerId);
-            } else this.move(event);
+            this.move(event);
         });
-        const finish = event => {
-            if (!this.drag || this.drag.id !== event.pointerId) return;
-            const id = this.drag.id; this.drag = null;
-            if (this.canvas.hasPointerCapture(id)) this.canvas.releasePointerCapture(id);
-        };
-        for (const name of ["pointerup", "pointercancel", "lostpointercapture"]) this.canvas.addEventListener(name, finish);
-        this.stopWheelCapture = registerImageWheel(this.canvas, () => this.ready, event => this.wheel(event), options.onGraphWheel);
+        this.canvas.addEventListener("wheel", event => this.wheel(event), { passive: false });
         this.canvas.addEventListener("keydown", event => {
-            if (event.code === "Space") { event.preventDefault(); event.stopPropagation(); this.space = true; }
-            else if (["ArrowLeft", "ArrowRight"].includes(event.key)) {
+            if (["ArrowLeft", "ArrowRight"].includes(event.key)) {
                 event.preventDefault(); event.stopPropagation();
                 this.split = Math.max(0, Math.min(1, this.split + (event.key === "ArrowRight" ? .02 : -.02))); this.schedule();
             }
         });
-        this.canvas.addEventListener("keyup", event => { if (event.code === "Space") this.space = false; });
-        this.canvas.addEventListener("blur", () => { this.space = false; });
         this.observer = new ResizeObserver(() => this.schedule()); this.observer.observe(this.stage);
         this.refreshTargets(); this.updateButton();
     }
@@ -140,36 +127,21 @@ export class ImageCompareView {
 
     transform() {
         const rect = this.canvas.getBoundingClientRect();
-        if (this.viewport?.width && this.viewport?.height && rect.width && rect.height) {
-            this.pan.x *= rect.width / this.viewport.width;
-            this.pan.y *= rect.height / this.viewport.height;
-        }
-        this.viewport = { width: rect.width, height: rect.height };
-        const scale = this.before ? Math.min(rect.width / this.before.width, rect.height / this.before.height) * this.zoom : 1;
-        return { width: rect.width, height: rect.height, scale, x: (rect.width - (this.before?.width || 0) * scale) / 2 + this.pan.x, y: (rect.height - (this.before?.height || 0) * scale) / 2 + this.pan.y };
+        const scale = this.before ? Math.min(rect.width / this.before.width, rect.height / this.before.height) : 1;
+        return { width: rect.width, height: rect.height, scale, x: (rect.width - (this.before?.width || 0) * scale) / 2, y: (rect.height - (this.before?.height || 0) * scale) / 2 };
     }
 
     position(event) { const rect = this.canvas.getBoundingClientRect(), t = this.transform(); return { x: (event.clientX - rect.left - t.x) / t.scale, y: (event.clientY - rect.top - t.y) / t.scale }; }
 
     wheel(event) {
-        if (!this.ready) return;
         event.preventDefault(); event.stopPropagation();
-        const before = this.position(event), rect = this.canvas.getBoundingClientRect();
-        this.zoom = Math.max(.1, Math.min(32, this.zoom * Math.exp(-event.deltaY * .0015)));
-        const t = this.transform();
-        this.pan.x += event.clientX - rect.left - (t.x + before.x * t.scale);
-        this.pan.y += event.clientY - rect.top - (t.y + before.y * t.scale);
-        this.schedule();
+        this.options.onGraphWheel?.(event);
     }
 
     move(event) {
         if (!this.ready) return;
         this.hovered = true;
-        if (this.drag) {
-            event.preventDefault(); event.stopPropagation();
-            this.pan.x = this.drag.pan.x + event.clientX - this.drag.x;
-            this.pan.y = this.drag.pan.y + event.clientY - this.drag.y;
-        } else this.split = Math.max(0, Math.min(1, this.position(event).x / this.before.width));
+        this.split = Math.max(0, Math.min(1, this.position(event).x / this.before.width));
         this.schedule();
     }
 
@@ -197,7 +169,6 @@ export class ImageCompareView {
 
     destroy() {
         this.destroyed = true; ++this.version; cancelAnimationFrame(this.frame); this.observer.disconnect();
-        this.stopWheelCapture();
         this.before = this.after = null; this.canvas.width = this.canvas.height = 0; this.root.remove();
     }
 }

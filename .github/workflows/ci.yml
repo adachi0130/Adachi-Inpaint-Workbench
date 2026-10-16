@@ -34,3 +34,5 @@ jobs:
           PY
       - name: Check exclusive routing behavior
         run: node --experimental-default-type=module tests/test_exclusive_routes.mjs
+      - name: Check comparison result history
+        run: node --experimental-default-type=module tests/test_compare_history.mjs

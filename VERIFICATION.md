@@ -47,6 +47,9 @@ Environment: Windows, local ComfyUI 0.19.3, ComfyUI frontend 1.42.11, PyTorch 2.
 - 0.5.6: actual local KJNodes Set/Get frontend definitions were loaded only into isolated QA browsers (no KJ code is bundled). Across frontend 1.42.11/1.52.7 and classic/Nodes 2.0, 32 real CPU queue cases verify ignored setters, swapped states, ignored/muted real sources, ignored Get, explicit both/neither errors, and switching after workflow reload. Output image pixels match the selected branch; generating prompts does not change editable connections.
 - 0.5.6: dependency-free routing tests cover Get/Set, reroutes, current virtual-output APIs, mute/bypass, missing setters/inputs and cycles. All 29 backend CPU tests continue to pass.
 
+- 0.5.7: actual browser wheel events over a real queued comparison image change workflow navigation while the comparison transform stays fitted and centered. Verified on frontends 1.42.11 and 1.52.7 in classic nodes and Nodes 2.0, with left-result/right-original pixels, hover/leave behavior, batch selection, adoption preserving mask/history, workflow reload, rejected mismatched adoption and ordinary-upload mask reset.
+- 0.5.7: three real queued two-image batches accumulate 2, 4 and 6 results and select the newest result. After adoption, old results retain their old original and new results use the adopted original; all six results survive workflow reload in both frontend versions/renderers. Dependency-free tests additionally cover legacy batch mapping, empty outputs and immutable appending.
+
 The sampling path was also checked for noise-schedule continuity against the real `common_ksampler`/`KSampler` functions in the local ComfyUI; an actual checkpoint has not been loaded to test GPU image quality or every model family, so CPU/interface tests must not be treated as model-quality verification.
 
 References used during implementation:

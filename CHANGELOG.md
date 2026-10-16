@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.7
+
+- Accumulate comparison results across runs, select the newest result and preserve each result's matching original, including after workflow reload.
+- Keep comparison images permanently fitted and centered in the canvas; remove independent wheel zoom and middle/Space image panning.
+- Route wheel events over the full comparison node, including the picture, to ComfyUI workflow navigation.
+- Preserve hover comparison, the full-result view on pointer leave, batch selection and adoption with mask/history retention.
+
 ## 0.5.6
 
 - Follow KJNodes Get/Set routes and reroutes when deciding which exclusive input is enabled, including the setter's and real source node's bypass/mute states.

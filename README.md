@@ -104,11 +104,13 @@ Parameters driven by an external link disable the matching panel control; a modu
 ## Comparison and chained inpainting
 
 Add an **Image Compare** node and connect Inline Mask's `image` to `original` and the final full-size generated `image` to `result`, then run.
-With the pointer over the picture, the thin divider shows the generated result on the left and the original on the right; leaving the picture hides the divider and shows the full result, and the plain wheel zooms. Batch selection, dimensions and the fit button sit below the picture.
+With the pointer over the picture, the thin divider shows the generated result on the left and the original on the right; leaving the picture hides the divider and shows the full result, and the image always remains fitted and centered in its canvas. Scrolling over the comparison image navigates the ComfyUI workflow background using the current navigation settings; comparison images do not zoom or pan independently. Batch selection, dimensions and the fit button sit below the picture.
 When you are happy, click **Adopt this result**: the plugin uploads the selected result as the new source image and writes it back into the upstream inline editor while preserving the painted mask, current undo/redo history and viewport. Use **Clear** when you want to start a new mask; a normal **Load image** upload still starts a fresh mask.
 To preserve mask coordinates, an adopted result must match the source dimensions; a mismatched result is rejected without changing the current source or mask. The mask remains embedded in saved workflow data; command-level undo history is retained during adoption in the current session.
 If the original is routed through intermediate IMAGE nodes the plugin walks upstream to find the inline editor; when several candidates exist you can pick one explicitly under **Adopt into**.
 Adoption only happens when you click the button and never starts the next generation automatically; the `image` output still passes the whole result batch, so you can feed a Save Image node.
+The result list accumulates images across runs and selects the newest result automatically. Each result keeps its original from that run, including when adopting results for further inpainting. Saving the workflow also saves this history's preview references and selection.
+
 Comparison previews live in ComfyUI's temp directory and may need a re-run after cleanup or restart; an adopted source image is stored in `input/adachi-inpaint/` and does not depend on temp previews.
 
 ## Group bypass presets
