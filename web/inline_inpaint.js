@@ -5,7 +5,7 @@ import { installInpaintWorkbench } from "./inpaint_node.js?v=0.6.1";
 import { bindWidgetToNodeWidth } from "./widget_layout.js?v=0.5.5";
 import { routeWheelOutsideImage } from "./wheel_routing.js";
 import { InlineCropController } from "./inline_crop.js?v=0.6.2";
-import { canStoreDraft } from "./draft_guard.js?v=0.6.1";
+import { canStoreDraft, prepareInlineDraft, syncInlineWidgets } from "./draft_guard.js?v=0.6.3";
 import { T } from "./i18n.js";
 
 const styleId = "adachi-inpaint-style";
@@ -38,8 +38,41 @@ function imageUrl(value) {
     return api.apiURL(`/view?${params}`);
 }
 
+function draftOptions() {
+    let workspace = "personal";
+    try { const current = JSON.parse(sessionStorage.getItem("Comfy.Workspace.Current") || "null"); if (current?.type !== "personal" && current?.id) workspace = current.id; } catch { /* Personal workspace. */ }
+    return { workspace, path: app.extensionManager?.workflow?.activeWorkflow?.path || "" };
+}
+
+async function uploadEmbeddedSource(embedded) {
+    const blob = await (await fetch(embedded)).blob();
+    if (blob.size > 64 * 1024 * 1024) throw Error(T("File is too large (max 64 MB)"));
+    const body = new FormData();
+    body.append("image", blob, `source-${crypto.randomUUID()}.png`);
+    body.append("type", "input"); body.append("subfolder", "adachi-inpaint");
+    const response = await api.fetchApi("/upload/image", {method:"POST", body});
+    if (!response.ok) throw Error(`${T("Upload failed")} (${response.status})`);
+    const uploaded = await response.json();
+    if (typeof uploaded.name !== "string" || !uploaded.name) throw Error(T("Upload failed"));
+    return uploaded.subfolder ? `${uploaded.subfolder}/${uploaded.name}` : uploaded.name;
+}
+
 app.registerExtension({
     name: "Adachi.InlineInpaint",
+    async beforeConfigureGraph(graphData) {
+        if (app.ui.settings.getSettingValue("Comfy.Workflow.Persist") === false) return;
+        try {
+            // The active workflow can still be the previous tab at this point;
+            // do not claim its replacement credit for an incoming workflow.
+            const options = { ...draftOptions(), path: "" };
+            const count = await prepareInlineDraft(graphData, {
+                fits: graph => canStoreDraft(graph, options), upload: uploadEmbeddedSource,
+            });
+            if (count) console.info(`[Adachi Inpaint] Saved ${count} oversized embedded source(s) as exact input files before workflow draft initialization. Masks and layers were preserved.`);
+        } catch (error) {
+            console.warn("[Adachi Inpaint] Draft preflight failed; embedded source data was retained.", error);
+        }
+    },
     async beforeRegisterNodeDef(nodeType, nodeData) {
         if (nodeData.name === "AdachiLayerCommit") { nodeType.skip_list = true; return; }
         if (["AdachiWebUIInpaint", "AdachiInpaintPrepare"].includes(nodeData.name)) { installInpaintWorkbench(nodeType); return; }
@@ -117,6 +150,7 @@ app.registerExtension({
                     maskWidget.value = preserveMask ? editor.flush() : "";
                     sourceWidget.value = editor.embed.checked ? editor.sourceData() : "";
                     if (!preserveCrop) crop?.reset();
+                    await beforeModeChange();
                     markChanged();
                 },
                 onEmbed(enabled) {
@@ -126,32 +160,21 @@ app.registerExtension({
                     markChanged();
                 },
             });
-            editor.root.dataset.adachiVersion = "0.6.2";
+            editor.root.dataset.adachiVersion = "0.6.3";
             const beforeModeChange = () => {
                 if (draftRecovery) return draftRecovery;
                 const embedded = sourceWidget?.value;
                 if (!editor.ready || !embedded?.startsWith("data:") || embedded.length < 256 * 1024) return;
                 if (app.ui.settings.getSettingValue("Comfy.Workflow.Persist") === false) return;
-                let workspace = "personal";
-                try { const current = JSON.parse(sessionStorage.getItem("Comfy.Workspace.Current") || "null"); if (current?.type !== "personal" && current?.id) workspace = current.id; } catch { /* Personal workspace. */ }
                 const graph = app.rootGraph || node.graph;
-                const path = app.extensionManager?.workflow?.activeWorkflow?.path || "";
-                if (canStoreDraft(graph.serialize(), {path, workspace}) !== false) return;
+                if (canStoreDraft(graph.serialize(), draftOptions()) !== false) return;
                 // Persist a fresh, exact copy before dropping any embedded bytes.
                 // This also repairs portable workflows whose original input path is absent.
                 draftRecovery = (async () => {
                     const version = editor.loadVersion;
-                    const blob = await (await fetch(embedded)).blob();
-                    if (blob.size > 64 * 1024 * 1024) throw Error(T("File is too large (max 64 MB)"));
-                    const body = new FormData();
-                    body.append("image", blob, `source-${crypto.randomUUID()}.png`);
-                    body.append("type", "input"); body.append("subfolder", "adachi-inpaint");
-                    const response = await api.fetchApi("/upload/image", {method:"POST", body});
-                    if (!response.ok) throw Error(`${T("Upload failed")} (${response.status})`);
-                    const uploaded = await response.json();
-                    if (typeof uploaded.name !== "string" || !uploaded.name) throw Error(T("Upload failed"));
+                    const name = await uploadEmbeddedSource(embedded);
                     if (editor.destroyed || editor.loadVersion !== version || sourceWidget.value !== embedded) return false;
-                    imageWidget.value = uploaded.subfolder ? `${uploaded.subfolder}/${uploaded.name}` : uploaded.name;
+                    imageWidget.value = name;
                     sourceWidget.value = ""; editor.embed.checked = false;
                     editor.message.textContent = T("Browser draft storage was full. The source was saved as an input file; the image, masks and layers are preserved.");
                     editor.message.classList.remove("dd-error"); editor.message.hidden = false;
@@ -230,10 +253,10 @@ app.registerExtension({
             };
             const previousSerializeNode = node.onSerialize;
             node.onSerialize = function (data) {
+                const result = previousSerializeNode?.apply(this, arguments);
                 editor.flush();
-                const index = node.widgets.indexOf(maskWidget);
-                if (data?.widgets_values && index >= 0) data.widgets_values[index] = maskWidget.value;
-                return previousSerializeNode?.apply(this, arguments);
+                if (data) syncInlineWidgets(data, node.widgets);
+                return result;
             };
             const previousQueued = maskWidget.beforeQueued;
             maskWidget.beforeQueued = function () { editor.flush(); return previousQueued?.apply(this, arguments); };

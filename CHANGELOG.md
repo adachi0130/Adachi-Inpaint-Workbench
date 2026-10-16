@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.3
+
+- Check oversized embedded sources before workflow configuration, so the first autosave cannot disable browser draft storage before the mode-change guard runs. Upload exact source bytes before changing the file reference, including sources in subgraph definitions.
+- Keep the array and optional named widget snapshots synchronized when serializing Inline Mask; stale embedded copies no longer survive in the named snapshot. Keep repaint masks, fusion masks and layer references unchanged.
+- Apply the source-capacity check after uploading/replacing an embedded image too. Respect disabled browser persistence and retain embedded data if upload fails.
+- A page that already encountered the native draft quota error needs one reload to reset ComfyUI's disabled-storage flag: save the workflow with Ctrl+S first, then use Ctrl+F5. No browser drafts are cleared by the plugin.
+
 ## 0.6.2
 
 - Remove magic wand and quick selection, including their toolbar menu and background workers.

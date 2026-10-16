@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { canStoreDraft } from "../web/draft_guard.js";
+import { canStoreDraft, prepareInlineDraft, syncInlineWidgets, inlineWidgetNames } from "../web/draft_guard.js";
 class Storage {
   constructor(limit = 10000) {
     this.limit = limit;
@@ -75,3 +75,44 @@ assert.equal(
 console.log(
   "Draft guard: quota detection, replacement credit, probe cleanup and preservation of existing storage passed",
 );
+
+const large = "data:image/png;base64," + "a".repeat(300000);
+const node = () => ({ type: "AdachiInlineMask", widgets_values: ["old.png", "mask", large, "crop", "region", "blend", "layer.png"], widgets_values_named: { image: "stale.png", mask_data: "stale-mask", source_data: large, edit_mode: "mask" } });
+const first = node(), nested = node();
+const graph = { nodes: [first, {type:"Other", widgets_values:[large]}], definitions: {subgraphs:[{nodes:[nested]}]} };
+const original = structuredClone(graph);
+let uploads = 0;
+assert.equal(await prepareInlineDraft(graph, { fits: g => g.nodes[0].widgets_values[2].length < 100 && g.definitions.subgraphs[0].nodes[0].widgets_values[2].length < 100, upload: async bytes => { assert.equal(bytes,large); return `source-${++uploads}.png`; } }),2);
+assert.equal(uploads,2);
+for (const n of [first,nested]) {
+  assert.equal(n.widgets_values[2],"");
+  assert.equal(n.widgets_values_named.source_data,"");
+  assert.equal(n.widgets_values_named.image,n.widgets_values[0]);
+  assert.equal(n.widgets_values_named.mask_data,"mask");
+  assert.deepEqual(n.widgets_values.slice(3),["crop","region","blend","layer.png"]);
+}
+assert.deepEqual(graph.nodes[1],original.nodes[1]);
+for (const fits of [() => true, () => null]) {
+  const g = {nodes:[node()]};
+  assert.equal(await prepareInlineDraft(g,{fits,upload:()=>{throw Error("unexpected upload")}}),0);
+  assert.equal(g.nodes[0].widgets_values[2],large);
+}
+const failure = {nodes:[node()]};
+await assert.rejects(prepareInlineDraft(failure,{fits:()=>false,upload:async()=>{throw Error("upload failed")}}),/upload failed/);
+assert.equal(failure.nodes[0].widgets_values[2],large);
+assert.equal(failure.nodes[0].widgets_values[0],"old.png");
+const namedOnly = {nodes:[{type:"AdachiInlineMask", widgets_values_named:{source_data:large,mask_data:"keep"}}]};
+await prepareInlineDraft(namedOnly,{fits:()=>false,upload:async()=>"named.png"});
+assert.equal(namedOnly.nodes[0].widgets_values_named.source_data,"");
+assert.equal(namedOnly.nodes[0].widgets_values_named.mask_data,"keep");
+const widgets=inlineWidgetNames.map((name,index)=>({name,value:`live-${index}`}));
+widgets.splice(1,0,{name:"unrelated",value:"untouched"});
+const snapshot={widgets_values:Array(8).fill("old"),widgets_values_named:{source_data:large,unrelated:"keep"}};
+syncInlineWidgets(snapshot,widgets);
+assert.equal(snapshot.widgets_values[3],"live-2");
+assert.equal(snapshot.widgets_values[1],"old");
+assert.equal(snapshot.widgets_values_named.source_data,"live-2");
+assert.equal(snapshot.widgets_values_named.unrelated,"keep");
+const arrayOnly={widgets_values:[]}; syncInlineWidgets(arrayOnly,widgets);
+assert.equal(arrayOnly.widgets_values_named,undefined);
+console.log("Draft preflight: root/subgraph sources, dual snapshots, unchanged masks/layers, fitting sources and failed uploads passed");
