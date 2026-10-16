@@ -320,7 +320,6 @@
       "mode": 0,
       "inputs": [],
       "outputs": [],
-      "title": "组忽略预设 / Group Bypass Presets",
       "properties": {
         "adachi_group_presets": {
           "version": 1,

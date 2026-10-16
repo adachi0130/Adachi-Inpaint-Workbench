@@ -203,7 +203,6 @@
       "mode": 0,
       "inputs": [],
       "outputs": [],
-      "title": "组忽略预设 / Group Bypass Presets",
       "properties": {
         "adachi_group_presets": {
           "version": 1,
@@ -273,7 +272,7 @@
       "outputs": [],
       "properties": {},
       "widgets_values": [
-        "选择左侧预设即可切换整组打开/忽略，无需接线。\n右侧可修改每个组的状态，或点击“记住当前分组状态”记录工作流里的修改。\n右键节点 → 应用预设，也可以快速切换。\n本示例只使用图片反色，不需要模型。"
+        "Adachi-Inpaint-Workbench - Group Bypass Presets\nSelect a preset on the left to switch a whole group between enabled and bypassed; no connections required\nAdjust each group's state on the right, or click \"Save current group states\" to store the current workflow\nRight-click the node -> Apply preset to switch quickly\nThis example only inverts an image, so no model is needed"
       ],
       "color": "#432",
       "bgcolor": "#653"
@@ -308,7 +307,7 @@
   "groups": [
     {
       "id": 1,
-      "title": "基础处理 / Base",
+      "title": "Base",
       "bounding": [
         80,
         100,
@@ -321,7 +320,7 @@
     },
     {
       "id": 2,
-      "title": "细节处理 / Detail",
+      "title": "Detail",
       "bounding": [
         470,
         100,

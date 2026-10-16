@@ -5,6 +5,7 @@
 - Add Auto Exclusive Switch: two generic lazy inputs, no manual switch control, and exactly one enabled branch required.
 - Respect muted/bypassed input branches, including bypassed transform nodes that normally pass through data; branch changes also invalidate execution caches.
 - Widen the group preset list from 32% to 40% of its panel.
+- Keep the new nodes English-only as well: backend error messages and the group preset node description no longer carry inline Chinese, and the two new example workflows use English note text and group names. The group preset node keeps no saved title override, so it shows its locale-aware name in any language.
 
 ## 0.5.0
 
