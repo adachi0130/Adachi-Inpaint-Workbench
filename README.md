@@ -1,227 +1,241 @@
+<div align="center">
+
 # Adachi-Inpaint-Workbench
 
-Load an image, paint a mask and inpaint **directly inside the workflow node** — no modal mask editor and no save/load round-trip on every stroke.
+**Paint. Inpaint. Compare. Keep going.**
 
-![Inline mask painting with WebUI-style inpainting](preview/nodes2-inline.png)
+An inline inpainting workspace for ComfyUI, with WebUI-style controls and tools for switching workflow branches.
 
-MIT licensed, by Adachi.
-Supports whole-image and masked-area sampling, an Alt temporary eraser, Ctrl+wheel brush size, image comparison and one-click adoption of a result as the next source image.
+**English** · [简体中文](README.zh-CN.md)
 
-## How this differs from other nodes
+[![License: MIT](https://img.shields.io/badge/License-MIT-38966b)](LICENSE)
+[![ComfyUI custom nodes](https://img.shields.io/badge/ComfyUI-Custom_Nodes-4776b4)](https://github.com/Comfy-Org/ComfyUI)
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-4776b4)](pyproject.toml)
+[![Validate plugin](https://github.com/adachi0130/Adachi-Inpaint-Workbench/actions/workflows/ci.yml/badge.svg)](https://github.com/adachi0130/Adachi-Inpaint-Workbench/actions/workflows/ci.yml)
 
-| | ComfyUI's built-in mask editing | This node pack |
-|---|---|---|
-| Where you paint | A **modal editor** opens over the graph (`MaskEditor`); you close it to get back to the workflow | You paint **on the node's own canvas**, and the mask lives in the workflow |
-| Per-stroke cost | Commit the mask in the dialog, then re-run | Every stroke updates the mask in the browser and is stored with the workflow; no disk save/load per stroke |
-| Sampling | Left to the workflow you build | The connected **WebUI Inpaint** node carries the sampling controls (`area`, `width/height`, `padding`, `mask_blur`, `mask_grow`, fill mode, sampler, Refiner) |
+[Features](#features) · [Installation](#installation) · [Quick start](#quick-start) · [Node reference](#node-reference) · [Examples](#example-workflows)
 
-The built-in `Painter` node draws an image and exposes a mask, but it stops there — it has no inpaint pipeline. The built-in `MaskEditor` edits masks in a modal dialog. `ComfyUI-Inpaint-CropAndStitch` does crop-and-stitch well but does not paint. This pack connects the whole loop in one place: **paint → sample → composite at original resolution → compare → adopt the result as the next source and keep painting.**
+![Inline painting, WebUI-style inpainting controls and image comparison in one ComfyUI workflow](preview/nodes2-inline.png)
 
-## Install
+*The original workbench preview. The compact Upload / Fit / pin toolbar is shown below.*
 
-Copy the whole `Adachi-Inpaint-Workbench` folder into `ComfyUI/custom_nodes/`, keeping `web/`, `backend.py` and `__init__.py`.
-Restart ComfyUI, then hard-refresh the browser with `Ctrl+F5`.
-Search for `Inline Mask` or `WebUI Inpaint`; the category is **Adachi-Inpaint-Workbench**.
-The node pack follows the ComfyUI language setting: node names, sockets and tooltips come from `locales/`, and the canvas buttons and parameter panel from `web/i18n.js`, so a Chinese ComfyUI shows the Chinese labels. English is the built-in default, and any missing entry falls back to English.
+</div>
 
-On Windows you can instead run the installer from the unzipped plugin folder, pointing it at your ComfyUI directory (the one containing `main.py`).
+## Why this workbench?
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\install.ps1 -ComfyUIPath "D:\ComfyUI_windows_portable\ComfyUI"
-```
+Inpainting usually means moving between the workflow, a mask editor and the generated result. This pack keeps that loop on the graph: paint directly on a node, generate, compare, then adopt a result as your next source **without losing the painted mask**.
 
-The installer only copies this plugin; on update it zips the previous installation into `user/adachi-workbench-backups/` and does not restart the server.
-The plugin uses ComfyUI's existing PyTorch, NumPy and Pillow — no extra pip or npm packages.
-To uninstall, close ComfyUI and delete `custom_nodes/Adachi-Inpaint-Workbench`.
+| Tool | What it adds |
+| --- | --- |
+| **Inline Mask** | Paint in the workflow, with brush, eraser, rectangle, lasso and undo/redo. |
+| **WebUI Inpaint** | Whole-image or masked-area sampling, familiar inpainting controls and compositing back at the source resolution. |
+| **Image Compare** | Hover comparison, result history and one-click adoption for another editing round. |
+| **Group Bypass Presets** | Save combinations of enabled/bypassed groups and apply them with one click. |
+| **Auto Exclusive Switch** | Route the only enabled branch to a shared output, without a manual switch widget. |
 
-### ComfyUI Manager and Comfy Registry
+English and Simplified Chinese interfaces follow the ComfyUI language setting. The plugin uses the PyTorch, NumPy and Pillow already available in ComfyUI; no extra frontend build is required.
 
-Manager **Git URL** installation can use `https://github.com/adachi0130/Adachi-Inpaint-Workbench`, or clone it into `ComfyUI/custom_nodes`:
+## Features
+
+### Paint directly on the graph
+
+Upload, drop or paste a source image and paint on **Inline Mask** itself. Mask strokes stay in the browser and are saved with the workflow; painting does not require a disk save/load round-trip for every stroke.
+
+- Brush, soft edges, hardness, opacity, pen pressure, temporary erasing and shape tools.
+- A compact **Upload / Fit / pin** toolbar. Enable the pin (**Keep**) to keep the image fitted and centered; plain wheel then navigates the workflow, while `Ctrl` + wheel still changes brush size.
+- Resize the editor horizontally or vertically. The pin state and node dimensions survive workflow reload.
+- The connected **WebUI Inpaint** node hosts the painting controls and sampling parameters, leaving more space for the picture.
+- Bounded display buffers and cached image/mask compositing reduce redraw cost at large graph zoom; the saved mask retains its source resolution.
+
+<details>
+<summary>View the compact toolbar</summary>
+
+<p align="center">
+  <img src="preview/inline-mask-toolbar.png" alt="Inline Mask with Upload, Fit and the active Keep pin" width="300">
+</p>
+
+*Toolbar reference supplied by the author; the source preview is unloaded in this screenshot.*
+
+</details>
+
+### Inpaint the whole image or just the masked region
+
+| Sampling area | Behaviour |
+| --- | --- |
+| **Whole image** · `whole_image` | Resize the full source to the sampling canvas, generate, then composite through the mask. |
+| **Only masked** · `only_masked` | Crop the mask bounds with padding and aspect-ratio context, generate at the sampling size, then paste the region back into place. |
+
+Both modes return a final `image` at the **source image's resolution**. Sampling `width` and `height` are independent controls; **Use source size** fills them from the uploaded image, rounded to the sampler's required multiple of 8.
+
+The panel includes mask inside/outside, original/fill/noise/zero-latent content, denoise, sampler, scheduler, steps, CFG and seed. Advanced controls cover blur, growth, extra feathering, batch size and optional Refiner staging.
+
+### Compare, adopt and refine
+
+Move the pointer over **Image Compare**: **result on the left, original on the right**. Leave the picture to see the full result. The divider stays thin, the image stays fitted, and scrolling navigates the workflow background.
+
+Results accumulate within an editing round, with the newest selected automatically. Each result retains its matching original; replayed preview notifications are not counted twice.
+
+Click **Adopt this result** to replace the inline source while preserving its mask and current-session undo/redo history. The comparison list resets to **1/1**; the next generation starts a new round. Failed adoption leaves the list intact. Adoption never queues a generation automatically.
+
+### Switch entire workflow setups with presets
+
+Save group states for your own setups: text-to-image, inpainting, model variants, ControlNet, upscaling, or any other grouped branches.
+
+![Group Bypass Presets with a preset list on the left and per-group states on the right](preview/group-bypass-presets.png)
+
+Choose a preset on the left, configure **Enabled / Bypassed / Keep current** on the right, or apply it from the node's right-click menu. Presets are stored in the workflow and need no wires or third-party group controller. Missing groups are reported; overlapping groups give the smaller group's setting priority.
+
+### Automatically use the remaining branch
+
+Connect two alternatives to **Auto Exclusive Switch** and bypass one. The remaining enabled branch flows to the shared output, with no `switch` toggle to maintain.
+
+![Two Auto Exclusive Switch nodes routing positive and negative conditioning into WebUI Inpaint](preview/auto-exclusive-switch.png)
+
+Use it for conditioning, strings, images, masks, models or latents; the two alternatives must use the same data type. Both enabled, or neither available, is an error rather than a silent preference for A.
+
+KJNodes Get/Set routes and reroutes are supported. **Both Gets may stay enabled**: bypassing a branch's corresponding Set or source disables that branch. Workflow-aware server checks also handle saved subgraph output routes when the source node exists in the submitted execution graph.
+
+## Installation
+
+### Git clone
+
+Run from your `ComfyUI/custom_nodes` directory:
 
 ```bash
 git clone https://github.com/adachi0130/Adachi-Inpaint-Workbench.git
 ```
 
-A Manager **listing** submission is open at [ComfyUI-Manager PR #3378](https://github.com/Comfy-Org/ComfyUI-Manager/pull/3378) and still needs the maintainer to merge it and refresh the index, so search visibility is not guaranteed yet. A Comfy Registry publisher is not configured; see [the publishing notes](registry/README.md).
+**Restart ComfyUI completely, then hard-refresh the browser with `Ctrl+F5`** (`Cmd+Shift+R` on macOS). Search for `Inline Mask`, `WebUI Inpaint` or `Adachi` in the node menu.
+
+### Other installation options
+
+- **ComfyUI Manager:** use its Git URL installation option, if available, with this repository's URL. Git URL installation and visibility in Manager's search index are separate; see the [publishing notes](registry/README.md).
+- **ZIP:** [download the repository](https://github.com/adachi0130/Adachi-Inpaint-Workbench/archive/refs/heads/main.zip), extract it, and place the plugin folder at `ComfyUI/custom_nodes/Adachi-Inpaint-Workbench/`. Keep `web/`, `backend.py` and `__init__.py` together.
+- **Windows installer:** from the extracted plugin folder, run the following, pointing to the ComfyUI directory containing `main.py`:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\install.ps1 -ComfyUIPath "D:\ComfyUI_windows_portable\ComfyUI"
+```
+
+The installer backs up an existing installation to `user/adachi-workbench-backups/`. It does not restart ComfyUI.
+
+For a Git installation, update with `git pull` inside the plugin folder, then restart ComfyUI and refresh the browser. Keep only one copy of this node pack in `custom_nodes`.
 
 ## Quick start
 
-1. Drag `examples/01-inline-inpaint.json` into ComfyUI and pick your checkpoint.
-2. In **Inline Mask**, upload, drop or paste an image and paint the areas to repaint directly on the canvas.
-3. Edit the positive/negative prompts, then set the painting tools, sampling area, sampling resolution, sampler and denoise in the **WebUI Inpaint** node, and run.
-4. `image` outputs the full composited picture, `crop` outputs the actual sampling canvas, and `mask` outputs that canvas's mask.
+1. Drag [01-inline-inpaint.json](examples/01-inline-inpaint.json) into ComfyUI and select a compatible checkpoint, or connect your existing model, VAE and conditioning nodes.
+2. In **Inline Mask**, upload a picture and paint the region to change. **White repaints; black preserves.** Orange is only the on-screen overlay.
+3. Edit the upstream positive/negative prompts. Set the sampling area, width, height and denoise in **WebUI Inpaint**, then queue the workflow.
+4. Compare the output. Adopt a result when you want it to become the next source, and continue editing with the mask intact.
 
-**White repaints, black preserves; orange is the painted area on the canvas.**
-With `mask_mode=outside` this inverts and everything outside the painted area is repainted.
-`mask_blur`, `mask_grow` and extra feathering change the effective mask boundary, so blend pixels at that boundary change too; pixels where the effective mask is zero are preserved exactly.
+```mermaid
+flowchart LR
+    Source[Inline Mask] -->|image + mask| Inpaint[WebUI Inpaint]
+    Inputs[Model · VAE · Conditioning] --> Inpaint
+    Source -->|original| Compare[Image Compare]
+    Inpaint -->|result| Compare
+    Inpaint --> Save[Save Image]
+    Compare -. Adopt this result .-> Source
+```
 
-## The two sampling areas
+### Essential connections
 
-| `area` | What it does | Behaviour |
-|---|---|---|
-| `whole_image` | Repaint at the source extent | Scales the whole image to `width × height`, samples, then composites back through the mask |
-| `only_masked` | Repaint at the mask extent | Takes the mask bounding box, adds `padding` context, expands toward the target ratio, upscales that region to the sampling size, and pastes the result back in place |
+| From | To |
+| --- | --- |
+| `Inline Mask.image` / `mask` | `WebUI Inpaint.image` / `mask` |
+| Your model / VAE / positive / negative conditioning | The matching inputs of `WebUI Inpaint` |
+| `Inline Mask.image` | `Image Compare.original` |
+| `WebUI Inpaint.image` | `Image Compare.result` and/or `Save Image.images` |
 
-`width/height` are the sampling canvas size and must be multiples of 8; the final `image` keeps the uploaded image's resolution in both modes.
-That differs from the WebUI whole-image mode, which usually outputs at the target size — take `crop`, or add a resize node after the full output, if you want a target-size image.
-`padding`, `mask_blur` and `mask_grow` are all measured in source pixels.
-When the mask touches an image edge, masked-area mode uses aspect-preserving fill to keep the entire mask instead of cropping it to match the ratio.
-`resize_mode` (stretch, center crop, aspect fill) applies to `whole_image`; masked-area mode automatically uses the transform that keeps the whole mask.
+The Refiner inputs are optional. Leave them disconnected unless you are using a compatible second-stage model.
 
-## Canvas controls
+## Node reference
 
-| Action | How |
-|---|---|
-| Brush / eraser | Toolbar toggle, `B` / `E`; hold `Alt` or use the right mouse button to erase temporarily and release to restore the previous tool; the eraser cursor and a pale pink dashed outline show the erase mode |
-| Rectangle / freehand lasso | `R` / `L`, drag out the region to repaint |
-| Brush size / hardness / brush opacity | Source-pixel brush size, edge hardness and painting opacity |
-| Orange overlay | Display opacity only; it never changes the real mask |
+All nodes live under **Adachi-Inpaint-Workbench**. The group preset controller is frontend-only; the other six have backend node classes.
+
+| Node | Purpose | Outputs |
+| --- | --- | --- |
+| **Inline Mask** | Source image and inline mask editing | `image`, `mask` |
+| **WebUI Inpaint** | Prepare, sample and composite in one node | `image` = full composite; `crop` = sampling canvas; `mask` = sampling mask |
+| **Image Compare** | Preview, compare and adopt results | `image` = unchanged result batch |
+| **Group Bypass Presets** | Apply saved group states | No connections needed |
+| **Auto Exclusive Switch** | Forward exactly one enabled alternative | `output` of the selected type |
+| **Inpaint Prepare** | Crop/resize pixels and mask for a custom sampler workflow | `pixels`, `mask`, `context` |
+| **Inpaint Composite** | Return a decoded local result to source coordinates | `image` |
+
+For modular sampling: `Prepare.pixels → VAE Encode → Set Latent Noise Mask → sampler → VAE Decode → Composite`. Connect `Prepare.mask` to the latent mask node and **always connect `Prepare.context` to `Composite.context`**. See the [modular example](examples/02-modular-inpaint.json).
+
+## Canvas shortcuts
+
+| Action | Shortcut / control |
+| --- | --- |
+| Brush / eraser / rectangle / lasso | `B` / `E` / `R` / `L` |
+| Temporary eraser | Hold `Alt`, or use the right mouse button; release to return to the previous tool |
+| Brush size | `Ctrl` + wheel, or `[` / `]` |
 | Undo / redo | `Ctrl+Z` / `Ctrl+Shift+Z`, or `Ctrl+Y` |
-| Zoom / pan | Wheel to zoom; drag with Space, the middle button or `H` to pan; **Fit** to reset |
-| Brush size keys | `[` / `]` |
-| Fast brush size | With the pointer over the canvas, hold `Ctrl` and wheel up/down; the plain wheel still zooms the image |
-| Editor height | Drag the `↕` bar at the bottom of the editor; the size is saved with the workflow |
-| Invert / fill / clear | Act on the current painted mask and are undoable |
-| Import / export mask | Full-resolution PNG; greyscale images import by brightness, images with alpha import by alpha |
-| Image / mask / overlay | Preview toggles only; they do not change the output |
+| Image zoom / pan, when unpinned | Wheel / Space + drag, middle-button drag, or the pan tool (`H`) |
+| Keep the image fitted | Pin beside **Fit**; click again to unlock |
+| Adjust editor height | Drag the bottom `↕` handle |
 
-Brush pressure and soft brushes are supported; the mouse uses a fixed pressure.
-Inline Mask keeps the image editing area and small **Upload** / **Fit** / pin buttons in the corner, and adjusts the canvas height to the image ratio after loading to reduce empty margins.
-The brush, eraser, rectangle, lasso, pan, four brush sliders, undo/redo, mask actions, view toggles, fit and the embed option all live in the connected **WebUI Inpaint** node and drive that same inline canvas.
-You upload the image once; every stroke then updates the mask in the browser and is stored as PNG data in the workflow and in the executed parameters, so there is no saving and reloading of files per stroke.
-Wheel events over the picture zoom it; over the toolbar, buttons, sliders or the parameter panel they follow ComfyUI's canvas navigation settings.
-A continuous wheel gesture that starts on the ComfyUI canvas keeps navigating the outer canvas when it moves over the picture; scrolling inside the picture again after stopping zooms the image.
-Very large images still use browser memory, and PNG encoding time depends on resolution and hardware, so instant completion is not guaranteed for every image.
+The painting panel also provides invert, fill, clear, PNG mask import/export, image/mask/overlay views and **Embed source in workflow**. Overlay opacity affects display only. Scrolling over buttons and parameter controls navigates the outer workflow; a gesture starting on the workflow keeps navigating it when the pointer crosses the picture.
 
-## Painting tools and inpainting parameters
+## Example workflows
 
-The Inline Mask header has **Upload**, **Fit** and a pin toggle (**Keep** / **保持**). Enable the pin to keep the picture fitted and centered: plain wheel navigates the workflow, Ctrl+wheel still adjusts the brush, and image panning is disabled. Disable the pin to resume image zoom and pan. The pin state is saved with the workflow. Display buffers are bounded during workflow zoom; the saved mask retains its original resolution.
+Drag a JSON file into ComfyUI:
 
-Once Inline Mask is connected to the `image` input of **WebUI Inpaint**, the original painting controls appear in that inpaint node, and the parameter panel below drives the node's real sampling parameters.
-Width and height each get their own row with both a slider and a number field; denoise is a slider too, and **Use source size** fills in the source dimensions, rounded to the nearest multiple of 8 the sampler requires.
-Mask mode, fill, sampling area, sampler, scheduler, steps, CFG and seed are shown directly; mask processing, batch and Refiner switching live under **Mask, batch and advanced settings**.
-If one inline source feeds several inpaint nodes, the painting controls go to the first WebUI Inpaint node and each node keeps its own parameter panel; disconnecting or deleting that node moves the tools to the next available one.
-Parameters driven by an external link disable the matching panel control; a modular workflow puts the painting tools in **Inpaint Prepare** and keeps the sampling parameters in the separate sampler node.
+| Example | What to try |
+| --- | --- |
+| [01 · Inline inpainting](examples/01-inline-inpaint.json) | The complete painting and inpainting loop; select your own compatible checkpoint. |
+| [02 · Modular inpainting](examples/02-modular-inpaint.json) | Use standard encode/sample/decode nodes with Prepare and Composite. |
+| [03 · Group presets](examples/03-group-presets.json) | Model-free preset switching with image branches. |
+| [04 · Exclusive switch](examples/04-exclusive-switch.json) | Model-free A/B selection controlled by group presets. |
 
-## Comparison and chained inpainting
+## Compatibility and important behaviour
 
-Add an **Image Compare** node and connect Inline Mask's `image` to `original` and the final full-size generated `image` to `result`, then run.
-With the pointer over the picture, the thin divider shows the generated result on the left and the original on the right; leaving the picture hides the divider and shows the full result, and the image always remains fitted and centered in its canvas. Scrolling over the comparison image navigates the ComfyUI workflow background using the current navigation settings; comparison images do not zoom or pan independently. Batch selection, dimensions and the fit button sit below the picture.
-When you are happy, click **Adopt this result**: the plugin uploads the selected result as the new source image and writes it back into the upstream inline editor while preserving the painted mask, current undo/redo history and viewport. Use **Clear** when you want to start a new mask; a normal **Upload** still starts a fresh mask.
-To preserve mask coordinates, an adopted result must match the source dimensions; a mismatched result is rejected without changing the current source or mask. The mask remains embedded in saved workflow data; command-level undo history is retained during adoption in the current session.
-If the original is routed through intermediate IMAGE nodes the plugin walks upstream to find the inline editor; when several candidates exist you can pick one explicitly under **Adopt into**.
-Adoption only happens when you click the button and never starts the next generation automatically; the `image` output still passes the whole result batch, so you can feed a Save Image node.
-The result list accumulates images across runs and selects the newest result automatically. Each result keeps its original from that run. Successful adoption clears the old list and displays the accepted image as 1/1; the next generation starts a fresh list using the new source. Failed adoption leaves the old list intact. Saving the workflow also saves preview references, selection and the pending new-round state.
+- **Static images:** ordinary 4D `[B,C,H,W]` latents and single-frame 5D `[B,C,1,H,W]` image latents are supported, including the Wan-derived VAE path used by Anima. Supply the model family's matching VAE and conditioning. This is not multi-frame video inpainting.
+- **Anima:** for ordinary masked img2img, leave **inpaint_model** disabled. That option is for dedicated inpainting architectures, not a requirement for painting a mask.
+- **Source size:** the final composite keeps the source resolution in both sampling areas. Use `crop` or a separate resize node for a target-size output.
+- **Sharing:** masks are embedded in saved workflows. Source images use a relative `input/` path by default; enable **Embed source in workflow** to include the picture too. Embedded images increase JSON size.
+- **Adoption:** source and result dimensions must match to preserve mask coordinates. Undo/redo commands survive adoption in the current session; saving/reloading retains the mask, not the command history.
+- **Temporary previews:** comparison history stores preview references. ComfyUI temp cleanup may expire them; adopted images are stored under `input/adachi-inpaint/`.
+- **Scope:** this is an original WebUI-style implementation. It does not promise identical WebUI pixels, scripts or extension behaviour. Extra soft-edge feathering is not WebUI's full Soft Inpainting algorithm.
 
-Comparison previews live in ComfyUI's temp directory and may need a re-run after cleanup or restart; an adopted source image is stored in `input/adachi-inpaint/` and does not depend on temp previews.
+<details>
+<summary>Sampling, fill and batch details</summary>
 
-## Group bypass presets
+- Sampling dimensions use multiples of 8. Padding, blur and mask growth are measured in source pixels; effective mask edges can change after blur/growth, while pixels with zero effective mask remain unchanged.
+- `mask_mode=outside` inverts the painted region before mask processing.
+- `resize_mode` controls whole-image resizing. Masked-area mode uses an aspect-preserving transform that retains the full mask, including at source edges.
+- Fill modes: **original**, surrounding-colour **fill**, **latent noise**, and **zero latent**. The latent modes belong to WebUI Inpaint; the modular Prepare node handles pixels and masks.
+- An empty mask or `denoise=0` skips VAE/sampling. `batch_size` is variants per input image, not ComfyUI queue count.
+- For modular multi-source batches, group variants per source (`A,A,B,B`), rather than interleaving them (`A,B,A,B`).
+- Optional Refiner uses `refiner_model` and `refiner_switch`; `0.8` runs the last 20% with the Refiner. Compatible Refiner conditioning is recommended. A switch of `1` uses only the base model; `0` uses only the Refiner.
+- Input limits: 64 MiB per file, 32 megapixels and 16384 pixels per image edge. Large-image painting and PNG encoding still depend on browser memory and hardware.
 
-Search for **Group Bypass Presets** (Chinese: **组忽略预设**) under Adachi-Inpaint-Workbench. It needs no connections and does not require rgthree or Danbooru.
+</details>
 
-1. Click **+ New preset**, name it and save. The preset captures the current groups' enabled/bypassed state.
-2. Choose **Enabled**, **Bypassed** or **Keep current** for each group on the right. Changes update and apply the selected preset immediately.
-3. Add more presets. Clicking a name on the left applies that preset to all of its configured groups at once. You can also right-click the node and choose **Apply preset**.
-4. Use **Save current group states** to capture changes you made directly in the workflow, or rename/delete presets as needed.
+## Troubleshooting and development
 
-Presets are stored in the workflow. Group renames retain their preset mapping; newly added groups stay unmanaged until configured. Loading a workflow restores its saved node modes without automatically applying a preset. If groups overlap, the smaller group's setting takes priority; the preset controller itself stays enabled.
-Bypass uses ComfyUI's standard bypass mode, so a bypassed node still needs compatible input/output types when it sits on an active data path.
-Try [examples/03-group-presets.json](examples/03-group-presets.json), which uses only empty images and colour inversion and needs no model.
+**Old UI after updating?** Fully restart ComfyUI and hard-refresh the browser. Backend Python changes need a server restart; refreshing the page alone is insufficient.
 
-## Fill, batch and Refiner
+**Exclusive switch reports no enabled input?** Check the real source and corresponding Set, not only the visible Get nodes. Keep the selector outside the groups it controls. If an integration still drops a subgraph output, placing the CLIP encoder outside that subgraph is a practical workaround. For a report, include the workflow, plugin/frontend versions and full error text; current errors show frontend, workflow and submitted-input flags.
 
-| `fill` | Behaviour |
-|---|---|
-| `original` | Encode the source pixels into the latent |
-| `fill` | Multi-scale fill from the colours surrounding the mask, then encode |
-| `latent_noise` | Fill the masked latent with seed-dependent noise |
-| `latent_nothing` | Zero the masked latent |
+**An image is missing after opening someone else's workflow?** Supply the source at its relative input path, or have the sender save with source embedding enabled. Expired comparison previews require regeneration.
 
-The two latent fills are implemented by the all-in-one **WebUI Inpaint** node; standalone **Inpaint Prepare** only handles pixels and masks, so choose `original` or `fill` in a standard-node pipeline.
-`denoise=0` and an empty mask return the source image directly and skip VAE and sampling; `batch_size` is the number of variants per input image, and the same seed reproduces the same batch.
-For repeated batches use ComfyUI's queue count together with the seed's after-generate control; `batch_size` controls a single run.
-Keep `inpaint_model=false` for ordinary SD/SDXL checkpoints; enable it only for dedicated inpainting models, which switches to ComfyUI's native `InpaintModelConditioning`.
+CPU regression tests:
 
-You can optionally attach a compatible `refiner_model` and use `refiner_switch` for the share of base sampling steps; `0.8` means roughly the first 80% of steps run on the base model.
-Encoding with the Refiner's own CLIP and wiring `refiner_positive`/`refiner_negative` is recommended; if left unconnected the original conditioning is reused and the VAE still comes from the base side.
-`refiner_switch=1` uses only the base model and `0` uses only the Refiner; a known-incompatible latent format raises an error.
-
-## Auto Exclusive Switch
-
-Search for **Auto Exclusive Switch** / **自动二选一** under **Adachi-Inpaint-Workbench**.
-Connect two alternative branches to `input_a` / `input_b` and connect `output` to the common downstream input.
-For example, connect the CONDITIONING outputs of two positive CLIP Text Encode nodes to A/B, then connect `output` to the sampler's positive input.
-Bypass one encoder (Ctrl+B), or use a Group Bypass Preset to enable one group and bypass the other: the remaining branch is selected automatically.
-Both enabled, or neither connected/enabled, produces an error instead of silently preferring A.
-
-The node accepts conditioning, strings, images, masks, models, latents and other ComfyUI data types; both alternatives and the downstream socket should use the same data type.
-The model-free `examples/04-exclusive-switch.json` demonstrates two branches with two group presets.
-It has no switch widget. A small internal value is computed from the graph when queuing, including when a bypassed image/model transform would otherwise pass its input through.
-Place the selector outside the two controlled groups and connect each group's final node to it.
-KJNodes Get/Set routes and reroutes are supported: an ignored/muted Get, its corresponding Set, or the source behind those routing nodes disables that selector branch. Missing setters and virtual routing cycles also count as unavailable. Ordinary processing nodes remain independent active sources; the selector does not guess the meaning of arbitrary processing chains.
-The ignored branch is not requested by this selector; any separate preview/save outputs on that branch may still execute independently.
-For raw API prompts, omit the ignored input and omit the internal `active_inputs` field; exactly one of `input_a` / `input_b` must remain.
-Without workflow metadata, the backend checks actual submitted connections after virtual routing: when only one input survives, it uses that branch even if cached frontend flags still report both enabled. With both connections present and no workflow metadata, the frontend flags remain necessary to distinguish bypassed transform pass-through from an enabled branch. Updating this backend logic requires a full ComfyUI restart as well as a browser refresh.
-When workflow metadata accompanies the request, the server independently follows Get → named Set → source node. Both Gets can stay enabled: bypassing one branch's Set or encoder disables that branch. The server normalizes flags and removes ignored execution inputs before validation and cache lookup, while the saved workflow retains its connections. Without workflow metadata the submitted connections/frontend flags remain the fallback.
-If the enabled input was dropped during frontend execution serialization, the server can restore its saved connection, including a subgraph output mapped to a flattened node ID. It only reconnects an existing submitted node whose type matches the saved source; it does not create missing model/encoder nodes.
-
-## Using a standard sampling workflow
-
-`examples/02-modular-inpaint.json` shows a wiring you can swap samplers into.
-
-```text
-Inline Mask ── image/mask ──> Inpaint Prepare
-                                pixels ──> VAE Encode ──> Set Latent Noise Mask ──> KSampler
-                                mask ──────────────────────────┘                      │
-                                context ──────────────────────────────────────┐      │
-                                                                             │      ▼
-                                                                        Inpaint Composite <── VAE Decode
-                                                                             │
-                                                                          Save Image
-```
-
-Always wire `Prepare.context` back into **Inpaint Composite** so the local result returns to the source coordinates and size.
-The modular example targets ordinary checkpoints; a dedicated inpainting checkpoint should use the conditioning nodes it needs, or the all-in-one node directly.
-When several input images each produce several variants, Composite needs the variants grouped per source image (for example `A,A,B,B`); the all-in-one node already orders them that way, while an external latent-repeat node that outputs `A,B,A,B` needs its batch order adjusted first.
-
-## Sharing and compatibility
-
-The painted mask is written into the workflow automatically; by default only a relative path inside ComfyUI's `input/` is stored for the source image.
-To hand someone a workflow that opens on the same picture, tick **Embed source in workflow** below the canvas before saving the JSON; they install this plugin, pick their own model and can keep editing.
-Without embedding you have to supply the source image as well and keep the same relative path under `input/`.
-Embedding grows the workflow file, and the source and mask then travel with the shared workflow, so check the picture content before sharing.
-
-This is an original WebUI-style implementation and does not promise pixel-perfect agreement with AUTOMATIC1111/Forge results.
-`soft_edge` is extra Gaussian feathering with `soft_strength` controlling the extra radius; it **does not reimplement WebUI's Soft Inpainting algorithm or its full parameter set**.
-Samplers, schedulers and Refiner use the current ComfyUI implementations, and the fill algorithms are this plugin's own.
-Static-image pipelines support ordinary 4D `[B,C,H,W]` latents and single-frame 5D `[B,C,1,H,W]` latents, without hardcoding a model name or channel count. This includes the Wan-derived VAE used by Anima and Qwen-image pipelines. Independent images/variants stay in the batch dimension, with their own masks; they are not encoded as consecutive video frames.
-Use the matching model, VAE and text conditioning for the model family. For ordinary Anima img2img, keep **inpaint_model** disabled; that option invokes native conditioning for dedicated inpainting architectures, and is not required merely because a mask is painted.
-Actual multi-frame video, audio/3D latents, model-specific control pipelines, WebUI scripts/extensions and automatic WebUI plugin configuration are not implemented.
-Limits are 64 MiB per file, 32 megapixels per image and 16384 px per side; no models are bundled and nothing is downloaded.
-Node loading, canvas editing, workflow/executed-parameter save and restore have been verified in an isolated CPU ComfyUI service on the development machine, and the backend is verified with mock VAE/samplers; real-checkpoint image quality and compatibility across every model family and Refiner have not been tested.
-
-## Tests
-
-Run the CPU tests from this plugin directory with your ComfyUI Python:
-
-```powershell
+```bash
 python -m unittest discover -s tests -v
+node --experimental-default-type=module tests/test_exclusive_routes.mjs
+node --experimental-default-type=module tests/test_compare_history.mjs
 ```
 
-## 中文简介
+See [verification notes](VERIFICATION.md) for tested configurations and limits, [changelog](CHANGELOG.md) for updates, and [rollback instructions](ROLLBACK.md) for returning to an earlier version. Model-family and image-quality coverage is not exhaustive.
 
-本插件把蒙版绘制放在工作流节点内部，**不需要弹出遮罩编辑器**，也省去每画一笔就保存、加载磁盘文件的往返。
-连接 **WebUI 局部重绘** 节点后，画笔工具与采样参数都在该节点内，支持整图范围与蒙版范围重绘、原尺寸回贴、Alt 临时橡皮擦、Ctrl+滚轮笔径、图像对比，以及把满意的结果一键回填为新的原图继续重绘。
-代码里的默认文案是英文，以便 Manager 用户直接使用；节点搜索可输入 `Inline Mask`，分类为 **Adachi-Inpaint-Workbench**。
+## Credits and license
 
-想用中文界面时，把 ComfyUI 的语言切成中文即可，插件会自动跟随：
-在 ComfyUI 设置里找到 **Locale / 语言**（设置项 `Comfy.Locale`）选择 `zh`，然后刷新浏览器（`Ctrl+F5`）。
-节点名称、分类、输入输出名与提示由 `locales/zh/` 提供，通过 ComfyUI 的 `/i18n` 机制加载；
-画布按钮与参数面板由 `web/i18n.js` 读取同一个语言设置翻译，因此「宽度」「高度」「上传」等也会一起变回中文。
-英文用户看到的一直是英文（英文是内置默认值）；某个词条若没有对应翻译，会自动回退为英文。
-两套语言共用同一个节点类 ID 和参数键名，所以已保存的工作流不受语言切换影响。
+Created by **Adachi / 安达**. Licensed under [MIT](LICENSE).
 
-新增「自动二选一」：把两个正面条件（或图像、模型等同类型数据）接到输入 A/B，输出接共同下游；忽略其中一个分支，就自动使用另一个。两路都启用或都无输入会报错，不需要 switch。切换节点放在两个被控制分组之外，也能配合组忽略预设使用。
+Built for [ComfyUI](https://github.com/Comfy-Org/ComfyUI), with familiar inpainting controls inspired by WebUI and hover-comparison interaction inspired by [rgthree-comfy](https://github.com/rgthree/rgthree-comfy). This repository contains its own implementation; those projects are not bundled dependencies.
 
-
-Anima 兼容：支持其 Wan/Qwen VAE 的单帧五维潜空间，也保留普通四维 VAE；会同步适配蒙版、填充、批次和解码回贴。普通 Anima 图生图请保持“专用重绘模型”关闭，并使用配套模型、VAE 与文本条件；这不是多帧视频重绘功能。
+Bug reports and workflow examples are welcome in [Issues](https://github.com/adachi0130/Adachi-Inpaint-Workbench/issues).
