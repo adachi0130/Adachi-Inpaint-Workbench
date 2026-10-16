@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.4
+
+- Use a pure black dashed crop outline and automatically synchronize connected inpaint resolution when locking a crop. Linked resolution inputs remain under their upstream node's control.
+- Remove the Inline Mask result socket and obsolete feedback connections. Both modes now receive results exclusively through Image Compare adoption.
+- Crop adoption keeps the full source, crop location and repaint mask; the accepted patch remains a separate editable blend layer. Generation alone does not update it. Tag comparison previews with their originating crop to reject stale adoption.
+
 ## 0.6.3
 
 - Check oversized embedded sources before workflow configuration, so the first autosave cannot disable browser draft storage before the mode-change guard runs. Upload exact source bytes before changing the file reference, including sources in subgraph definitions.

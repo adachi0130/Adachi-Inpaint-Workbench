@@ -35,6 +35,23 @@ export function connectedSamplers(source) {
         .sort((a, b) => Number(b.type === "AdachiWebUIInpaint") - Number(a.type === "AdachiWebUIInpaint"));
 }
 
+// Use the same rounding, range and linked-input rules as Use source size.
+export function syncCropDimensions(source, width, height) {
+    const aligned = value => Math.max(64, Math.min(8192, Math.round(value / 8) * 8));
+    for (const target of connectedSamplers(source)) {
+        target.adachiParameters?.refresh();
+        for (const [name, value] of [["width", width], ["height", height]]) {
+            if (target.inputs?.some(input => input.name === name && input.link != null)) continue;
+            const widget = target.widgets?.find(widget => widget.name === name);
+            if (widget && widget.value !== aligned(value)) {
+                widget.value = aligned(value);
+                widget.callback?.(widget.value);
+            }
+        }
+        target.adachiParameters?.refresh();
+    }
+}
+
 export function relocateWidgets(owner, previous, next) {
     if (previous) {
         for (const widget of previous.widgets || []) {

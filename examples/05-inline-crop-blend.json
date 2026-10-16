@@ -2,7 +2,7 @@
   "id": "58f1c513-1df0-4f53-af63-69da48ad43f0",
   "revision": 0,
   "last_node_id": 8,
-  "last_link_id": 13,
+  "last_link_id": 15,
   "nodes": [
     {
       "id": 1,
@@ -19,13 +19,6 @@
       "order": 0,
       "mode": 0,
       "inputs": [
-        {
-          "localized_name": "重绘结果",
-          "name": "result",
-          "shape": 7,
-          "type": "IMAGE",
-          "link": 12
-        },
         {
           "localized_name": "原图",
           "name": "image",
@@ -101,7 +94,7 @@
           "type": "IMAGE",
           "links": [
             7,
-            9
+            15
           ]
         },
         {
@@ -217,7 +210,7 @@
         150
       ],
       "flags": {},
-      "order": 3,
+      "order": 4,
       "mode": 0,
       "inputs": [
         {
@@ -269,7 +262,7 @@
         150
       ],
       "flags": {},
-      "order": 4,
+      "order": 5,
       "mode": 0,
       "inputs": [
         {
@@ -318,10 +311,10 @@
       ],
       "size": [
         430,
-        1020
+        767
       ],
       "flags": {},
-      "order": 5,
+      "order": 6,
       "mode": 0,
       "inputs": [
         {
@@ -571,8 +564,7 @@
           "name": "image",
           "type": "IMAGE",
           "links": [
-            10,
-            12
+            10
           ]
         },
         {
@@ -650,14 +642,14 @@
         620
       ],
       "flags": {},
-      "order": 6,
+      "order": 7,
       "mode": 0,
       "inputs": [
         {
           "localized_name": "原图",
           "name": "original",
           "type": "IMAGE",
-          "link": 9
+          "link": 15
         },
         {
           "localized_name": "重绘结果",
@@ -692,7 +684,7 @@
         450
       ],
       "flags": {},
-      "order": 7,
+      "order": 3,
       "mode": 0,
       "inputs": [
         {
@@ -729,7 +721,7 @@
       ],
       "size": [
         540,
-        280
+        260
       ],
       "flags": {},
       "order": 2,
@@ -738,10 +730,10 @@
       "outputs": [],
       "properties": {},
       "widgets_values": [
-        "Inline Mask: Crop & Blend\n1. Select your checkpoint and upload the full source with the arrow.\n2. Choose Crop & Blend at the upper right.\n3. Pick one of the six 64-aligned presets (512-2048); swap width/height for landscape. Move the dashed frame, then left-click to lock.\n4. The outside is dimmed; the repaint mask starts empty. Paint inside the crop and run. WebUI Inpaint.image returns to Inline Mask.result.\n5. The half-circle button edits the layer mask: brush keeps new pixels; Alt restores the original.\n6. Save Image uses full_image. Reselect merges the visible layers before choosing another area.\nCtrl+wheel = brush size; Shift+wheel = hardness."
+        "Inline Mask: Crop & Blend\n1. Select your checkpoint and upload the full source.\n2. Choose Crop & Blend and a size preset, then left-click to lock the black dashed frame. Inpaint width/height follow the crop automatically.\n3. Paint inside the empty crop mask and run the workflow.\n4. Inspect Image Compare and click Adopt this result. The patch returns to this crop; Inline Mask has no result input.\n5. Paint the blend layer mask to keep new pixels; Alt restores original pixels. The repaint mask is retained.\n6. full_image is the current adopted full composite. Reselect merges it before choosing a new area."
       ],
       "widgets_values_named": {
-        "text": "Inline Mask: Crop & Blend\n1. Select your checkpoint and upload the full source with the arrow.\n2. Choose Crop & Blend at the upper right.\n3. Pick one of the six 64-aligned presets (512-2048); swap width/height for landscape. Move the dashed frame, then left-click to lock.\n4. The outside is dimmed; the repaint mask starts empty. Paint inside the crop and run. WebUI Inpaint.image returns to Inline Mask.result.\n5. The half-circle button edits the layer mask: brush keeps new pixels; Alt restores the original.\n6. Save Image uses full_image. Reselect merges the visible layers before choosing another area.\nCtrl+wheel = brush size; Shift+wheel = hardness."
+        "text": "Inline Mask: Crop & Blend\n1. Select your checkpoint and upload the full source.\n2. Choose Crop & Blend and a size preset, then left-click to lock the black dashed frame. Inpaint width/height follow the crop automatically.\n3. Paint inside the empty crop mask and run the workflow.\n4. Inspect Image Compare and click Adopt this result. The patch returns to this crop; Inline Mask has no result input.\n5. Paint the blend layer mask to keep new pixels; Alt restores original pixels. The repaint mask is retained.\n6. full_image is the current adopted full composite. Reselect merges it before choosing a new area."
       },
       "color": "#432",
       "bgcolor": "#653"
@@ -813,14 +805,6 @@
       "MASK"
     ],
     [
-      9,
-      1,
-      0,
-      6,
-      0,
-      "IMAGE"
-    ],
-    [
       10,
       5,
       0,
@@ -829,18 +813,18 @@
       "IMAGE"
     ],
     [
-      12,
-      5,
-      0,
-      1,
-      0,
-      "IMAGE"
-    ],
-    [
       13,
       1,
       2,
       7,
+      0,
+      "IMAGE"
+    ],
+    [
+      15,
+      1,
+      0,
+      6,
       0,
       "IMAGE"
     ]

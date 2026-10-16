@@ -48,7 +48,7 @@ app.registerExtension({
                     if (!response.ok) throw new Error(T("Result preview expired; run the workflow again"));
                     const blob = await response.blob();
                     if (blob.size > 64 * 1024 * 1024) throw new Error(T("Result image exceeds 64 MiB; downscale it first"));
-                    await target.adachiUseResult(new File([blob], `adachi-result-${Date.now()}.png`, { type: "image/png" }));
+                    await target.adachiUseResult(new File([blob], `adachi-result-${Date.now()}.png`, { type: "image/png" }), image.adachi_origin);
                     // Adoption starts a new round. Keep the accepted image visible
                     // as 1/1, then replace it with the next round's first outputs.
                     const data = { originals: [image], results: [image] };
@@ -73,7 +73,9 @@ app.registerExtension({
                 const previous = node.properties.adachi_compare_new_round
                     ? appendComparison() : appendComparison(node.properties.adachi_compare);
                 const data = appendComparison(previous, {
-                    originals: output.adachi_originals, results: output.adachi_results,
+                    originals: output.adachi_originals,
+                    results: output.adachi_results.map(image => output.adachi_origin?.[0]
+                        ? {...image, adachi_origin:output.adachi_origin[0]} : image),
                 });
                 node.properties.adachi_compare = data;
                 node.properties.adachi_compare_new_round = false;

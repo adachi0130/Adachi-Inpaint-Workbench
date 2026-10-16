@@ -60,19 +60,19 @@ Upload, drop or paste a source image and paint on **Inline Mask** itself. Mask s
 
 ### Crop and blend in the same node
 
-Choose **Mask** or **Crop & Blend** at the upper right of Inline Mask. Ordinary Mask mode ignores its `result` input, even when connected.
+Choose **Mask** or **Crop & Blend** at the upper right of Inline Mask. Both modes receive images through **Adopt this result** in Image Compare; Inline Mask has no result input socket.
 
-In Crop & Blend mode, choose one of six 64-aligned presets spanning 512–2048 pixels per side, including 1024 × 1536 (or custom dimensions in multiples of 64). The dashed rectangle follows the pointer by its upper-left corner; left-click locks it. The outside is darkened. A new region starts with an empty repaint mask. Paint inside the rectangle; brush and shape operations stay within its bounds. Use **◌ repaint mask** to return to repaint-mask editing. The position stays fixed for repeated passes.
+In Crop & Blend mode, choose one of six 64-aligned presets spanning 512–2048 pixels per side, including 1024 × 1536 (or custom dimensions in multiples of 64). The dashed rectangle follows the pointer by its upper-left corner; left-click locks it. The outside is darkened. A new region starts with an empty repaint mask. Paint inside the rectangle; brush and shape operations stay within its bounds. Use **◌ repaint mask** to return to repaint-mask editing. The position stays fixed for repeated passes. The outline is a pure black dashed rectangle, and locking it automatically fills the connected Inpaint node's width and height from the crop, using the same rules as Use source size.
 
 | Connection | Purpose |
 | --- | --- |
 | `Inline Mask.image` + `mask` → `WebUI Inpaint.image` + `mask` | Send the selected crop and its repaint mask. |
-| `WebUI Inpaint.image` → `Inline Mask.result` | Return the result at exactly the crop dimensions. |
-| `Inline Mask.full_image` → `Save Image.images` | Save the full source with the generated patch stitched in. |
+| `Inline Mask.image` → `Image Compare.original`; `WebUI Inpaint.image` → `Image Compare.result` | Compare the crop before adopting it. |
+| `Inline Mask.full_image` → `Save Image.images` | Save the current full image with the **adopted** layer stitched in. |
 
-The plugin separates this visible feedback link before execution, so it can run without an execution cycle. Keep the editor and return link in the main graph. Use the inpaint node's **image** output for the return link; its `crop` output is the sampling canvas and can have a different size. [Open the ready-wired example](examples/05-inline-crop-blend.json).
+Generate, inspect the result in **Image Compare**, then click **Adopt this result** to return it. There is no feedback wire and generation does not automatically replace the editor image. Use the inpaint node's **image** output for comparison; its `crop` output is the sampling canvas and can have a different size. [Open the ready-wired example](examples/05-inline-crop-blend.json).
 
-After generation, **◐ blend layers** shows the original under the new result. Paint to keep new pixels, hold **Alt** to restore original pixels, and use soft brush edges to blend seams. This layer mask is independent of the repaint mask and is kept for another pass at the same coordinates. **✓** merges the visible layers; **↖ reselect** merges first, then lets you choose a fresh region. There is no crop version timeline. In a generated batch, `full_image` contains all composites and the editor displays the last result.
+After adoption, **◐ blend layers** shows the original under the new result. Paint to keep new pixels, hold **Alt** to restore original pixels, and use soft brush edges to blend seams. This layer mask is independent of the repaint mask and is kept for another pass at the same coordinates. **✓** merges the visible layers; **↖ reselect** merges first, then lets you choose a fresh region. There is no crop version timeline. For a generated batch, choose the desired result in Image Compare before adopting it. A result tagged with an older crop is rejected after selecting another region.
 
 ### Inpaint the whole image or just the masked region
 
@@ -167,7 +167,7 @@ The Refiner inputs are optional. Leave them disconnected unless you are using a 
 
 ## Node reference
 
-All nodes live under **Adachi-Inpaint-Workbench**. The group preset controller is frontend-only; the other six are user-facing backend nodes. The layer sink is internal and added only for execution.
+All nodes live under **Adachi-Inpaint-Workbench**. The group preset controller is frontend-only; the other six are user-facing backend nodes.
 
 | Node | Purpose | Outputs |
 | --- | --- | --- |
@@ -206,7 +206,7 @@ Drag a JSON file into ComfyUI:
 | [02 · Modular inpainting](examples/02-modular-inpaint.json) | Use standard encode/sample/decode nodes with Prepare and Composite. |
 | [03 · Group presets](examples/03-group-presets.json) | Model-free preset switching with image branches. |
 | [04 · Exclusive switch](examples/04-exclusive-switch.json) | Model-free A/B selection controlled by group presets. |
-| [05 · Inline crop and blend](examples/05-inline-crop-blend.json) | One editor, crop presets, result feedback and full-image output; select your checkpoint and upload a source. |
+| [05 · Inline crop and blend](examples/05-inline-crop-blend.json) | One editor, crop presets, comparison adoption and accepted full-image output; select your checkpoint and upload a source. |
 
 ## Compatibility and important behaviour
 

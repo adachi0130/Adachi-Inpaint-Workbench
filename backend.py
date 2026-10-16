@@ -313,7 +313,6 @@ class AdachiInlineMask:
             "mask_data": ("STRING", {"default": "", "multiline": False, "tooltip": "Editor mask PNG data URL; white repaints."}),
             "source_data": ("STRING", {"default": "", "multiline": False, "tooltip": "Embedded source image for portable workflows."}),
         }, "optional": {
-            "result": ("IMAGE", {"lazy": True, "tooltip": "Inpaint result; ignored in ordinary mask mode."}),
             "edit_mode": (["mask", "crop"], {"default": "mask"}),
             "crop_state": ("STRING", {"default": "{}"}),
             "blend_data": ("STRING", {"default": ""}),
@@ -604,7 +603,7 @@ class AdachiImageCompare:
         return {"required": {
             "original": ("IMAGE", {"tooltip": "Original image shown on the right."}),
             "result": ("IMAGE", {"tooltip": "Full-size generated image shown on the left; use image, not crop."}),
-        }}
+        }, "hidden": {"prompt": "PROMPT", "unique_id": "UNIQUE_ID", "dynprompt": "DYNPROMPT"}}
 
     RETURN_TYPES = ("IMAGE",)
     RETURN_NAMES = ("image",)
@@ -614,7 +613,7 @@ class AdachiImageCompare:
     DESCRIPTION = "Hover to compare; adopt a result into the upstream inline editor."
     SEARCH_ALIASES = ["compare", "before after", "图像对比", "adachi", "安达工作台"]
 
-    def compare(self, original, result):
+    def compare(self, original, result, prompt=None, unique_id=None, dynprompt=None):
         import nodes
 
         original, result = _image_tensor(original), _image_tensor(result)
@@ -627,7 +626,8 @@ class AdachiImageCompare:
         preview = nodes.PreviewImage()
         before = preview.save_images(original, filename_prefix="adachi_compare_original")["ui"]["images"]
         after = preview.save_images(result, filename_prefix="adachi_compare_result")["ui"]["images"]
-        return {"ui": {"adachi_originals": before, "adachi_results": after}, "result": (result,)}
+        origin = _comparison_origin(prompt, unique_id, dynprompt)
+        return {"ui": {"adachi_originals": before, "adachi_results": after, "adachi_origin": [origin] if origin else []}, "result": (result,)}
 
 
 _MISSING_INPUT = object()
@@ -963,32 +963,46 @@ class AdachiLayerCommit:
 
 
 def normalize_crop_prompt(data):
-    """One visible node, an acyclic source -> sampler -> sink execution graph."""
+    """Ignore obsolete feedback links; adoption now happens only in Image Compare."""
     prompt = data.get("prompt", {})
-    if not isinstance(prompt, dict):
-        return data
-    for node_id, node in list(prompt.items()):
-        if not isinstance(node, dict) or node.get("class_type") != "AdachiInlineMask":
-            continue
-        inputs = node.setdefault("inputs", {})
-        result = inputs.pop("result", None)
-        if inputs.get("edit_mode", "mask") != "crop" or not result:
-            continue
-        state = _crop_state(inputs.get("crop_state", "{}"))
-        if not state.get("locked") or not state.get("job"):
-            continue
-        sink_id = f"adachi_layer_{node_id}"
-        if sink_id in prompt:
-            raise ValueError("Reserved Adachi execution node ID is already in use.")
-        sink_inputs = {key: inputs.get(key, default) for key, default in
-                       (("image", ""), ("source_data", ""), ("crop_state", "{}"), ("blend_data", ""))}
-        sink_inputs.update(result=result, target=str(node_id))
-        for other in prompt.values():
-            for name, link in list(other.get("inputs", {}).items()):
-                if isinstance(link, list) and len(link) == 2 and str(link[0]) == str(node_id) and link[1] == 2:
-                    other["inputs"][name] = [sink_id, 0]
-        prompt[sink_id] = {"class_type": "AdachiLayerCommit", "inputs": sink_inputs}
+    if isinstance(prompt, dict):
+        for node in prompt.values():
+            if isinstance(node, dict) and node.get("class_type") == "AdachiInlineMask":
+                node.setdefault("inputs", {}).pop("result", None)
     return data
+
+
+def _comparison_origin(prompt, unique_id, dynprompt=None):
+    """Tag previews with their generating crop, so later adoption cannot hit another region."""
+    def get_node(node_id):
+        if dynprompt is not None:
+            try:
+                return dynprompt.get_node(str(node_id))
+            except KeyError:
+                pass
+        return prompt.get(str(node_id), prompt.get(node_id)) if isinstance(prompt, dict) else None
+    node = get_node(unique_id)
+    link = node.get("inputs", {}).get("original") if isinstance(node, dict) else None
+    queue = [str(link[0])] if isinstance(link, list) and len(link) == 2 else []
+    seen, sources = set(), {}
+    while queue and len(seen) < 256:
+        node_id = queue.pop()
+        if node_id in seen:
+            continue
+        seen.add(node_id)
+        current = get_node(node_id)
+        if not isinstance(current, dict):
+            continue
+        inputs = current.get("inputs", {})
+        if current.get("class_type") == "AdachiInlineMask":
+            mode = inputs.get("edit_mode", "mask")
+            state = _crop_state(inputs.get("crop_state", "{}")) if mode == "crop" else {}
+            sources[node_id] = {"source": node_id, "mode": mode, "job": state.get("job", "")}
+            continue
+        for value in inputs.values():
+            if isinstance(value, list) and len(value) == 2 and type(value[1]) is int:
+                queue.append(str(value[0]))
+    return next(iter(sources.values())) if len(sources) == 1 else None
 
 
 NODE_CLASS_MAPPINGS = {

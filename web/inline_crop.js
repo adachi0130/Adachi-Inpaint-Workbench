@@ -1,5 +1,7 @@
 import { CROP_PRESETS, cropAt } from "./crop_geometry.js?v=0.6.2";
 import { T } from "./i18n.js";
+import { syncCropDimensions } from "./parameter_bridge.js?v=0.6.4";
+import { installResultAdoption } from "./result_adoption.js?v=0.6.4";
 
 const fields = ["mask", "baseMask", "history", "future", "lastMask", "dirty"];
 const canvas = (w, h) =>
@@ -39,6 +41,7 @@ export class InlineCropController {
     this.cropHeight = 1536;
     this.patchCanvas = canvas(1, 1);
     this.build();
+    installResultAdoption(node, this);
     const originalFlush = editor.flush.bind(editor);
     editor.flush = () => {
       if (this.target !== "blend") return originalFlush();
@@ -370,6 +373,7 @@ export class InlineCropController {
     e.history = [];
     e.future = [];
     e.changed();
+    syncCropDimensions(this.node, region.width, region.height);
     this.sync();
     this.changed();
   }
@@ -427,13 +431,13 @@ export class InlineCropController {
     this.sync();
     this.editor.schedule();
   }
-  async accept(record) {
+  async accept(record, {allowBusy = false} = {}) {
     if (
       this.editor.destroyed ||
       this.mode !== "crop" ||
       !this.region.locked ||
       record.job !== this.region.job ||
-      this.busy
+      (this.busy && !allowBusy)
     )
       return;
     if (this.editor.stroke) {
@@ -518,7 +522,7 @@ export class InlineCropController {
       ctx.rect(r.x, r.y, r.width, r.height);
       ctx.fill("evenodd");
     }
-    ctx.strokeStyle = "#ffd293";
+    ctx.strokeStyle = "#000000";
     ctx.lineWidth = 1 / d.scale;
     ctx.setLineDash([6 / d.scale, 4 / d.scale]);
     ctx.strokeRect(r.x, r.y, r.width, r.height);

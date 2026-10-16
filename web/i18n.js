@@ -6,6 +6,11 @@
 // buttons are drawn by this plugin, so they translate here by reading Comfy.Locale.
 
 const ZH = {
+  "Select a crop region before adopting a result": "请先选择裁切区域再采用结果",
+  "Finish editing before adopting a result": "请结束当前编辑后再采用结果",
+  "This result belongs to another crop; generate a result for the current region": "该结果来自其他选区，请为当前选区重新生成",
+  "Result dimensions must match the selected crop": "结果宽高必须与当前裁切区域一致",
+  "The crop changed while adopting the result": "采用过程中选区已改变，请重新生成结果",
   "Painting tools and mask settings": "绘图工具与蒙版设置",
   "Browser draft storage was full. The source was saved as an input file; the image, masks and layers are preserved.": "浏览器草稿空间不足，已将原图保存为图片文件；图像、蒙版和图层均已保留。",
   "Editing mode": "编辑模式",

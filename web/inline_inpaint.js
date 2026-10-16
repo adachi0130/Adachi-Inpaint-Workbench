@@ -4,9 +4,10 @@ import { InlineMaskEditor } from "./editor.js?v=0.6.2";
 import { installInpaintWorkbench } from "./inpaint_node.js?v=0.6.1";
 import { bindWidgetToNodeWidth } from "./widget_layout.js?v=0.5.5";
 import { routeWheelOutsideImage } from "./wheel_routing.js";
-import { InlineCropController } from "./inline_crop.js?v=0.6.2";
+import { InlineCropController } from "./inline_crop.js?v=0.6.4";
 import { canStoreDraft, prepareInlineDraft, syncInlineWidgets } from "./draft_guard.js?v=0.6.3";
 import { T } from "./i18n.js";
+import { removeLegacyFeedback } from "./legacy_feedback.js?v=0.6.4";
 
 const styleId = "adachi-inpaint-style";
 const stylesheet = document.getElementById(styleId) || document.createElement("link");
@@ -60,6 +61,7 @@ async function uploadEmbeddedSource(embedded) {
 app.registerExtension({
     name: "Adachi.InlineInpaint",
     async beforeConfigureGraph(graphData) {
+        removeLegacyFeedback(graphData);
         if (app.ui.settings.getSettingValue("Comfy.Workflow.Persist") === false) return;
         try {
             // The active workflow can still be the previous tab at this point;
@@ -160,7 +162,7 @@ app.registerExtension({
                     markChanged();
                 },
             });
-            editor.root.dataset.adachiVersion = "0.6.3";
+            editor.root.dataset.adachiVersion = "0.6.4";
             const beforeModeChange = () => {
                 if (draftRecovery) return draftRecovery;
                 const embedded = sourceWidget?.value;
@@ -189,8 +191,9 @@ app.registerExtension({
             node.adachiCrop = crop;
             node.adachiEditor = editor;
             const stopWheelRouting = routeWheelOutsideImage(editor.root, editor.canvas, () => editor.ready);
-            node.adachiUseResult = async file => {
+            node.adachiUseResult = async (file, origin) => {
                 if (editor.destroyed) throw new Error(T("The inline mask node was removed"));
+                if (crop.mode === "crop") return node.adachiAdoptCrop(file, origin);
                 await editor.options.onUpload(file, { preserveMask: true });
                 editor.view = "overlay"; editor.updateButtons(); editor.schedule();
                 editor.status(T("Adopted the result as the new source image; the mask and undo history were preserved"));
@@ -276,12 +279,4 @@ app.registerExtension({
             return result;
         };
     },
-});
-
-// Execution-only sinks report back to the single visible editor node.
-api.addEventListener("executed", event => {
-    for (const record of event.detail?.output?.adachi_layer || []) {
-        const node = app.graph?.getNodeById(record.target);
-        node?.adachiCrop?.accept(record).catch(error => node.adachiEditor.status(error.message, true));
-    }
 });

@@ -63,12 +63,19 @@ class InlineCropTests(unittest.TestCase):
         data={'prompt':{'1':{'class_type':'AdachiInlineMask','inputs':{'result':['2',0]}},'2':{'class_type':'ImageInvert','inputs':{'image':['1',0]}}}}
         backend.normalize_exclusive_prompt(data)
         self.assertNotIn('result',data['prompt']['1']['inputs']);self.assertEqual(len(data['prompt']),2)
-    def test_crop_feedback_is_split_before_validation_and_full_output_redirected(self):
-        data={'prompt':{'1':{'class_type':'AdachiInlineMask','inputs':{'result':['2',0],'edit_mode':'crop','crop_state':self.state,'image':'sample.png'}},'2':{'class_type':'ImageInvert','inputs':{'image':['1',0]}},'3':{'class_type':'SaveImage','inputs':{'images':['1',2]}}}}
-        backend.normalize_exclusive_prompt(data);p=data['prompt']
-        self.assertNotIn('result',p['1']['inputs']);self.assertEqual(p['2']['inputs']['image'],['1',0]);self.assertEqual(p['3']['inputs']['images'],['adachi_layer_1',0])
-        self.assertEqual(p['adachi_layer_1']['inputs']['result'],['2',0]);self.assertEqual(p['adachi_layer_1']['inputs']['target'],'1')
-        backend.normalize_crop_prompt(data);self.assertEqual(len(p),4)
+    def test_crop_mode_has_no_result_socket_or_automatic_sink(self):
+        self.assertNotIn('result', backend.AdachiInlineMask.INPUT_TYPES()['optional'])
+        data={'prompt':{'1':{'class_type':'AdachiInlineMask','inputs':{'result':['2',0],'edit_mode':'crop','crop_state':self.state}},'2':{'class_type':'ImageInvert','inputs':{'image':['1',0]}},'3':{'class_type':'SaveImage','inputs':{'images':['1',2]}}}}
+        backend.normalize_exclusive_prompt(data)
+        self.assertEqual(len(data['prompt']),3)
+        self.assertNotIn('result',data['prompt']['1']['inputs'])
+        self.assertEqual(data['prompt']['3']['inputs']['images'],['1',2])
+    def test_comparison_origin_tracks_exact_generating_region(self):
+        prompt={'7':{'class_type':'AdachiInlineMask','inputs':{'edit_mode':'crop','crop_state':self.state}},'8':{'class_type':'Reroute','inputs':{'image':['7',0]}},'9':{'class_type':'AdachiImageCompare','inputs':{'original':['8',0]}}}
+        self.assertEqual(backend._comparison_origin(prompt,'9'),{'source':'7','mode':'crop','job':'region-a'})
+        prompt['7']['inputs']['crop_state']=json.dumps({**self.region,'job':'next-region'})
+        self.assertEqual(backend._comparison_origin(prompt,'9')['job'],'next-region')
+        self.assertIsNone(backend._comparison_origin({},'9'))
     def test_fingerprint_tracks_mode_blend_and_layer(self):
         first=backend.AdachiInlineMask.IS_CHANGED(source_data=self.source,edit_mode='mask')
         for extra in ({'edit_mode':'crop'},{'blend_data':'new'},{'layer_image':'changed.png'}):
