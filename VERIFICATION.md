@@ -23,6 +23,9 @@ Environment: Windows, local ComfyUI 0.19.3, ComfyUI frontend 1.42.11, PyTorch 2.
 - 0.4.1: a real browser confirms the eraser SVG cursor and erase state after holding Alt, restoring the cross brush cursor on release; temporary erase, regular painting and the 18 backend CPU regression tests pass.
 - 0.4.1: the public name was unified to Adachi-Inpaint-Workbench while node class IDs were kept so existing workflows stay compatible.
 - 0.4.2: node display names, descriptions, tooltips and frontend labels were converted to English so the nodes are usable for the general Manager audience; the same 18 backend CPU tests pass and every touched script parses.
+- 0.5.0: in classic nodes and Nodes 2.0, adopting a real queued comparison result preserves mask PNG pixels, base-mask pixels and the current undo/redo command arrays. Undo/redo still work, workflow reload retains the mask, a mismatched result leaves the source/mask unchanged, and ordinary image upload still clears the mask.
+- 0.5.0: group preset tests cover real preset-button clicks, enabled/bypassed modes in executed prompts, exclusion of the virtual controller from backend execution, saved workflow reload, renamed and duplicate-title groups, unmanaged new groups, nested group priority, missing groups and protection of the controller itself.
+- 0.5.0: the native right-click preset submenu was clicked successfully in both renderers. The example workflow was loaded and all three presets queued successfully without a model.
 
 The sampling path was also checked for noise-schedule continuity against the real `common_ksampler`/`KSampler` functions in the local ComfyUI; an actual checkpoint has not been loaded to test GPU image quality or every model family, so CPU/interface tests must not be treated as model-quality verification.
 

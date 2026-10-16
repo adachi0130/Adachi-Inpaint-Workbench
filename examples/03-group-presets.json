@@ -1,0 +1,347 @@
+{
+  "id": "00000000-0000-0000-0000-000000000000",
+  "revision": 0,
+  "last_node_id": 6,
+  "last_link_id": 3,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "EmptyImage",
+      "pos": [
+        -350,
+        140
+      ],
+      "size": [
+        270,
+        160
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "宽度",
+          "name": "width",
+          "type": "INT",
+          "widget": {
+            "name": "width"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "高度",
+          "name": "height",
+          "type": "INT",
+          "widget": {
+            "name": "height"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "批量大小",
+          "name": "batch_size",
+          "type": "INT",
+          "widget": {
+            "name": "batch_size"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "颜色",
+          "name": "color",
+          "type": "INT",
+          "widget": {
+            "name": "color"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "图像",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            1
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "EmptyImage"
+      },
+      "widgets_values": [
+        512,
+        512,
+        1,
+        8096934
+      ]
+    },
+    {
+      "id": 2,
+      "type": "ImageInvert",
+      "pos": [
+        120,
+        160
+      ],
+      "size": [
+        225,
+        48
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "图像",
+          "name": "image",
+          "type": "IMAGE",
+          "link": 1
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "图像",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            2
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ImageInvert"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 3,
+      "type": "ImageInvert",
+      "pos": [
+        510,
+        160
+      ],
+      "size": [
+        225,
+        48
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "图像",
+          "name": "image",
+          "type": "IMAGE",
+          "link": 2
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "图像",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            3
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ImageInvert"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 4,
+      "type": "SaveImage",
+      "pos": [
+        920,
+        140
+      ],
+      "size": [
+        270,
+        76
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "图片",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 3
+        },
+        {
+          "localized_name": "文件名前缀",
+          "name": "filename_prefix",
+          "type": "STRING",
+          "widget": {
+            "name": "filename_prefix"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        "Adachi/GroupPresetExample"
+      ]
+    },
+    {
+      "id": 5,
+      "type": "AdachiGroupPresets",
+      "pos": [
+        80,
+        440
+      ],
+      "size": [
+        620,
+        410
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "title": "组忽略预设 / Group Bypass Presets",
+      "properties": {
+        "adachi_group_presets": {
+          "version": 1,
+          "activeId": "01dbf1d1-c15a-4db1-97d5-9d522781c482",
+          "presets": [
+            {
+              "id": "01dbf1d1-c15a-4db1-97d5-9d522781c482",
+              "name": "全部打开 / All enabled",
+              "groups": {
+                "group:1": {
+                  "title": "基础处理 / Base",
+                  "mode": 0
+                },
+                "group:2": {
+                  "title": "细节处理 / Detail",
+                  "mode": 0
+                }
+              }
+            },
+            {
+              "id": "fe43bc1f-1a1e-4f49-a37b-c6e6ca7cbc8a",
+              "name": "跳过细节 / Skip detail",
+              "groups": {
+                "group:1": {
+                  "title": "基础处理 / Base",
+                  "mode": 0
+                },
+                "group:2": {
+                  "title": "细节处理 / Detail",
+                  "mode": 4
+                }
+              }
+            },
+            {
+              "id": "b881a666-4643-4af6-8feb-f1d02c47f113",
+              "name": "全部忽略 / Bypass both",
+              "groups": {
+                "group:1": {
+                  "title": "基础处理 / Base",
+                  "mode": 4
+                },
+                "group:2": {
+                  "title": "细节处理 / Detail",
+                  "mode": 4
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 6,
+      "type": "Note",
+      "pos": [
+        820,
+        550
+      ],
+      "size": [
+        350,
+        180
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        "选择左侧预设即可切换整组打开/忽略，无需接线。\n右侧可修改每个组的状态，或点击“记住当前分组状态”记录工作流里的修改。\n右键节点 → 应用预设，也可以快速切换。\n本示例只使用图片反色，不需要模型。"
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    }
+  ],
+  "links": [
+    [
+      1,
+      1,
+      0,
+      2,
+      0,
+      "IMAGE"
+    ],
+    [
+      2,
+      2,
+      0,
+      3,
+      0,
+      "IMAGE"
+    ],
+    [
+      3,
+      3,
+      0,
+      4,
+      0,
+      "IMAGE"
+    ]
+  ],
+  "groups": [
+    {
+      "id": 1,
+      "title": "基础处理 / Base",
+      "bounding": [
+        80,
+        100,
+        300,
+        230
+      ],
+      "color": "#3f789e",
+      "font_size": 24,
+      "flags": {}
+    },
+    {
+      "id": 2,
+      "title": "细节处理 / Detail",
+      "bounding": [
+        470,
+        100,
+        300,
+        230
+      ],
+      "color": "#3f789e",
+      "font_size": 24,
+      "flags": {}
+    }
+  ],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 1,
+      "offset": [
+        0,
+        0
+      ]
+    }
+  },
+  "version": 0.4
+}

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.0
+
+- Preserve the painted mask, undo/redo history and viewport when adopting a comparison result as the source; an ordinary image upload still starts a new mask.
+- Add Group Bypass Presets: a connection-free controller with a preset list, per-group enabled/bypassed/unmanaged states, and a right-click preset menu.
+- Store presets in the workflow with stable group IDs, support renamed and nested groups, and leave newly added/unmanaged groups untouched.
+- Add a model-free example workflow for group presets.
+
 ## 0.4.2
 
 - Make every user-facing string English by default: node display names, category, descriptions, tooltips and the canvas/panel labels.

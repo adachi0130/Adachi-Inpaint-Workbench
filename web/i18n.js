@@ -6,6 +6,29 @@
 // buttons are drawn by this plugin, so they translate here by reading Comfy.Locale.
 
 const ZH = {
+  "Group Bypass Presets": "组忽略预设 / Group Bypass Presets",
+  "Group presets": "分组预设",
+  "+ New preset": "+ 添加预设",
+  "Preset name": "预设名称",
+  "Save": "保存",
+  "Cancel": "取消",
+  "Presets": "预设列表",
+  "Group states": "分组状态",
+  "Rename": "改名",
+  "Save current group states": "记住当前分组状态",
+  "Delete preset": "删除预设",
+  "Preset": "预设",
+  "Apply preset": "应用预设",
+  "Add a preset to get started": "添加第一套预设",
+  "No groups in this workflow yet": "当前工作流还没有分组",
+  "Keep current": "保持当前",
+  "Enabled": "打开",
+  "Bypassed": "忽略",
+  "Current group state differs from the preset": "当前分组状态与预设不同",
+  "Overlapping groups use the smaller group's setting": "重叠分组以较小分组的设置为准",
+  "presets": "套预设",
+  "groups": "个分组",
+  "missing groups": "个分组已不存在",
   // compare.js
   "Result": "结果",
   "Choose result": "选择重绘结果",
@@ -71,7 +94,9 @@ const ZH = {
 
   // inline_inpaint.js
   "The inline mask node was removed": "内联蒙版节点已移除",
-  "Adopted the result as the new source image; the old mask was cleared": "已采用重绘结果作为新原图，旧蒙版已清空",
+  "Adopted the result as the new source image; the mask and undo history were preserved": "已采用重绘结果作为新原图，蒙版与撤销记录已保留",
+  "The result size must match the source image to preserve the mask": "为保留蒙版，重绘结果尺寸必须与原图一致",
+  "Wait for the source image to finish loading before adopting a result": "请等待原图加载完成后再采用结果",
   "Drag to resize canvas height": "上下拖动调整画布高度",
   "Resize canvas height": "调整画布高度",
   "Upload failed": "上传失败",

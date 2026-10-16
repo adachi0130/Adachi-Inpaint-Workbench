@@ -269,6 +269,22 @@ export class InlineMaskEditor {
         }
     }
 
+    async replaceSource(url, name = "") {
+        const version = ++this.loadVersion;
+        const image = await loadImage(url);
+        if (version !== this.loadVersion || this.destroyed) return;
+        if (image.width !== this.mask.width || image.height !== this.mask.height) {
+            throw new Error(T("The result size must match the source image to preserve the mask"));
+        }
+        // Replacing only the source preserves mask pixels, the base snapshot,
+        // command history, redo history, active strokes and the current view.
+        this.flush();
+        this.image = image;
+        this.filename.textContent = name || T("Embedded image");
+        this.filename.title = this.filename.textContent;
+        this.updateButtons(); this.schedule();
+    }
+
     importMask(ctx, image) {
         const scratch = makeCanvas();
         scratch.width = this.mask.width; scratch.height = this.mask.height;

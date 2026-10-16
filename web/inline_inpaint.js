@@ -91,7 +91,8 @@ app.registerExtension({
                 onDirty() { markChanged(); },
                 onImage() { if (!restoring || !node.properties.adachi_compact_ui) fitNodeToImage(); },
                 onGraphWheel: event => app.canvas?.processMouseWheel(event),
-                async onUpload(file) {
+                async onUpload(file, { preserveMask = false } = {}) {
+                    if (preserveMask && editor.image && !editor.ready) throw new Error(T("Wait for the source image to finish loading before adopting a result"));
                     const version = ++uploadVersion;
                     const body = new FormData();
                     body.append("image", file, file.name);
@@ -102,12 +103,13 @@ app.registerExtension({
                     const uploaded = await response.json();
                     if (version !== uploadVersion || editor.destroyed) return;
                     const name = uploaded.subfolder ? `${uploaded.subfolder}/${uploaded.name}` : uploaded.name;
-                    imageWidget.value = name;
-                    maskWidget.value = "";
-                    sourceWidget.value = "";
                     restoring = false;
-                    await editor.setImage(imageUrl(name), "", file.name);
-                    if (editor.embed.checked) sourceWidget.value = editor.sourceData();
+                    if (preserveMask && editor.ready) await editor.replaceSource(imageUrl(name), file.name);
+                    else await editor.setImage(imageUrl(name), "", file.name);
+                    if (version !== uploadVersion || editor.destroyed) return;
+                    imageWidget.value = name;
+                    maskWidget.value = preserveMask ? editor.flush() : "";
+                    sourceWidget.value = editor.embed.checked ? editor.sourceData() : "";
                     markChanged();
                 },
                 onEmbed(enabled) {
@@ -119,9 +121,9 @@ app.registerExtension({
             const stopWheelRouting = routeWheelOutsideImage(editor.root, editor.canvas, () => editor.ready);
             node.adachiUseResult = async file => {
                 if (editor.destroyed) throw new Error(T("The inline mask node was removed"));
-                await editor.options.onUpload(file);
+                await editor.options.onUpload(file, { preserveMask: true });
                 editor.view = "overlay"; editor.updateButtons(); editor.schedule();
-                editor.status(T("Adopted the result as the new source image; the old mask was cleared"));
+                editor.status(T("Adopted the result as the new source image; the mask and undo history were preserved"));
             };
             const domWidget = node.addDOMWidget("adachi_canvas", "adachi_inline_mask", editor.root, {
                 serialize: false,

@@ -105,10 +105,24 @@ Parameters driven by an external link disable the matching panel control; a modu
 
 Add an **Image Compare** node and connect Inline Mask's `image` to `original` and the final full-size generated `image` to `result`, then run.
 With the pointer over the picture, the thin divider shows the generated result on the left and the original on the right; leaving the picture hides the divider and shows the full result, and the plain wheel zooms. Batch selection, dimensions and the fit button sit below the picture.
-When you are happy, click **Adopt this result**: the plugin uploads the selected result as the new source image, writes it back into the upstream inline editor and clears the old mask, so you can paint the next area straight away.
+When you are happy, click **Adopt this result**: the plugin uploads the selected result as the new source image and writes it back into the upstream inline editor while preserving the painted mask, current undo/redo history and viewport. Use **Clear** when you want to start a new mask; a normal **Load image** upload still starts a fresh mask.
+To preserve mask coordinates, an adopted result must match the source dimensions; a mismatched result is rejected without changing the current source or mask. The mask remains embedded in saved workflow data; command-level undo history is retained during adoption in the current session.
 If the original is routed through intermediate IMAGE nodes the plugin walks upstream to find the inline editor; when several candidates exist you can pick one explicitly under **Adopt into**.
 Adoption only happens when you click the button and never starts the next generation automatically; the `image` output still passes the whole result batch, so you can feed a Save Image node.
 Comparison previews live in ComfyUI's temp directory and may need a re-run after cleanup or restart; an adopted source image is stored in `input/adachi-inpaint/` and does not depend on temp previews.
+
+## Group bypass presets
+
+Search for **Group Bypass Presets** (Chinese: **组忽略预设**) under Adachi-Inpaint-Workbench. It needs no connections and does not require rgthree or Danbooru.
+
+1. Click **+ New preset**, name it and save. The preset captures the current groups' enabled/bypassed state.
+2. Choose **Enabled**, **Bypassed** or **Keep current** for each group on the right. Changes update and apply the selected preset immediately.
+3. Add more presets. Clicking a name on the left applies that preset to all of its configured groups at once. You can also right-click the node and choose **Apply preset**.
+4. Use **Save current group states** to capture changes you made directly in the workflow, or rename/delete presets as needed.
+
+Presets are stored in the workflow. Group renames retain their preset mapping; newly added groups stay unmanaged until configured. Loading a workflow restores its saved node modes without automatically applying a preset. If groups overlap, the smaller group's setting takes priority; the preset controller itself stays enabled.
+Bypass uses ComfyUI's standard bypass mode, so a bypassed node still needs compatible input/output types when it sits on an active data path.
+Try [examples/03-group-presets.json](examples/03-group-presets.json), which uses only empty images and colour inversion and needs no model.
 
 ## Fill, batch and Refiner
 
