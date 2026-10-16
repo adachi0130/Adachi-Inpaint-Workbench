@@ -2,8 +2,8 @@
 
 ## 0.6.8
 
-- Move the selected-region painting help from the canvas hover text to the repaint mask button, so the crop canvas no longer repeats it while a region is locked.
-- Remove the now-unused repaint mask description entry from the locale dictionary.
+- Move the selected-region painting help onto the repaint mask button, and remove hover text from the painting canvas entirely: hovering the image no longer shows any hint in any mode. The bottom controls and their button tooltips keep the instructions.
+- Remove the now-unused canvas and repaint mask hint entries from the locale dictionary.
 
 ## 0.6.7
 

@@ -315,15 +315,8 @@ export class InlineCropController {
   sync() {
     this.editor.root.classList.toggle("dd-crop-mode", this.mode === "crop");
     this.modeSelect.value = this.mode;
-    this.editor.canvas.title = T(!this.editor.ready
-      ? "Upload an image, or drop / paste one"
-      : this.mode !== "crop"
-        ? "Paint a mask. Alt: temporary eraser. Ctrl+wheel: brush size. Shift+wheel: hardness. Undo: bottom return arrow or Ctrl+Z."
-        : this.layer
-          ? "Unmerged result: hold right-click to see the original; release to see the workspace. In the blend mask, brush keeps new pixels and Alt restores old pixels. Ctrl+wheel: size; Shift+wheel: hardness. Click the check mark to merge."
-          : this.region.locked
-            ? ""
-            : "Move the dashed frame and left-click to select a region. Paint a mask inside it, generate, then use Adopt this result in Image Compare.");
+    // No hover text on the painting canvas; the bottom controls carry the hints.
+    this.editor.canvas.removeAttribute("title");
     for (const control of [this.preset, this.swapButton, this.maskButton, this.blendButton, this.commitButton]) {
       control.hidden = this.mode !== "crop";
     }
