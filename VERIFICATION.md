@@ -27,6 +27,10 @@ Environment: Windows, local ComfyUI 0.19.3, ComfyUI frontend 1.42.11, PyTorch 2.
 - 0.5.0: group preset tests cover real preset-button clicks, enabled/bypassed modes in executed prompts, exclusion of the virtual controller from backend execution, saved workflow reload, renamed and duplicate-title groups, unmanaged new groups, nested group priority, missing groups and protection of the controller itself.
 - 0.5.0: the native right-click preset submenu was clicked successfully in both renderers. The example workflow was loaded and all three presets queued successfully without a model.
 
+- 0.5.1: all 23 CPU unit tests pass, including exclusive input validation and identity-preserving forwarding of conditioning, image/mask tensors, latents and falsey values.
+- 0.5.1: 26 real CPU queue cases across classic nodes and Nodes 2.0 cover A/B selection, bypassed transform pass-through, mute, both-enabled/both-bypassed/both-disconnected errors, reroutes, one connected input, group presets, cache changes, workflow reload and switching reloaded presets. Output pixels match the selected image; the unused branch was not requested by the selector. A raw API prompt works without frontend metadata.
+- 0.5.1: the 40%-width preset list retains internal scrolling and has no horizontal overflow in a 360px node at a 390px viewport.
+
 The sampling path was also checked for noise-schedule continuity against the real `common_ksampler`/`KSampler` functions in the local ComfyUI; an actual checkpoint has not been loaded to test GPU image quality or every model family, so CPU/interface tests must not be treated as model-quality verification.
 
 References used during implementation:

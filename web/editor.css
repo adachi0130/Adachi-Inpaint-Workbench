@@ -102,7 +102,7 @@
 .dd-gp-toolbar strong { font-size: 12px; font-weight: 500; }
 .dd-group-presets button { min-height: 26px; padding: 4px 7px; font-size: 11px; }
 .dd-gp-form input { flex: 1; min-width: 0; color: var(--dd-text); background: var(--dd-panel); border: 1px solid var(--dd-line); padding: 5px 6px; font: inherit; border-radius: 3px; }
-.dd-gp-body { display: grid; grid-template-columns: minmax(110px, 32%) minmax(0, 1fr); flex: 1; min-height: 0; }
+.dd-gp-body { display: grid; grid-template-columns: minmax(130px, 40%) minmax(0, 1fr); flex: 1; min-height: 0; }
 .dd-gp-presets { border-right: 1px solid var(--dd-line); padding: 7px; display: flex; flex-direction: column; gap: 5px; }
 .dd-gp-presets button { text-align: left; flex: 0 0 auto; white-space: normal; overflow-wrap: anywhere; }
 .dd-gp-detail { display: flex; flex-direction: column; min-height: 0; min-width: 0; }

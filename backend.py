@@ -553,12 +553,66 @@ class AdachiImageCompare:
         return {"ui": {"adachi_originals": before, "adachi_results": after}, "result": (result,)}
 
 
+_MISSING_INPUT = object()
+
+
+class AdachiExclusiveSwitch:
+    """Forward exactly one enabled branch, without evaluating the ignored branch."""
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "optional": {
+                "input_a": ("*", {"lazy": True, "tooltip": "First branch; bypass either this branch or input_b."}),
+                "input_b": ("*", {"lazy": True, "tooltip": "Second branch; exactly one branch must remain enabled."}),
+                # The frontend computes this from the graph on every serialization.
+                # Keeping it in the prompt also makes branch changes invalidate caches,
+                # including bypassed transform nodes whose links otherwise pass through.
+                "active_inputs": ("INT", {"default": -1, "min": -1, "max": 3}),
+            },
+        }
+
+    RETURN_TYPES = ("*",)
+    RETURN_NAMES = ("output",)
+    FUNCTION = "select"
+    CATEGORY = CATEGORY
+    DESCRIPTION = "Automatically forwards the only enabled input. Bypass one branch; both enabled or both absent is an error."
+    SEARCH_ALIASES = ["exclusive switch", "auto switch", "自动二选一", "互斥", "自动切换", "adachi"]
+
+    @staticmethod
+    def _selected_input(input_a, input_b, active_inputs):
+        if active_inputs == -1:
+            # Raw API prompts need no frontend state: simply omit the unused input.
+            active_inputs = int(input_a is not _MISSING_INPUT) | (int(input_b is not _MISSING_INPUT) << 1)
+        if active_inputs not in (1, 2):
+            raise ValueError(
+                "Auto Exclusive Switch requires exactly one enabled input. "
+                "Bypass one branch or disconnect it; both enabled / both absent are invalid. "
+                "自动二选一需要且只能有一路启用；请忽略或断开另一路。"
+            )
+        name = "input_a" if active_inputs == 1 else "input_b"
+        if (input_a if active_inputs == 1 else input_b) is _MISSING_INPUT:
+            raise ValueError(f"The enabled branch {name} has no input. 启用的分支没有输入。")
+        return name
+
+    def check_lazy_status(self, input_a=_MISSING_INPUT, input_b=_MISSING_INPUT, active_inputs=-1):
+        return [self._selected_input(input_a, input_b, active_inputs)]
+
+    def select(self, input_a=_MISSING_INPUT, input_b=_MISSING_INPUT, active_inputs=-1):
+        selected = self._selected_input(input_a, input_b, active_inputs)
+        value = input_a if selected == "input_a" else input_b
+        if value is None:
+            raise ValueError(f"The enabled branch {selected} returned no data. 启用的分支没有返回数据。")
+        return (value,)
+
+
 NODE_CLASS_MAPPINGS = {
     "AdachiInlineMask": AdachiInlineMask,
     "AdachiInpaintPrepare": AdachiInpaintPrepare,
     "AdachiInpaintComposite": AdachiInpaintComposite,
     "AdachiWebUIInpaint": AdachiWebUIInpaint,
     "AdachiImageCompare": AdachiImageCompare,
+    "AdachiExclusiveSwitch": AdachiExclusiveSwitch,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -567,4 +621,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "AdachiInpaintComposite": "Inpaint Composite",
     "AdachiWebUIInpaint": "WebUI Inpaint",
     "AdachiImageCompare": "Image Compare",
+    "AdachiExclusiveSwitch": "Auto Exclusive Switch",
 }

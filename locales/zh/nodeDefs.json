@@ -232,5 +232,24 @@
         "name": "图像"
       }
     }
+  },
+  "AdachiExclusiveSwitch": {
+    "display_name": "自动二选一 / Auto Exclusive Switch",
+    "description": "自动输出唯一启用的分支；忽略或断开另一路，两路都启用或都无输入时提示错误，无需 switch。",
+    "inputs": {
+      "input_a": {
+        "name": "输入 A",
+        "tooltip": "第一路；两路及下游应使用相同数据类型，如正面条件、图像、模型。"
+      },
+      "input_b": {
+        "name": "输入 B",
+        "tooltip": "第二路；两路中需要且只能启用一路，另一支设为忽略或断开。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "输出"
+      }
+    }
   }
 }

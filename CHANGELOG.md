@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.1
+
+- Add Auto Exclusive Switch: two generic lazy inputs, no manual switch control, and exactly one enabled branch required.
+- Respect muted/bypassed input branches, including bypassed transform nodes that normally pass through data; branch changes also invalidate execution caches.
+- Widen the group preset list from 32% to 40% of its panel.
+
 ## 0.5.0
 
 - Preserve the painted mask, undo/redo history and viewport when adopting a comparison result as the source; an ordinary image upload still starts a new mask.

@@ -228,5 +228,24 @@
         "name": "image"
       }
     }
+  },
+  "AdachiExclusiveSwitch": {
+    "display_name": "Auto Exclusive Switch",
+    "description": "Automatically forwards the only enabled input. Bypass one branch; both enabled or both absent is an error.",
+    "inputs": {
+      "input_a": {
+        "name": "input_a",
+        "tooltip": "First branch. Connect the same data type to both branches and the output."
+      },
+      "input_b": {
+        "name": "input_b",
+        "tooltip": "Second branch. Exactly one branch must remain enabled."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "output"
+      }
+    }
   }
 }

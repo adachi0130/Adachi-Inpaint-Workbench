@@ -142,6 +142,21 @@ You can optionally attach a compatible `refiner_model` and use `refiner_switch` 
 Encoding with the Refiner's own CLIP and wiring `refiner_positive`/`refiner_negative` is recommended; if left unconnected the original conditioning is reused and the VAE still comes from the base side.
 `refiner_switch=1` uses only the base model and `0` uses only the Refiner; a known-incompatible latent format raises an error.
 
+## Auto Exclusive Switch
+
+Search for **Auto Exclusive Switch** / **自动二选一** under **Adachi-Inpaint-Workbench**.
+Connect two alternative branches to `input_a` / `input_b` and connect `output` to the common downstream input.
+For example, connect the CONDITIONING outputs of two positive CLIP Text Encode nodes to A/B, then connect `output` to the sampler's positive input.
+Bypass one encoder (Ctrl+B), or use a Group Bypass Preset to enable one group and bypass the other: the remaining branch is selected automatically.
+Both enabled, or neither connected/enabled, produces an error instead of silently preferring A.
+
+The node accepts conditioning, strings, images, masks, models, latents and other ComfyUI data types; both alternatives and the downstream socket should use the same data type.
+The model-free `examples/04-exclusive-switch.json` demonstrates two branches with two group presets.
+It has no switch widget. A small internal value is computed from the graph when queuing, including when a bypassed image/model transform would otherwise pass its input through.
+Place the selector outside the two controlled groups and connect each group's final node to it; any routing nodes between them should remain enabled.
+The ignored branch is not requested by this selector; any separate preview/save outputs on that branch may still execute independently.
+For raw API prompts, omit the ignored input and omit the internal `active_inputs` field; exactly one of `input_a` / `input_b` must remain.
+
 ## Using a standard sampling workflow
 
 `examples/02-modular-inpaint.json` shows a wiring you can swap samplers into.
@@ -195,4 +210,6 @@ python -m unittest discover -s tests -v
 画布按钮与参数面板由 `web/i18n.js` 读取同一个语言设置翻译，因此「宽度」「高度」「载入原图」等也会一起变回中文。
 英文用户看到的一直是英文（英文是内置默认值）；某个词条若没有对应翻译，会自动回退为英文。
 两套语言共用同一个节点类 ID 和参数键名，所以已保存的工作流不受语言切换影响。
+
+新增「自动二选一」：把两个正面条件（或图像、模型等同类型数据）接到输入 A/B，输出接共同下游；忽略其中一个分支，就自动使用另一个。两路都启用或都无输入会报错，不需要 switch。切换节点放在两个被控制分组之外，也能配合组忽略预设使用。
 
