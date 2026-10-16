@@ -252,6 +252,9 @@ export class InlineCropController {
     this.bar.append(this.preset);
     const button = (text, title, action) =>
       e.button(this.bar, text, T(title), () => this.run(action));
+    // Shown in both modes: one click clears the mask of the active target.
+    this.clearButton = button("🗑", "Clear the mask", () => e.action({ type: "clear" }));
+    this.bar.prepend(this.clearButton);
     this.swapButton = button("⇄", "Swap width and height, release the current selection, then left-click to place the new region.", () =>
       this.changeSize(this.cropHeight, this.cropWidth),
     );
@@ -322,6 +325,7 @@ export class InlineCropController {
     }
     this.custom.hidden = this.mode !== "crop" || this.preset.value !== "custom";
     this.undoButton.disabled = !!this.busy || !this.editor.history.length;
+    this.clearButton.disabled = !!this.busy || !this.editor.ready;
     this.blendButton.disabled = !this.layer;
     this.commitButton.disabled = !this.layer;
     this.maskButton.classList.toggle("dd-active", this.target === "mask");

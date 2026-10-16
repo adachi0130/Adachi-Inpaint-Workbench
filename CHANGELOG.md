@@ -2,8 +2,10 @@
 
 ## 0.6.8
 
+- Add a Clear button to the bottom-left canvas bar: one click empties the mask of the active target, in both Mask and Crop & Blend modes, and it stays disabled until an image is loaded.
 - Move the selected-region painting help onto the repaint mask button, and remove hover text from the painting canvas entirely: hovering the image no longer shows any hint in any mode. The bottom controls and their button tooltips keep the instructions.
 - Remove the now-unused canvas and repaint mask hint entries from the locale dictionary.
+- Bump the inline crop module's asset version so the updated file is fetched instead of a cached copy.
 
 ## 0.6.7
 
