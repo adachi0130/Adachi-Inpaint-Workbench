@@ -11,5 +11,16 @@ export function appendComparison(previous, incoming) {
         };
     };
     const before = pairs(previous), next = pairs(incoming);
-    return { originals: [...before.originals, ...next.originals], results: [...before.results, ...next.results] };
+    const history = { originals: [], results: [] }, seen = new Set();
+    for (const data of [before, next]) data.results.forEach((result, index) => {
+        // Cached execution notifications can replay the same preview. Its file
+        // identity is stable, while a genuinely new generation gets a new file.
+        const key = typeof result === "object" && result !== null
+            ? JSON.stringify([result.type || "temp", result.subfolder || "", result.filename])
+            : JSON.stringify(result);
+        if (seen.has(key)) return;
+        seen.add(key);
+        history.originals.push(data.originals[index]); history.results.push(result);
+    });
+    return history;
 }

@@ -12,5 +12,12 @@ assert.deepEqual(appendComparison(legacy, {originals: ["c"], results: [5]}), {
 assert.deepEqual(appendComparison(undefined, first), first);
 assert.deepEqual(appendComparison(first, {}), first);
 assert.deepEqual(appendComparison({}, {results: ["orphan"]}), {originals: [], results: []});
-assert.deepEqual(appendComparison(JSON.parse(JSON.stringify(second)), first).results, ["result-a", "result-b", "result-c", "result-a"]);
+assert.deepEqual(appendComparison(JSON.parse(JSON.stringify(second)), first).results, ["result-a", "result-b", "result-c"], "Cached execution replay must not count twice");
+const preview = {filename: "preview_001.png", subfolder: "", type: "temp"};
+const one = {originals: ["source-a"], results: [preview]};
+assert.equal(appendComparison(one, {originals: ["source-a"], results: [{...preview}]}).results.length, 1);
+assert.equal(appendComparison(one, {originals: ["source-a"], results: [{...preview, filename: "preview_002.png"}]}).results.length, 2);
+assert.equal(appendComparison(one, {originals: ["source-a"], results: [{...preview, subfolder: "other"}]}).results.length, 2);
+assert.equal(appendComparison(one, {originals: ["source-a"], results: [{...preview, type: "output"}]}).results.length, 2);
+assert.deepEqual(appendComparison({originals: ["source-a", "source-a"], results: [preview, {...preview}]}), one, "Repair duplicates already saved in workflows");
 console.log("Comparison history checks passed");

@@ -1,7 +1,7 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
-import { ImageCompareView } from "./compare.js?v=0.5.7";
-import { appendComparison } from "./compare_history.js?v=0.5.7";
+import { ImageCompareView } from "./compare.js?v=0.5.8";
+import { appendComparison } from "./compare_history.js?v=0.5.8";
 import { routeWheelOutsideImage } from "./wheel_routing.js";
 import { T } from "./i18n.js";
 import { bindWidgetToNodeWidth } from "./widget_layout.js?v=0.5.5";
@@ -62,18 +62,24 @@ app.registerExtension({
             node.onExecuted = function (output) {
                 const result = executed?.apply(this, arguments);
                 if (!output?.adachi_originals?.length || !output?.adachi_results?.length) return result;
-                const data = appendComparison(node.properties.adachi_compare, {
+                const previous = appendComparison(node.properties.adachi_compare);
+                const data = appendComparison(previous, {
                     originals: output.adachi_originals, results: output.adachi_results,
                 });
                 node.properties.adachi_compare = data;
-                node.properties.adachi_result_index = data.results.length - 1;
+                node.properties.adachi_result_index = data.results.length > previous.results.length
+                    ? data.results.length - 1 : Math.max(0, Math.min(data.results.length - 1, node.properties.adachi_result_index || 0));
                 compare.setData(data, node.properties.adachi_result_index);
                 return result;
             };
             const configured = node.onConfigure;
             node.onConfigure = function () {
                 const result = configured?.apply(this, arguments);
-                if (node.properties.adachi_compare) compare.setData(node.properties.adachi_compare, node.properties.adachi_result_index || 0);
+                if (node.properties.adachi_compare) {
+                    node.properties.adachi_compare = appendComparison(node.properties.adachi_compare);
+                    node.properties.adachi_result_index = Math.max(0, Math.min(node.properties.adachi_compare.results.length - 1, node.properties.adachi_result_index || 0));
+                    compare.setData(node.properties.adachi_compare, node.properties.adachi_result_index);
+                }
                 return result;
             };
             const removed = node.onRemoved;

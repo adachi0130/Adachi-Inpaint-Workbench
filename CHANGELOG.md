@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.8
+
+- Count each comparison preview file once, even when cached execution notifications replay it; keep the selected result on replay.
+- Remove duplicate preview entries when reloading older saved comparison histories.
+
 ## 0.5.7
 
 - Accumulate comparison results across runs, select the newest result and preserve each result's matching original, including after workflow reload.

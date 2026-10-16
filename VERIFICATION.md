@@ -49,6 +49,7 @@ Environment: Windows, local ComfyUI 0.19.3, ComfyUI frontend 1.42.11, PyTorch 2.
 
 - 0.5.7: actual browser wheel events over a real queued comparison image change workflow navigation while the comparison transform stays fitted and centered. Verified on frontends 1.42.11 and 1.52.7 in classic nodes and Nodes 2.0, with left-result/right-original pixels, hover/leave behavior, batch selection, adoption preserving mask/history, workflow reload, rejected mismatched adoption and ordinary-upload mask reset.
 - 0.5.7: three real queued two-image batches accumulate 2, 4 and 6 results and select the newest result. After adoption, old results retain their old original and new results use the adopted original; all six results survive workflow reload in both frontend versions/renderers. Dependency-free tests additionally cover legacy batch mapping, empty outputs and immutable appending.
+- 0.5.8: real single-image queues on frontend 1.52.7 in classic nodes and Nodes 2.0 show 1/1 then 2/2. Replaying the same execution output twice does not increase the count or reset a manually selected result. Reloading a workflow containing duplicate preview references removes duplicates. Unit checks distinguish filenames, subfolders and file types.
 
 The sampling path was also checked for noise-schedule continuity against the real `common_ksampler`/`KSampler` functions in the local ComfyUI; an actual checkpoint has not been loaded to test GPU image quality or every model family, so CPU/interface tests must not be treated as model-quality verification.
 

@@ -1,10 +1,11 @@
 # Git versions and rollback
 
-The current local version is **v0.5.7**. Both the installed plugin and the source repository retain local commits and tags. This update is also pushed to the GitHub main branch.
+The current local version is **v0.5.8**. Both the installed plugin and the source repository retain local commits and tags. This update is also pushed to the GitHub main branch.
 
 | Tag | Contents |
 |---|---|
-| `v0.5.7` | Fixed comparison images; wheel navigates the workflow; retain result history across runs |
+| `v0.5.8` | Deduplicate replayed comparison previews and repair duplicate saved history |
+| `v0.5.7` / `local-before-v0.5.8` | Fixed comparison images; wheel navigates the workflow; retain result history across runs |
 | `v0.5.6` / `local-before-v0.5.7` | Exclusive selector follows Get/Set and virtual routes correctly |
 | `v0.5.5` / `local-before-v0.5.6` | Bind canvas/panel widths to node geometry and retain vertical resizing |
 | `v0.5.4` / `local-before-v0.5.5` | Isolate Fit clicks and refresh editor assets on upgrade |
@@ -19,13 +20,13 @@ To undo only this update, run in the plugin folder:
 
 ```powershell
 git status --short
-git switch --detach local-before-v0.5.7
+git switch --detach local-before-v0.5.8
 ```
 
 Return to this version with:
 
 ```powershell
-git switch --detach v0.5.7
+git switch --detach v0.5.8
 ```
 
 Restart ComfyUI and hard-refresh the browser (`Ctrl+F5`) after switching versions.
