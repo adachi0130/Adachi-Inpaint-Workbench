@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.5
+
+- Keep crop size presets, width/height swap and custom dimensions available after locking a region. Changing dimensions automatically unlocks it for a new selection.
+- Merge an adopted layer before changing the region, and retain the old selection if merging fails.
+
 ## 0.6.4
 
 - Use a pure black dashed crop outline and automatically synchronize connected inpaint resolution when locking a crop. Linked resolution inputs remain under their upstream node's control.

@@ -199,22 +199,19 @@ export class InlineCropController {
     custom.value = "custom";
     custom.textContent = T("Custom");
     this.preset.append(custom);
-    this.preset.onchange = () => {
-      if (this.preset.value !== "custom")
-        [this.cropWidth, this.cropHeight] = this.preset.value
-          .split("x")
-          .map(Number);
-      this.custom.hidden = this.preset.value !== "custom";
-      this.sizeChanged();
-    };
+    this.preset.onchange = () => this.run(() => {
+      const custom = this.preset.value === "custom";
+      const [width, height] = custom
+        ? [this.cropWidth, this.cropHeight]
+        : this.preset.value.split("x").map(Number);
+      return this.changeSize(width, height, {custom});
+    });
     this.bar.append(this.preset);
     const button = (text, title, action) =>
       e.button(this.bar, text, T(title), () => this.run(action));
-    this.swapButton = button("⇄", "Swap crop dimensions", () => {
-      [this.cropWidth, this.cropHeight] = [this.cropHeight, this.cropWidth];
-      this.syncPreset();
-      this.sizeChanged();
-    });
+    this.swapButton = button("⇄", "Swap crop dimensions", () =>
+      this.changeSize(this.cropHeight, this.cropWidth),
+    );
     this.reselectButton = button("↖", "Choose another region", () =>
       this.reselect(),
     );
@@ -246,11 +243,11 @@ export class InlineCropController {
         "aria-label",
         T(key === "cropWidth" ? "Width" : "Height"),
       );
-      input.onchange = () => {
-        this[key] = Math.max(64, Math.min(16384, Math.round(Number(input.value) / 64) * 64));
-        input.value = this[key];
-        this.sizeChanged();
-      };
+      input.onchange = () => this.run(() => {
+        const value = Math.max(64, Math.min(16384, Math.round(Number(input.value) / 64) * 64));
+        return this.changeSize(key === "cropWidth" ? value : this.cropWidth,
+          key === "cropHeight" ? value : this.cropHeight, {custom:true});
+      });
       this.custom.append(input);
     }
     this.bar.append(this.custom);
@@ -278,10 +275,10 @@ export class InlineCropController {
     this.maskButton.classList.toggle("dd-active", this.target === "mask");
     this.blendButton.classList.toggle("dd-active", this.target === "blend");
     this.modeSelect.disabled = !!this.busy;
-    this.preset.disabled = !!this.region?.locked;
-    this.swapButton.disabled = !!this.region?.locked;
+    this.preset.disabled = !!this.busy;
+    this.swapButton.disabled = !!this.busy;
     for (const input of this.custom.children)
-      input.disabled = !!this.region?.locked;
+      input.disabled = !!this.busy;
   }
   setMode(mode) {
     if (
@@ -336,6 +333,22 @@ export class InlineCropController {
     this.hover = null;
     this.editor.schedule();
     this.syncPreset();
+  }
+  async changeSize(width, height, {custom = false} = {}) {
+    if (this.busy || this.editor.stroke) { this.syncPreset(); return; }
+    try {
+      // Use the same merge-before-reselect behavior as the reselect button.
+      if (this.region.locked) await this.reselect();
+      this.cropWidth = width;
+      this.cropHeight = height;
+      this.sizeChanged();
+      if (custom) { this.preset.value = "custom"; this.custom.hidden = false; }
+      this.sync();
+      this.changed();
+    } catch (error) {
+      this.syncPreset();
+      throw error;
+    }
   }
   reset() {
     this.layer = null;

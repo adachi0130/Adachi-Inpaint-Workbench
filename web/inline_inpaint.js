@@ -4,7 +4,7 @@ import { InlineMaskEditor } from "./editor.js?v=0.6.2";
 import { installInpaintWorkbench } from "./inpaint_node.js?v=0.6.1";
 import { bindWidgetToNodeWidth } from "./widget_layout.js?v=0.5.5";
 import { routeWheelOutsideImage } from "./wheel_routing.js";
-import { InlineCropController } from "./inline_crop.js?v=0.6.4";
+import { InlineCropController } from "./inline_crop.js?v=0.6.5";
 import { canStoreDraft, prepareInlineDraft, syncInlineWidgets } from "./draft_guard.js?v=0.6.3";
 import { T } from "./i18n.js";
 import { removeLegacyFeedback } from "./legacy_feedback.js?v=0.6.4";
@@ -162,7 +162,7 @@ app.registerExtension({
                     markChanged();
                 },
             });
-            editor.root.dataset.adachiVersion = "0.6.4";
+            editor.root.dataset.adachiVersion = "0.6.5";
             const beforeModeChange = () => {
                 if (draftRecovery) return draftRecovery;
                 const embedded = sourceWidget?.value;
