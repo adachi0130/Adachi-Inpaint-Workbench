@@ -1,5 +1,7 @@
 # Verification record
 
+- 0.5.12: all 37 CPU unit tests pass. The supplied remote workflow was used as request metadata with lightweight red/blue image probes replacing model generation: positive selector 532 chooses B, negative 533 chooses A, all four Gets remain enabled. Ten real queue cases cover reverse Set/source states, switching back, encoder-only and Set-only bypass, unchanged-workflow preservation, cache reuse, and both-enabled/both-ignored errors. No complete Anima model generation is claimed by these routing probes. Sixteen native KJ Get/Set browser queue cases pass on frontend 1.52.7 in both renderers, and all 15 metadata-free stale-state API queue cases still pass.
+
 - 0.5.11: all 32 backend CPU tests pass, including stale branch flags with either single submitted input, strict empty/ambiguous input errors, both-connected passthrough selection and dynamic subgraph node lookup. Fifteen real CPU queue cases verify single-branch A/B output pixels for flags -1 through 3, both-connected A/B selection, and invalid cases. Sixteen real KJ Get/Set queue cases on frontend 1.52.7 cover both renderers, source/Set/Get ignore and mute states, reverse switching, both-invalid states and workflow reload.
 
 Environment: Windows, local ComfyUI 0.19.3, ComfyUI frontend 1.42.11, PyTorch 2.8.0, Pillow 11.0.0, Chrome 155, using a separate port 8190 CPU service with its own input/output directories and an in-memory database.

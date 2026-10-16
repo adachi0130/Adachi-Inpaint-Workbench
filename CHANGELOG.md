@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.12
+
+- Trace enabled Get nodes back through their named Set and encoder in saved workflow metadata; ignored Sets disable their branch even when both Gets remain enabled and both execution links survive.
+- Normalize exclusive branch flags and remove only ignored execution inputs before ComfyUI validation/cache lookup. Keep all original workflow wires and normal cache reuse.
+- Repeat the workflow check during lazy selection, support scoped subgraph IDs and both serialized link formats, and retain raw-API behavior without workflow metadata.
+- Validate the supplied remote workflow's routing states using lightweight real image queues, including reverse switching, cache reuse and strict invalid states. A full ComfyUI restart is required after updating.
+
 ## 0.5.11
 
 - Resolve exclusive selection against the actual submitted prompt connections, overriding stale frontend flags when only one branch survives Get/Set, mute or bypass resolution.

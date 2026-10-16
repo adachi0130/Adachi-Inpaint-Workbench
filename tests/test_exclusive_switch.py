@@ -1,5 +1,6 @@
 """The selector must preserve arbitrary values and never silently prefer a branch."""
 import importlib.util
+import copy
 from pathlib import Path
 import unittest
 
@@ -13,6 +14,17 @@ spec.loader.exec_module(backend)
 class ExclusiveSwitchTests(unittest.TestCase):
     def setUp(self):
         self.node = backend.AdachiExclusiveSwitch()
+
+    def workflow(self):
+        return {"nodes": [
+            {"id": 1, "type": "CLIPTextEncode", "mode": 4},
+            {"id": 2, "type": "CLIPTextEncode", "mode": 0},
+            {"id": 3, "type": "SetNode", "mode": 4, "widgets_values": ["p_0"], "inputs": [{"link": 1}]},
+            {"id": 4, "type": "SetNode", "mode": 0, "widgets_values": ["p"], "inputs": [{"link": 2}]},
+            {"id": 5, "type": "GetNode", "mode": 0, "widgets_values": ["p_0"]},
+            {"id": 6, "type": "GetNode", "mode": 0, "widgets_values": ["p"]},
+            {"id": 532, "type": "AdachiExclusiveSwitch", "inputs": [{"name": "input_a", "link": 3}, {"name": "input_b", "link": 4}]},
+        ], "links": [[1, 1, 0, 3, 0, "*"], [2, 2, 0, 4, 0, "*"], [3, 5, 0, 532, 0, "*"], [4, 6, 0, 532, 1, "*"]]}
 
     def test_single_connected_branch_is_requested(self):
         self.assertEqual(self.node.check_lazy_status(input_a=None), ["input_a"])
@@ -69,6 +81,59 @@ class ExclusiveSwitchTests(unittest.TestCase):
                 return {"inputs": {"input_b": ["nested-source", 0]}}
         self.assertEqual(self.node.check_lazy_status(input_b=None, active_inputs=3,
                          prompt={}, dynprompt=DynamicPrompt(), unique_id="subgraph:532"), ["input_b"])
+
+    def test_enabled_gets_follow_ignored_set_and_encoder_in_workflow(self):
+        workflow = self.workflow()
+        args = dict(input_a=None, input_b=None, active_inputs=3, unique_id="532", extra_pnginfo={"workflow": workflow})
+        self.assertEqual(self.node.check_lazy_status(**args), ["input_b"])
+        for stale in range(-1, 4):
+            self.assertEqual(self.node.check_lazy_status(**{**args, "active_inputs": stale}), ["input_b"])
+        for node in workflow["nodes"][:4]:
+            node["mode"] = 0 if node["mode"] == 4 else 4
+        self.assertEqual(self.node.check_lazy_status(**args), ["input_a"])
+
+    def test_ignored_set_alone_or_encoder_alone_disables_route(self):
+        for source_mode, set_mode in ((4, 0), (0, 4), (2, 0), (0, 2)):
+            workflow = self.workflow()
+            workflow["nodes"][0]["mode"] = source_mode
+            workflow["nodes"][2]["mode"] = set_mode
+            self.assertEqual(backend._workflow_exclusive_flags({"workflow": workflow}, "532"), 2)
+
+    def test_workflow_ambiguous_empty_cycle_missing_set_are_not_selected(self):
+        workflow = self.workflow()
+        for node in workflow["nodes"][:4]:
+            node["mode"] = 0
+        self.assertEqual(backend._workflow_exclusive_flags({"workflow": workflow}, "532"), 3)
+        for node in workflow["nodes"][:4]:
+            node["mode"] = 4
+        self.assertEqual(backend._workflow_exclusive_flags({"workflow": workflow}, "532"), 0)
+        workflow = self.workflow()
+        workflow["nodes"][2]["mode"] = 0
+        workflow["links"][0][1] = 5
+        self.assertEqual(backend._workflow_exclusive_flags({"workflow": workflow}, "532"), 2)
+        workflow["nodes"][4]["widgets_values"] = ["missing"]
+        self.assertEqual(backend._workflow_exclusive_flags({"workflow": workflow}, "532"), 2)
+
+    def test_prompt_normalization_before_cache_preserves_workflow(self):
+        workflow = self.workflow()
+        saved = copy.deepcopy(workflow)
+        request = {"prompt": {"532": {"class_type": "AdachiExclusiveSwitch", "inputs": {"input_a": ["a", 0], "input_b": ["b", 0], "active_inputs": 3}}},
+                   "extra_data": {"extra_pnginfo": {"workflow": workflow}}}
+        self.assertIs(backend.normalize_exclusive_prompt(request), request)
+        self.assertEqual(request["prompt"]["532"]["inputs"], {"input_b": ["b", 0], "active_inputs": 2})
+        self.assertEqual(workflow, saved)
+        plain = {"prompt": {"532": {"class_type": "AdachiExclusiveSwitch", "inputs": {"input_a": ["a", 0]}}}}
+        original = copy.deepcopy(plain)
+        backend.normalize_exclusive_prompt(plain)
+        self.assertEqual(plain, original)
+
+    def test_scoped_subgraph_and_dictionary_links(self):
+        child = self.workflow()
+        child["id"] = "child"
+        child["links"] = [dict(zip(("id", "origin_id", "origin_slot", "target_id", "target_slot", "type"), link)) for link in child["links"]]
+        workflow = {"nodes": [{"id": 349, "type": "child"}], "definitions": {"subgraphs": [child]}}
+        self.assertEqual(backend._workflow_exclusive_flags({"workflow": workflow}, "349:532"), 2)
+        self.assertIsNone(backend._workflow_exclusive_flags({"workflow": workflow}, "532"))
 
 
 if __name__ == "__main__":

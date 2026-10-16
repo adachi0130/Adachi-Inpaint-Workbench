@@ -618,6 +618,88 @@ class AdachiImageCompare:
 _MISSING_INPUT = object()
 
 
+def _workflow_exclusive_flags(extra_pnginfo, unique_id):
+    """Recover routing states from the editable graph, before virtual links vanish."""
+    workflow = extra_pnginfo.get("workflow") if isinstance(extra_pnginfo, dict) else None
+    if not isinstance(workflow, dict) or unique_id is None:
+        return None
+    definitions = {str(g.get("id")): g for g in workflow.get("definitions", {}).get("subgraphs", [])}
+    graph = workflow
+    parts = str(unique_id).split(":")
+    for parent_id in parts[:-1]:
+        parent = next((n for n in graph.get("nodes", []) if str(n.get("id")) == parent_id), None)
+        graph = definitions.get(str(parent.get("type"))) if parent else None
+        if graph is None:
+            return None
+    nodes = {str(n.get("id")): n for n in graph.get("nodes", [])}
+    selector = nodes.get(parts[-1])
+    if not selector or selector.get("type") != "AdachiExclusiveSwitch":
+        return None
+    links = {}
+    for link in graph.get("links", []):
+        if isinstance(link, dict):
+            links[str(link["id"])] = (str(link["origin_id"]), link.get("origin_slot", 0))
+        else:
+            links[str(link[0])] = (str(link[1]), link[2])
+
+    def visit(node_id, slot, seen):
+        if node_id in seen:
+            return False
+        node = nodes.get(node_id)
+        if node is None:
+            return None  # e.g. a subgraph's external input placeholder
+        if node.get("mode", 0) in (2, 4):
+            return False
+        seen = seen | {node_id}
+        kind = node.get("type")
+        if kind == "GetNode":
+            values = node.get("widgets_values", [])
+            name = values[0] if isinstance(values, list) and values else None
+            setter = next((n for n in nodes.values() if n.get("type") == "SetNode"
+                           and isinstance(n.get("widgets_values"), list)
+                           and n["widgets_values"] and n["widgets_values"][0] == name), None) if name else None
+            return visit(str(setter["id"]), slot, seen) if setter else False
+        if kind in ("SetNode", "Reroute"):
+            inputs = node.get("inputs", [])
+            if not inputs:
+                return False
+            source = inputs[slot] if isinstance(slot, int) and 0 <= slot < len(inputs) else inputs[0]
+            link = links.get(str(source.get("link")))
+            return visit(*link, seen) if link else False
+        return True
+
+    flags = 0
+    for name, bit in (("input_a", 1), ("input_b", 2)):
+        source = next((i for i in selector.get("inputs", []) if i.get("name") == name), {})
+        link = links.get(str(source.get("link")))
+        enabled = visit(*link, set()) if link else False
+        if enabled is None:
+            return None
+        if enabled:
+            flags |= bit
+    return flags
+
+
+def normalize_exclusive_prompt(data):
+    """Resolve flags before validation/cache keys, without changing workflow wires."""
+    prompt = data.get("prompt", {})
+    extra = data.get("extra_data", {}).get("extra_pnginfo")
+    if not isinstance(prompt, dict):
+        return data
+    for node_id, node in prompt.items():
+        if not isinstance(node, dict) or node.get("class_type") != "AdachiExclusiveSwitch":
+            continue
+        flags = _workflow_exclusive_flags(extra, node_id)
+        if flags is None:
+            continue
+        inputs = node.setdefault("inputs", {})
+        inputs["active_inputs"] = flags
+        for name, bit in (("input_a", 1), ("input_b", 2)):
+            if not flags & bit:
+                inputs.pop(name, None)
+    return data
+
+
 class AdachiExclusiveSwitch:
     """Forward exactly one enabled branch, without evaluating the ignored branch."""
 
@@ -632,7 +714,7 @@ class AdachiExclusiveSwitch:
                 # including bypassed transform nodes whose links otherwise pass through.
                 "active_inputs": ("INT", {"default": -1, "min": -1, "max": 3}),
             },
-            "hidden": {"prompt": "PROMPT", "dynprompt": "DYNPROMPT", "unique_id": "UNIQUE_ID"},
+            "hidden": {"prompt": "PROMPT", "dynprompt": "DYNPROMPT", "unique_id": "UNIQUE_ID", "extra_pnginfo": "EXTRA_PNGINFO"},
         }
 
     RETURN_TYPES = ("*",)
@@ -643,7 +725,10 @@ class AdachiExclusiveSwitch:
     SEARCH_ALIASES = ["exclusive switch", "auto switch", "自动二选一", "互斥", "自动切换", "adachi"]
 
     @staticmethod
-    def _selected_input(input_a, input_b, active_inputs, prompt=None, dynprompt=None, unique_id=None):
+    def _selected_input(input_a, input_b, active_inputs, prompt=None, dynprompt=None, unique_id=None, extra_pnginfo=None):
+        workflow_flags = _workflow_exclusive_flags(extra_pnginfo, unique_id)
+        if workflow_flags is not None:
+            active_inputs = workflow_flags
         execution_node = None
         if dynprompt is not None and unique_id is not None:
             try:
@@ -659,7 +744,7 @@ class AdachiExclusiveSwitch:
             connected = execution_node["inputs"]
             actual = int("input_a" in connected) | (int("input_b" in connected) << 1)
             if actual != 3:
-                active_inputs = actual
+                active_inputs = actual if workflow_flags is None else actual & workflow_flags
         if active_inputs == -1:
             # Raw API prompts need no frontend state: simply omit the unused input.
             active_inputs = int(input_a is not _MISSING_INPUT) | (int(input_b is not _MISSING_INPUT) << 1)
@@ -674,11 +759,11 @@ class AdachiExclusiveSwitch:
             raise ValueError(f"The enabled branch {name} has no input.")
         return name
 
-    def check_lazy_status(self, input_a=_MISSING_INPUT, input_b=_MISSING_INPUT, active_inputs=-1, prompt=None, dynprompt=None, unique_id=None):
-        return [self._selected_input(input_a, input_b, active_inputs, prompt, dynprompt, unique_id)]
+    def check_lazy_status(self, input_a=_MISSING_INPUT, input_b=_MISSING_INPUT, active_inputs=-1, prompt=None, dynprompt=None, unique_id=None, extra_pnginfo=None):
+        return [self._selected_input(input_a, input_b, active_inputs, prompt, dynprompt, unique_id, extra_pnginfo)]
 
-    def select(self, input_a=_MISSING_INPUT, input_b=_MISSING_INPUT, active_inputs=-1, prompt=None, dynprompt=None, unique_id=None):
-        selected = self._selected_input(input_a, input_b, active_inputs, prompt, dynprompt, unique_id)
+    def select(self, input_a=_MISSING_INPUT, input_b=_MISSING_INPUT, active_inputs=-1, prompt=None, dynprompt=None, unique_id=None, extra_pnginfo=None):
+        selected = self._selected_input(input_a, input_b, active_inputs, prompt, dynprompt, unique_id, extra_pnginfo)
         value = input_a if selected == "input_a" else input_b
         if value is None:
             raise ValueError(f"The enabled branch {selected} returned no data.")
