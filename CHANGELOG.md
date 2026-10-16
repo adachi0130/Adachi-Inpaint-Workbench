@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.3
+
+- Move the image Fit button from the inpaint painting controls to the inline mask, immediately after Load image.
+- Keep viewport reset and mask/history behavior unchanged. Includes the 0.5.2 single-frame 5D VAE compatibility fix.
+
 ## 0.5.2
 
 - Support still-image inpainting with both 4D `[B,C,H,W]` and single-frame 5D `[B,C,1,H,W]` VAE latents, including the Wan-derived VAE used by Anima/Qwen-image pipelines.

@@ -35,6 +35,8 @@ Environment: Windows, local ComfyUI 0.19.3, ComfyUI frontend 1.42.11, PyTorch 2.
 - 0.5.2: actual ComfyUI `VAE` + `WanVAE` encode/decode and `prepare_mask` were exercised with a small randomly initialized Wan architecture (16 latent channels). Four cases cover whole-image/original, masked-area/noise, zero-latent fill, and native inpaint conditioning, with two independent sources and two variants each. Latents were `[4,16,1,8,8]`, masks `[4,1,1,8,8]`, decoded images `[4,64,64,3]`, and all protected source pixels remained exact.
 - Anima checkpoint image generation was not performed: this machine does not have the user's Anima/Qwen VAE checkpoint files. The workflow was inspected read-only, confirming node 501 uses VAE node 358 (`qwen_image_vae.safetensors`) and the Anima model branch.
 
+- 0.5.3: in classic nodes and Nodes 2.0, the inline Fit button is on the same row immediately to the right of Load image, and is absent from the connected inpaint controls. Actual browser clicks reset zoom/pan and preserve the painted mask PNG exactly.
+
 The sampling path was also checked for noise-schedule continuity against the real `common_ksampler`/`KSampler` functions in the local ComfyUI; an actual checkpoint has not been loaded to test GPU image quality or every model family, so CPU/interface tests must not be treated as model-quality verification.
 
 References used during implementation:

@@ -170,7 +170,7 @@ export class InlineMaskEditor {
         footer.append(spacer);
         this.zoomLabel = el("span", "dd-zoom", "100%");
         footer.append(this.zoomLabel);
-        this.button(footer, T("Fit"), T("Fit the image to the canvas"), () => this.fit());
+        this.fitButton = this.button(footer, T("Fit"), T("Fit the image to the canvas"), () => this.fit());
         this.root.append(footer);
         const embedRow = el("label", "dd-embed");
         this.embed = el("input");
@@ -189,6 +189,7 @@ export class InlineMaskEditor {
             const info = el("div", "dd-row dd-source-info"); info.append(this.filename, this.sizeLabel);
             head.remove();
             this.controls.append(info, tools, settings, actions, footer, embedRow);
+            this.loadButton.after(this.fitButton);
             // These are the original live controls; the sampler mounts this
             // same DOM tree so brush state and callbacks are preserved.
         }

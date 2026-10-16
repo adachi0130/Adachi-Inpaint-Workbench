@@ -86,7 +86,7 @@ When the mask touches an image edge, masked-area mode uses aspect-preserving fil
 | Image / mask / overlay | Preview toggles only; they do not change the output |
 
 Brush pressure and soft brushes are supported; the mouse uses a fixed pressure.
-Inline Mask keeps only the image editing area and a small **Load image** button in the corner, and adjusts the canvas height to the image ratio after loading to reduce empty margins.
+Inline Mask keeps only the image editing area and small **Load image** / **Fit** buttons in the corner, and adjusts the canvas height to the image ratio after loading to reduce empty margins.
 The brush, eraser, rectangle, lasso, pan, four brush sliders, undo/redo, mask actions, view toggles, fit and the embed option all live in the connected **WebUI Inpaint** node and drive that same inline canvas.
 You upload the image once; every stroke then updates the mask in the browser and is stored as PNG data in the workflow and in the executed parameters, so there is no saving and reloading of files per stroke.
 Wheel events over the picture zoom it; over the toolbar, buttons, sliders or the parameter panel they follow ComfyUI's canvas navigation settings.
