@@ -17,7 +17,7 @@ An inline inpainting workspace for ComfyUI, with WebUI-style controls and tools 
 
 ![Inline painting, WebUI-style inpainting controls and image comparison in one ComfyUI workflow](preview/nodes2-inline.png)
 
-*The original workbench preview. The compact Upload / Fit / pin toolbar is shown below.*
+*The original workbench preview. Earlier toolbar screenshots are retained below; v0.6 uses arrow / fit / pin icons and a selection menu.*
 
 </div>
 
@@ -27,7 +27,7 @@ Inpainting usually means moving between the workflow, a mask editor and the gene
 
 | Tool | What it adds |
 | --- | --- |
-| **Inline Mask** | Paint in the workflow, with brush, eraser, rectangle, lasso and undo/redo. |
+| **Inline Mask** | Paint masks or crop, inpaint and blend two layers in the same node. Magic wand and quick selection included. |
 | **WebUI Inpaint** | Whole-image or masked-area sampling, familiar inpainting controls and compositing back at the source resolution. |
 | **Image Compare** | Hover comparison, result history and one-click adoption for another editing round. |
 | **Group Bypass Presets** | Save combinations of enabled/bypassed groups and apply them with one click. |
@@ -42,7 +42,7 @@ English and Simplified Chinese interfaces follow the ComfyUI language setting. T
 Upload, drop or paste a source image and paint on **Inline Mask** itself. Mask strokes stay in the browser and are saved with the workflow; painting does not require a disk save/load round-trip for every stroke.
 
 - Brush, soft edges, hardness, opacity, pen pressure, temporary erasing and shape tools.
-- A compact **Upload / Fit / pin** toolbar. Enable the pin (**Keep**) to keep the image fitted and centered; plain wheel then navigates the workflow, while `Ctrl` + wheel still changes brush size.
+- A compact **↑ upload / ⛶ fit / pin / selection menu** toolbar, with a mode selector at the upper right. Enable the pin (**Keep**) to keep the image fitted and centered; plain wheel then navigates the workflow, while `Ctrl` + wheel still changes brush size and `Shift` + wheel changes hardness.
 - Resize the editor horizontally or vertically. The pin state and node dimensions survive workflow reload.
 - The connected **WebUI Inpaint** node hosts the painting controls and sampling parameters, leaving more space for the picture.
 - Bounded display buffers and cached image/mask compositing reduce redraw cost at large graph zoom; the saved mask retains its source resolution.
@@ -57,6 +57,28 @@ Upload, drop or paste a source image and paint on **Inline Mask** itself. Mask s
 *Toolbar reference supplied by the author; the source preview is unloaded in this screenshot.*
 
 </details>
+
+### Crop and blend in the same node
+
+Choose **Mask** or **Crop & Blend** at the upper right of Inline Mask. Ordinary Mask mode ignores its `result` input, even when connected.
+
+In Crop & Blend mode, choose a preset near 1024 × 1536 (or custom dimensions in multiples of 32). The dashed rectangle follows the pointer by its upper-left corner; left-click locks it. The outside is darkened. A new region starts with the whole crop selected for repainting; edit that mask with the **◌ repaint mask** button. The position stays fixed for repeated passes.
+
+| Connection | Purpose |
+| --- | --- |
+| `Inline Mask.image` + `mask` → `WebUI Inpaint.image` + `mask` | Send the selected crop and its repaint mask. |
+| `WebUI Inpaint.image` → `Inline Mask.result` | Return the result at exactly the crop dimensions. |
+| `Inline Mask.full_image` → `Save Image.images` | Save the full source with the generated patch stitched in. |
+
+The plugin separates this visible feedback link before execution, so it can run without an execution cycle. Keep the editor and return link in the main graph. Use the inpaint node's **image** output for the return link; its `crop` output is the sampling canvas and can have a different size. [Open the ready-wired example](examples/05-inline-crop-blend.json).
+
+After generation, **◐ blend layers** shows the original under the new result. Paint to keep new pixels, hold **Alt** to restore original pixels, and use soft brush edges to blend seams. This layer mask is independent of the repaint mask and is kept for another pass at the same coordinates. **✓** merges the visible layers; **↖ reselect** merges first, then lets you choose a fresh region. There is no crop version timeline. In a generated batch, `full_image` contains all composites and the editor displays the last result.
+
+### Selection tools without a crowded toolbar
+
+Open the **✦ selection menu** for **Magic wand** (`W`) and **Quick selection** (`Q`), with color tolerance and brush-size controls. The wand selects a contiguous area similar to the clicked color. Quick selection samples colors under a dragged brush and adds their connected areas. Hold **Alt** while clicking or dragging to subtract. Both tools work on ordinary masks, crop repaint masks and layer fusion masks, with undo/redo.
+
+These are local color-based tools, not AI object segmentation; detailed textures and similar-colored backgrounds may need a lower tolerance or manual cleanup. Selection grows in a background worker, and crop mode confines it to the locked rectangle.
 
 ### Inpaint the whole image or just the masked region
 
@@ -151,11 +173,11 @@ The Refiner inputs are optional. Leave them disconnected unless you are using a 
 
 ## Node reference
 
-All nodes live under **Adachi-Inpaint-Workbench**. The group preset controller is frontend-only; the other six have backend node classes.
+All nodes live under **Adachi-Inpaint-Workbench**. The group preset controller is frontend-only; the other six are user-facing backend nodes. The layer sink is internal and added only for execution.
 
 | Node | Purpose | Outputs |
 | --- | --- | --- |
-| **Inline Mask** | Source image and inline mask editing | `image`, `mask` |
+| **Inline Mask** | Mask painting or crop/inpaint/layer blending | `image`, `mask`, `full_image` |
 | **WebUI Inpaint** | Prepare, sample and composite in one node | `image` = full composite; `crop` = sampling canvas; `mask` = sampling mask |
 | **Image Compare** | Preview, compare and adopt results | `image` = unchanged result batch |
 | **Group Bypass Presets** | Apply saved group states | No connections needed |
@@ -172,6 +194,8 @@ For modular sampling: `Prepare.pixels → VAE Encode → Set Latent Noise Mask �
 | Brush / eraser / rectangle / lasso | `B` / `E` / `R` / `L` |
 | Temporary eraser | Hold `Alt`, or use the right mouse button; release to return to the previous tool |
 | Brush size | `Ctrl` + wheel, or `[` / `]` |
+| Brush hardness | `Shift` + wheel |
+| Magic wand / quick selection | `W` / `Q`; `Alt` + click/drag subtracts |
 | Undo / redo | `Ctrl+Z` / `Ctrl+Shift+Z`, or `Ctrl+Y` |
 | Image zoom / pan, when unpinned | Wheel / Space + drag, middle-button drag, or the pan tool (`H`) |
 | Keep the image fitted | Pin beside **Fit**; click again to unlock |
@@ -189,12 +213,14 @@ Drag a JSON file into ComfyUI:
 | [02 · Modular inpainting](examples/02-modular-inpaint.json) | Use standard encode/sample/decode nodes with Prepare and Composite. |
 | [03 · Group presets](examples/03-group-presets.json) | Model-free preset switching with image branches. |
 | [04 · Exclusive switch](examples/04-exclusive-switch.json) | Model-free A/B selection controlled by group presets. |
+| [05 · Inline crop and blend](examples/05-inline-crop-blend.json) | One editor, crop presets, result feedback and full-image output; select your checkpoint and upload a source. |
 
 ## Compatibility and important behaviour
 
 - **Static images:** ordinary 4D `[B,C,H,W]` latents and single-frame 5D `[B,C,1,H,W]` image latents are supported, including the Wan-derived VAE path used by Anima. Supply the model family's matching VAE and conditioning. This is not multi-frame video inpainting.
 - **Anima:** for ordinary masked img2img, leave **inpaint_model** disabled. That option is for dedicated inpainting architectures, not a requirement for painting a mask.
 - **Source size:** the final composite keeps the source resolution in both sampling areas. Use `crop` or a separate resize node for a target-size output.
+- **Crop layers:** the fusion mask and crop coordinates are saved in the workflow; the latest layer is a relative image reference under `input/adachi-inpaint-layers/`. Include that file when moving an unmerged edit between machines, or merge layers and embed the source first.
 - **Sharing:** masks are embedded in saved workflows. Source images use a relative `input/` path by default; enable **Embed source in workflow** to include the picture too. Embedded images increase JSON size.
 - **Adoption:** source and result dimensions must match to preserve mask coordinates. Undo/redo commands survive adoption in the current session; saving/reloading retains the mask, not the command history.
 - **Temporary previews:** comparison history stores preview references. ComfyUI temp cleanup may expire them; adopted images are stored under `input/adachi-inpaint/`.

@@ -48,7 +48,7 @@ export function installInpaintWorkbench(nodeType) {
         let panel;
         panel = new InpaintParameterPanel({
             getTargets: () => { refreshEditor(); return [node]; },
-            getImage: () => source?.adachiEditor?.ready ? source.adachiEditor.image : null,
+            getImage: () => source?.adachiEditor?.ready ? (source.adachiCrop?.mode === "crop" && source.adachiCrop.region.locked ? source.adachiCrop.region : source.adachiEditor.image) : null,
             onTargetChange: (previous, next) => relocateWidgets(node, previous, next),
             onDirty: markChanged, onHeight: scheduleSize,
         });

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.0
+
+- Merge rectangular cropping and two-layer blending into Inline Mask, with a compact mode selector; ordinary mask mode ignores the result input.
+- Add 32-aligned crop presets, pointer-following selection, fixed-region repeat generation, exact full-image stitching and a third full_image output. Feedback wiring is split into an acyclic execution graph before validation.
+- Replace the proposed crop version history with original/result layers and a separate editable fusion mask. Brush reveals the new layer; Alt erases back to the original. Reselecting merges visible layers first.
+- Add a compact selection-tool menu: contiguous magic wand (W), brush-guided color quick selection (Q), tolerance and selection brush size. Alt subtracts, and both tools support undo/redo in either mode. Selection calculations run in a Web Worker.
+- Use arrow/fit/pin icons, Ctrl+wheel for size and Shift+wheel for hardness. Use source size follows the locked crop in crop mode.
+- Retain existing image/mask output indices, old workflows, comparison adoption and mask preservation. Restart ComfyUI and hard-refresh after updating.
+
 ## 0.5.13
 
 - Restore a missing enabled execution input by resolving its saved workflow route through Get/Set, reroutes and subgraph output slots to an existing flattened execution node.

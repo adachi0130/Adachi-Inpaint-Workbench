@@ -14,6 +14,22 @@
       "source_data": {
         "name": "嵌入原图",
         "tooltip": "嵌入原图，便于工作流在其他机器使用。"
+      },
+      "result": {
+        "name": "重绘结果",
+        "tooltip": "仅裁切融合模式使用；普通蒙版模式忽略此输入。"
+      },
+      "edit_mode": {
+        "name": "编辑模式"
+      },
+      "crop_state": {
+        "name": "裁切选区"
+      },
+      "blend_data": {
+        "name": "融合蒙版"
+      },
+      "layer_image": {
+        "name": "重绘图层"
       }
     },
     "outputs": {
@@ -22,6 +38,9 @@
       },
       "1": {
         "name": "蒙版"
+      },
+      "2": {
+        "name": "完整图像"
       }
     }
   },

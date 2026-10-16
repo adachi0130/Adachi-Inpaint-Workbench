@@ -177,13 +177,13 @@ class BackendTests(unittest.TestCase):
     def test_embedded_source_and_mask_convention(self):
         rgba = Image.new("RGBA", (8, 4), (10, 20, 30, 255))
         rgba.putpixel((0, 0), (10, 20, 30, 0))
-        pixels, alpha_mask = backend.AdachiInlineMask().load(source_data=data_url(rgba))
+        pixels, alpha_mask, _ = backend.AdachiInlineMask().load(source_data=data_url(rgba))
         self.assertEqual(tuple(pixels.shape), (1, 4, 8, 3))
         self.assertEqual(float(alpha_mask[0, 0, 0]), 1)
         self.assertEqual(float(alpha_mask[0, 1, 1]), 0)
         blackwhite = Image.new("L", (8, 4), 0)
         blackwhite.putpixel((2, 1), 255)
-        _, explicit_mask = backend.AdachiInlineMask().load(source_data=data_url(rgba), mask_data=data_url(blackwhite))
+        _, explicit_mask, _ = backend.AdachiInlineMask().load(source_data=data_url(rgba), mask_data=data_url(blackwhite))
         self.assertEqual(float(explicit_mask[0, 1, 2]), 1)
         self.assertEqual(float(explicit_mask[0, 0, 0]), 0)
 

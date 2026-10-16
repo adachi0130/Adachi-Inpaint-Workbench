@@ -1,0 +1,558 @@
+import { CROP_PRESETS, cropAt } from "./crop_geometry.js?v=0.6.0";
+import { T } from "./i18n.js";
+
+const fields = ["mask", "baseMask", "history", "future", "lastMask", "dirty"];
+const canvas = (w, h) =>
+  Object.assign(document.createElement("canvas"), { width: w, height: h });
+const load = async (url) => {
+  const image = new Image();
+  image.src = url;
+  await image.decode();
+  return image;
+};
+const make = (tag, cls) => {
+  const e = document.createElement(tag);
+  e.className = cls;
+  return e;
+};
+
+export class InlineCropController {
+  constructor(node, editor, { find, hide, changed, imageUrl }) {
+    Object.assign(this, { node, editor, changed, imageUrl });
+    this.widgets = Object.fromEntries(
+      ["edit_mode", "crop_state", "blend_data", "layer_image"].map((name) => [
+        name,
+        find(name),
+      ]),
+    );
+    Object.values(this.widgets).forEach(hide);
+    this.contexts = {};
+    this.target = "mask";
+    this.layer = null;
+    this.revision = 0;
+    this.acceptVersion = 0;
+    this.cropWidth = 1024;
+    this.cropHeight = 1536;
+    this.patchCanvas = canvas(1, 1);
+    this.build();
+    const originalFlush = editor.flush.bind(editor);
+    editor.flush = () => {
+      if (this.target !== "blend") return originalFlush();
+      if (!editor.ready || !this.region?.locked)
+        return this.widgets.blend_data.value;
+      if (!editor.dirty && !editor.stroke) return this.widgets.blend_data.value;
+      const r = this.region,
+        out = canvas(r.width, r.height),
+        ctx = out.getContext("2d");
+      ctx.fillStyle = "black";
+      ctx.fillRect(0, 0, r.width, r.height);
+      ctx.drawImage(
+        editor.mask,
+        r.x,
+        r.y,
+        r.width,
+        r.height,
+        0,
+        0,
+        r.width,
+        r.height,
+      );
+      this.widgets.blend_data.value = out.toDataURL("image/png");
+      out.width = out.height = 0;
+      editor.dirty = false;
+      return this.widgets.blend_data.value;
+    };
+    editor.options.sceneRevision = () =>
+      `${this.mode}:${this.target}:${this.revision}`;
+    editor.options.drawSource = (ctx) => this.drawSource(ctx);
+    editor.options.showMask = () =>
+      this.mode !== "crop" || (this.target === "mask" && this.region?.locked);
+    editor.options.drawOverlay = (ctx, d) => this.drawOverlay(ctx, d);
+    editor.options.selectionBounds = () =>
+      this.mode === "crop" && this.region?.locked ? this.region : undefined;
+    const down = editor.pointerDown.bind(editor),
+      move = editor.pointerMove.bind(editor);
+    editor.pointerDown = (e) => {
+      if (!editor.ready) return;
+      if (this.busy) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+      if (
+        this.mode === "crop" &&
+        !this.region?.locked &&
+        e.button === 0 &&
+        !editor.space
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        editor.root.focus({ preventScroll: true });
+        const p = editor.point(e),
+          r = cropAt(
+            editor.image.width,
+            editor.image.height,
+            this.cropWidth,
+            this.cropHeight,
+            p.x,
+            p.y,
+          );
+        if (r) this.lock(r);
+        return;
+      }
+      down(e);
+    };
+    editor.pointerMove = (e) => {
+      if (
+        this.mode === "crop" &&
+        editor.ready &&
+        !this.region?.locked &&
+        !editor.drag
+      ) {
+        const p = editor.point(e);
+        this.hover = cropAt(
+          editor.image.width,
+          editor.image.height,
+          this.cropWidth,
+          this.cropHeight,
+          p.x,
+          p.y,
+        );
+      }
+      move(e);
+    };
+    editor.canvas.addEventListener("pointerleave", () => {
+      this.hover = null;
+      editor.schedule();
+    });
+    editor.root.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && this.mode === "crop" && !editor.stroke) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.reselect();
+      }
+    });
+  }
+
+  get mode() {
+    return this.widgets.edit_mode.value || "mask";
+  }
+  get region() {
+    try {
+      return JSON.parse(this.widgets.crop_state.value || "{}");
+    } catch {
+      return {};
+    }
+  }
+  state(value) {
+    this.widgets.crop_state.value = JSON.stringify(value);
+    this.revision++;
+  }
+  snapshot() {
+    return Object.fromEntries(fields.map((k) => [k, this.editor[k]]));
+  }
+  activate(target) {
+    if (this.target === target) return;
+    this.editor.flush();
+    this.contexts[this.target] = this.snapshot();
+    const next = this.contexts[target];
+    if (!next) return;
+    Object.assign(this.editor, next);
+    this.target = target;
+    this.editor.maskRevision++;
+    this.editor.updateButtons();
+    this.editor.schedule();
+    this.sync();
+  }
+  build() {
+    const e = this.editor;
+    this.modeSelect = make("select", "dd-mode-select");
+    this.modeSelect.setAttribute("aria-label", T("Editing mode"));
+    for (const [value, label] of [
+      ["mask", "Mask"],
+      ["crop", "Crop & Blend"],
+    ]) {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = T(label);
+      this.modeSelect.append(option);
+    }
+    this.modeSelect.onchange = () => this.setMode(this.modeSelect.value);
+    e.root.append(this.modeSelect);
+    this.bar = make("div", "dd-crop-bar");
+    this.preset = make("select", "");
+    this.preset.setAttribute("aria-label", T("Crop size"));
+    for (const [w, h] of CROP_PRESETS) {
+      const o = document.createElement("option");
+      o.value = `${w}x${h}`;
+      o.textContent = `${w} × ${h}`;
+      this.preset.append(o);
+    }
+    const custom = document.createElement("option");
+    custom.value = "custom";
+    custom.textContent = T("Custom");
+    this.preset.append(custom);
+    this.preset.onchange = () => {
+      if (this.preset.value !== "custom")
+        [this.cropWidth, this.cropHeight] = this.preset.value
+          .split("x")
+          .map(Number);
+      this.custom.hidden = this.preset.value !== "custom";
+      this.sizeChanged();
+    };
+    this.bar.append(this.preset);
+    const button = (text, title, action) =>
+      e.button(this.bar, text, T(title), () => this.run(action));
+    this.swapButton = button("⇄", "Swap crop dimensions", () => {
+      [this.cropWidth, this.cropHeight] = [this.cropHeight, this.cropWidth];
+      this.syncPreset();
+      this.sizeChanged();
+    });
+    this.reselectButton = button("↖", "Choose another region", () =>
+      this.reselect(),
+    );
+    this.maskButton = button("◌", "Repaint mask", () => {
+      this.activate("mask");
+      this.changed();
+    });
+    this.blendButton = button(
+      "◐",
+      "Blend layers: brush keeps new pixels; Alt restores original",
+      () => {
+        this.activate("blend");
+        this.changed();
+      },
+    );
+    this.commitButton = button("✓", "Merge the visible layers", () =>
+      this.flatten(),
+    );
+    this.custom = make("div", "dd-crop-custom");
+    this.custom.hidden = true;
+    for (const key of ["cropWidth", "cropHeight"]) {
+      const input = make("input", "");
+      input.type = "number";
+      input.min = 32;
+      input.max = 16384;
+      input.step = 32;
+      input.value = this[key];
+      input.setAttribute(
+        "aria-label",
+        T(key === "cropWidth" ? "Width" : "Height"),
+      );
+      input.onchange = () => {
+        this[key] = Math.max(32, Math.round(Number(input.value) / 32) * 32);
+        input.value = this[key];
+        this.sizeChanged();
+      };
+      this.custom.append(input);
+    }
+    this.bar.append(this.custom);
+    e.root.append(this.bar);
+    this.sync();
+  }
+  async run(action) {
+    if (
+      this.busy ||
+      this.editor.stroke ||
+      this.editor.quickStroke ||
+      this.editor.wandBusy
+    )
+      return;
+    try {
+      await action();
+    } catch (error) {
+      this.editor.status(error.message, true);
+    }
+  }
+  sync() {
+    this.modeSelect.value = this.mode;
+    this.bar.hidden = this.mode !== "crop";
+    this.blendButton.disabled = !this.layer;
+    this.commitButton.disabled = !this.layer;
+    this.maskButton.classList.toggle("dd-active", this.target === "mask");
+    this.blendButton.classList.toggle("dd-active", this.target === "blend");
+    this.modeSelect.disabled = !!this.busy;
+    this.preset.disabled = !!this.region?.locked;
+    this.swapButton.disabled = !!this.region?.locked;
+    for (const input of this.custom.children) input.disabled = !!this.region?.locked;
+  }
+  setMode(mode) {
+    if (
+      this.editor.stroke ||
+      this.editor.quickStroke ||
+      this.editor.wandBusy ||
+      this.busy
+    ) {
+      this.sync();
+      return;
+    }
+    this.activate("mask");
+    this.widgets.edit_mode.value = mode;
+    this.state({ ...this.region, job: crypto.randomUUID() });
+    this.editor.fit();
+    this.sync();
+    this.changed();
+  }
+  syncPreset() {
+    const value = `${this.cropWidth}x${this.cropHeight}`;
+    this.preset.value = [...this.preset.options].some((o) => o.value === value)
+      ? value
+      : "custom";
+    this.custom.hidden = this.preset.value !== "custom";
+    [...this.custom.children].forEach(
+      (e, i) => (e.value = i ? this.cropHeight : this.cropWidth),
+    );
+  }
+  sizeChanged() {
+    this.hover = null;
+    this.editor.schedule();
+    this.syncPreset();
+  }
+  reset() {
+    this.layer = null;
+    this.widgets.layer_image.value = "";
+    this.widgets.blend_data.value = "";
+    this.contexts = {};
+    this.target = "mask";
+    this.hover = null;
+    this.state({ locked: false, job: crypto.randomUUID() });
+    const { width, height } = this.editor.image;
+    for (const o of this.preset.options)
+      if (o.value !== "custom") {
+        const [w, h] = o.value.split("x").map(Number);
+        o.disabled = w > width || h > height;
+      }
+    if (this.cropWidth > width || this.cropHeight > height) {
+      this.cropWidth = Math.min(1024, Math.floor(width / 32) * 32);
+      this.cropHeight = Math.min(1536, Math.floor(height / 32) * 32);
+    }
+    this.syncPreset();
+    this.sync();
+    this.editor.schedule();
+  }
+  lock(region) {
+    if (this.editor.wandBusy) return;
+    this.activate("mask");
+    this.contexts.blend = null;
+    this.layer = null;
+    this.widgets.layer_image.value = "";
+    this.widgets.blend_data.value = "";
+    this.state({ ...region, locked: true, job: crypto.randomUUID() });
+    const e = this.editor;
+    // A fresh region starts with its entire rectangle selected. Earlier strokes do not leak into it.
+    for (const c of [e.mask, e.baseMask])
+      c.getContext("2d").clearRect(0, 0, c.width, c.height);
+    e.history = [];
+    e.future = [];
+    const ctx = e.baseMask.getContext("2d");
+    ctx.fillStyle = "white";
+    ctx.fillRect(region.x, region.y, region.width, region.height);
+    e.mask.getContext("2d").drawImage(e.baseMask, 0, 0);
+    e.changed();
+    this.sync();
+    this.changed();
+  }
+  makeBlend(data = "") {
+    const r = this.region,
+      e = this.editor,
+      mask = canvas(e.image.width, e.image.height),
+      baseMask = canvas(e.image.width, e.image.height);
+    const ctx = mask.getContext("2d");
+    ctx.fillStyle = "white";
+    ctx.fillRect(r.x, r.y, r.width, r.height);
+    baseMask.getContext("2d").drawImage(mask, 0, 0);
+    this.contexts.blend = {
+      mask,
+      baseMask,
+      history: [],
+      future: [],
+      lastMask: "",
+      dirty: false,
+    };
+    if (!data) return Promise.resolve();
+    return load(data).then((image) => {
+      const out = canvas(r.width, r.height),
+        c = out.getContext("2d");
+      c.drawImage(image, 0, 0);
+      const pixels = c.getImageData(0, 0, r.width, r.height);
+      for (let i = 0; i < pixels.data.length; i += 4) {
+        pixels.data[i + 3] = pixels.data[i];
+        pixels.data[i] = pixels.data[i + 1] = pixels.data[i + 2] = 255;
+      }
+      ctx.clearRect(0, 0, mask.width, mask.height);
+      ctx.putImageData(pixels, r.x, r.y);
+      const base = baseMask.getContext("2d");
+      base.clearRect(0, 0, baseMask.width, baseMask.height);
+      base.drawImage(mask, 0, 0);
+      out.width = out.height = 0;
+    });
+  }
+  async restore() {
+    this.target = "mask";
+    this.contexts = {};
+    this.layer = null;
+    const r = this.region;
+    if (r.locked) {
+      this.cropWidth = r.width;
+      this.cropHeight = r.height;
+      this.syncPreset();
+      if (this.widgets.layer_image.value) {
+        this.layer = await load(this.imageUrl(this.widgets.layer_image.value));
+        await this.makeBlend(this.widgets.blend_data.value);
+        if (this.mode === "crop") this.activate("blend");
+      }
+    }
+    this.revision++;
+    this.sync();
+    this.editor.schedule();
+  }
+  async accept(record) {
+    if (
+      this.editor.destroyed ||
+      this.mode !== "crop" ||
+      !this.region.locked ||
+      record.job !== this.region.job ||
+      this.busy
+    )
+      return;
+    if (this.editor.stroke || this.editor.quickStroke || this.editor.wandBusy) {
+      this.pendingResult = record;
+      clearTimeout(this.resultTimer);
+      this.resultTimer = setTimeout(() => {
+        const next = this.pendingResult;
+        this.pendingResult = null;
+        this.accept(next).catch((error) =>
+          this.editor.status(error.message, true),
+        );
+      }, 50);
+      return;
+    }
+    const name = record.image.subfolder
+      ? `${record.image.subfolder}/${record.image.filename}`
+      : record.image.filename;
+    if (name === this.widgets.layer_image.value) return;
+    const version = ++this.acceptVersion;
+    const image = await load(this.imageUrl(name));
+    if (
+      this.editor.destroyed ||
+      version !== this.acceptVersion ||
+      record.job !== this.region.job ||
+      this.mode !== "crop"
+    )
+      return;
+    this.layer = image;
+    this.widgets.layer_image.value = name;
+    if (!this.contexts.blend && this.target !== "blend")
+      await this.makeBlend(this.widgets.blend_data.value);
+    this.activate("blend");
+    this.revision++;
+    this.sync();
+    this.editor.schedule();
+    this.changed();
+  }
+  drawSource(ctx) {
+    if (this.mode !== "crop") return false;
+    const e = this.editor,
+      r = this.region;
+    ctx.drawImage(e.image, 0, 0);
+    if (this.layer && r.locked) {
+      const key = `${this.revision}:${e.maskRevision}`;
+      if (this.patchKey !== key) {
+        this.patchCanvas.width = r.width;
+        this.patchCanvas.height = r.height;
+        const c = this.patchCanvas.getContext("2d");
+        c.drawImage(this.layer, 0, 0);
+        const mask =
+          this.target === "blend" ? e.mask : this.contexts.blend?.mask;
+        if (mask) {
+          c.globalCompositeOperation = "destination-in";
+          c.drawImage(
+            mask,
+            r.x,
+            r.y,
+            r.width,
+            r.height,
+            0,
+            0,
+            r.width,
+            r.height,
+          );
+          c.globalCompositeOperation = "source-over";
+        }
+        this.patchKey = key;
+      }
+      ctx.drawImage(this.patchCanvas, r.x, r.y);
+    }
+    return true;
+  }
+  drawOverlay(ctx, d) {
+    if (this.mode !== "crop") return;
+    const r = this.region.locked ? this.region : this.hover;
+    if (!r) return;
+    ctx.save();
+    if (this.region.locked) {
+      ctx.fillStyle = "#0008";
+      ctx.beginPath();
+      ctx.rect(0, 0, this.editor.image.width, this.editor.image.height);
+      ctx.rect(r.x, r.y, r.width, r.height);
+      ctx.fill("evenodd");
+    }
+    ctx.strokeStyle = "#ffd293";
+    ctx.lineWidth = 1 / d.scale;
+    ctx.setLineDash([6 / d.scale, 4 / d.scale]);
+    ctx.strokeRect(r.x, r.y, r.width, r.height);
+    ctx.restore();
+  }
+  async flatten() {
+    if (!this.layer) return;
+    this.editor.flush();
+    this.busy = true;
+    this.sync();
+    try {
+      const e = this.editor,
+        c = canvas(e.image.width, e.image.height);
+      this.drawSource(c.getContext("2d"));
+      const blob = await new Promise((resolve) =>
+        c.toBlob(resolve, "image/png"),
+      );
+      c.width = c.height = 0;
+      this.activate("mask");
+      await e.options.onUpload(
+        new File([blob], `merged-${crypto.randomUUID()}.png`, {
+          type: "image/png",
+        }),
+        { preserveMask: true, preserveCrop: true },
+      );
+      this.layer = null;
+      this.widgets.layer_image.value = "";
+      this.widgets.blend_data.value = "";
+      this.contexts.blend = null;
+      this.state({ ...this.region, job: crypto.randomUUID() });
+    } finally {
+      this.busy = false;
+      this.sync();
+      this.editor.schedule();
+      this.changed();
+    }
+  }
+  async reselect() {
+    if (this.busy || this.editor.wandBusy || this.editor.stroke || this.editor.quickStroke) return;
+    await this.flatten();
+    this.activate("mask");
+    this.state({ locked: false, job: crypto.randomUUID() });
+    this.hover = null;
+    this.sync();
+    this.editor.schedule();
+    this.changed();
+  }
+  destroy() {
+    clearTimeout(this.resultTimer);
+    this.pendingResult = null;
+    this.acceptVersion++;
+    for (const context of Object.values(this.contexts))
+      for (const key of ["mask", "baseMask"])
+        if (context?.[key] !== this.editor[key] && context?.[key])
+          context[key].width = context[key].height = 0;
+    this.patchCanvas.width = this.patchCanvas.height = 0;
+  }
+}

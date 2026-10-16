@@ -1,15 +1,16 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
-import { InlineMaskEditor } from "./editor.js?v=0.5.10";
-import { installInpaintWorkbench } from "./inpaint_node.js?v=0.5.5";
+import { InlineMaskEditor } from "./editor.js?v=0.6.0";
+import { installInpaintWorkbench } from "./inpaint_node.js?v=0.6.0";
 import { bindWidgetToNodeWidth } from "./widget_layout.js?v=0.5.5";
 import { routeWheelOutsideImage } from "./wheel_routing.js";
+import { InlineCropController } from "./inline_crop.js?v=0.6.0";
 import { T } from "./i18n.js";
 
 const styleId = "adachi-inpaint-style";
 const stylesheet = document.getElementById(styleId) || document.createElement("link");
 stylesheet.id = styleId; stylesheet.rel = "stylesheet";
-stylesheet.href = new URL("./editor.css?v=0.5.5", import.meta.url).href;
+stylesheet.href = new URL("./editor.css?v=0.6.0", import.meta.url).href;
 if (!stylesheet.isConnected) document.head.append(stylesheet);
 
 function hide(widget) {
@@ -39,6 +40,7 @@ function imageUrl(value) {
 app.registerExtension({
     name: "Adachi.InlineInpaint",
     async beforeRegisterNodeDef(nodeType, nodeData) {
+        if (nodeData.name === "AdachiLayerCommit") { nodeType.skip_list = true; return; }
         if (["AdachiWebUIInpaint", "AdachiInpaintPrepare"].includes(nodeData.name)) { installInpaintWorkbench(nodeType); return; }
         if (nodeData.name !== "AdachiInlineMask") return;
         const originalCreated = nodeType.prototype.onNodeCreated;
@@ -56,6 +58,7 @@ app.registerExtension({
             const find = name => node.widgets?.find(widget => widget.name === name);
             const imageWidget = find("image"), maskWidget = find("mask_data"), sourceWidget = find("source_data");
             for (const widget of [imageWidget, maskWidget, sourceWidget]) hide(widget);
+            let crop;
             let restoring = false;
             let restoreFrame = 0;
             let uploadVersion = 0;
@@ -79,7 +82,7 @@ app.registerExtension({
                 if (!embedded && !filename) return;
                 restoring = true;
                 editor.embed.checked = !!embedded;
-                try { await editor.setImage(embedded || imageUrl(filename), maskWidget?.value || "", embedded ? T("Embedded image") : filename); }
+                try { crop?.activate("mask"); await editor.setImage(embedded || imageUrl(filename), maskWidget?.value || "", embedded ? T("Embedded image") : filename); await crop?.restore(); }
                 catch (error) { console.warn("[Adachi Inpaint]", error); }
                 finally { restoring = false; }
             };
@@ -90,7 +93,7 @@ app.registerExtension({
                 onKeepFit(enabled) { node.properties.adachi_keep_fit = enabled; markChanged(); },
                 onImage() { if (!restoring || !node.properties.adachi_compact_ui) fitNodeToImage(); },
                 onGraphWheel: event => app.canvas?.processMouseWheel(event),
-                async onUpload(file, { preserveMask = false } = {}) {
+                async onUpload(file, { preserveMask = false, preserveCrop = false } = {}) {
                     if (preserveMask && editor.image && !editor.ready) throw new Error(T("Wait for the source image to finish loading before adopting a result"));
                     const version = ++uploadVersion;
                     const body = new FormData();
@@ -103,12 +106,14 @@ app.registerExtension({
                     if (version !== uploadVersion || editor.destroyed) return;
                     const name = uploaded.subfolder ? `${uploaded.subfolder}/${uploaded.name}` : uploaded.name;
                     restoring = false;
+                    crop?.activate("mask");
                     if (preserveMask && editor.ready) await editor.replaceSource(imageUrl(name), file.name);
                     else await editor.setImage(imageUrl(name), "", file.name);
                     if (version !== uploadVersion || editor.destroyed) return;
                     imageWidget.value = name;
                     maskWidget.value = preserveMask ? editor.flush() : "";
                     sourceWidget.value = editor.embed.checked ? editor.sourceData() : "";
+                    if (!preserveCrop) crop?.reset();
                     markChanged();
                 },
                 onEmbed(enabled) {
@@ -116,7 +121,9 @@ app.registerExtension({
                     markChanged();
                 },
             });
-            editor.root.dataset.adachiVersion = "0.5.10";
+            editor.root.dataset.adachiVersion = "0.6.0";
+            crop = new InlineCropController(node, editor, {find, hide, changed:markChanged, imageUrl});
+            node.adachiCrop = crop;
             node.adachiEditor = editor;
             const stopWheelRouting = routeWheelOutsideImage(editor.root, editor.canvas, () => editor.ready);
             node.adachiUseResult = async file => {
@@ -200,10 +207,18 @@ app.registerExtension({
             const previousImageCallback = imageWidget.callback;
             imageWidget.callback = function () { previousImageCallback?.apply(this, arguments); restore(); };
             const previousRemoved = node.onRemoved;
-            node.onRemoved = function () { cancelAnimationFrame(restoreFrame); cancelAnimationFrame(fitFrame); stopWheelRouting(); editor.destroy(); return previousRemoved?.apply(this, arguments); };
+            node.onRemoved = function () { cancelAnimationFrame(restoreFrame); cancelAnimationFrame(fitFrame); stopWheelRouting(); crop.destroy(); editor.destroy(); return previousRemoved?.apply(this, arguments); };
             node.setSize([Math.max(380, node.size[0]), Math.max(480, node.size[1])]);
             restoreFrame = requestAnimationFrame(restore);
             return result;
         };
     },
+});
+
+// Execution-only sinks report back to the single visible editor node.
+api.addEventListener("executed", event => {
+    for (const record of event.detail?.output?.adachi_layer || []) {
+        const node = app.graph?.getNodeById(record.target);
+        node?.adachiCrop?.accept(record).catch(error => node.adachiEditor.status(error.message, true));
+    }
 });

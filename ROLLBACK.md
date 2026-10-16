@@ -1,9 +1,13 @@
 # Git versions and rollback
 
-The current local version is **v0.5.13**. Both the installed plugin and the source repository retain local commits and tags. This update is also pushed to the GitHub main branch.
+The current version is **v0.6.0**. Git history lives in the source repository. The installed custom-node folder may be a ZIP/file copy without its own `.git`; do not run rollback commands in ComfyUI's parent repository.
+
+Before installing, the installer saves the previous plugin directory under `ComfyUI/user/adachi-workbench-backups/`. Restore that ZIP to roll back a copied installation. For a Git clone, use the tags below.
 
 | Tag | Contents |
 |---|---|
+| `v0.6.0` | Merged crop/blend editor, magic wand and quick selection |
+| `local-before-v0.6.0` | Exact source baseline before the merged editor (includes bilingual README) |
 | `v0.5.13` | Restore dropped enabled inputs through saved subgraph output routes |
 | `v0.5.12` / `local-before-v0.5.13` | Trace Get/Set source states server-side before prompt validation and caching |
 | `v0.5.11` / `local-before-v0.5.12` | Resolve exclusive selection from actual submitted connections despite stale frontend flags |
@@ -25,14 +29,14 @@ To undo only this update, run in the plugin folder:
 
 ```powershell
 git status --short
-git switch --detach local-before-v0.5.13
+git switch --detach local-before-v0.6.0
 ```
 
 Return to this version with:
 
 ```powershell
-git switch --detach v0.5.13
+git switch --detach v0.6.0
 ```
 
 Restart ComfyUI and hard-refresh the browser (`Ctrl+F5`) after switching versions.
-Commit or back up any local modifications before switching. A release ZIP does not contain `.git`; local history is kept in the source and installation repositories.
+Commit or back up any local modifications before switching. A release ZIP does not contain `.git`; use the installer backup for a copied installation.

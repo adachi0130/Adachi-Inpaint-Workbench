@@ -1,0 +1,860 @@
+{
+  "id": "58f1c513-1df0-4f53-af63-69da48ad43f0",
+  "revision": 0,
+  "last_node_id": 8,
+  "last_link_id": 13,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "AdachiInlineMask",
+      "pos": [
+        40,
+        100
+      ],
+      "size": [
+        540,
+        820
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "重绘结果",
+          "name": "result",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 12
+        },
+        {
+          "localized_name": "原图",
+          "name": "image",
+          "type": "STRING",
+          "widget": {
+            "name": "image"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "蒙版数据",
+          "name": "mask_data",
+          "type": "STRING",
+          "widget": {
+            "name": "mask_data"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "嵌入原图",
+          "name": "source_data",
+          "type": "STRING",
+          "widget": {
+            "name": "source_data"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "编辑模式",
+          "name": "edit_mode",
+          "shape": 7,
+          "type": "COMBO",
+          "widget": {
+            "name": "edit_mode"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "裁切选区",
+          "name": "crop_state",
+          "shape": 7,
+          "type": "STRING",
+          "widget": {
+            "name": "crop_state"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "融合蒙版",
+          "name": "blend_data",
+          "shape": 7,
+          "type": "STRING",
+          "widget": {
+            "name": "blend_data"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "重绘图层",
+          "name": "layer_image",
+          "shape": 7,
+          "type": "STRING",
+          "widget": {
+            "name": "layer_image"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "图像",
+          "name": "image",
+          "type": "IMAGE",
+          "links": [
+            7,
+            9
+          ]
+        },
+        {
+          "localized_name": "蒙版",
+          "name": "mask",
+          "type": "MASK",
+          "links": [
+            8
+          ]
+        },
+        {
+          "localized_name": "完整图像",
+          "name": "full_image",
+          "type": "IMAGE",
+          "links": [
+            13
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "AdachiInlineMask"
+      },
+      "widgets_values": [
+        "",
+        "",
+        "",
+        "crop",
+        "{\"job\":\"8d759783-b3cd-4dbc-b4ea-2c8e307be653\"}",
+        "",
+        ""
+      ],
+      "widgets_values_named": {
+        "image": "",
+        "mask_data": "",
+        "source_data": "",
+        "edit_mode": "crop",
+        "crop_state": "{\"job\":\"8d759783-b3cd-4dbc-b4ea-2c8e307be653\"}",
+        "blend_data": "",
+        "layer_image": ""
+      }
+    },
+    {
+      "id": 2,
+      "type": "CheckpointLoaderSimple",
+      "pos": [
+        40,
+        -300
+      ],
+      "size": [
+        340,
+        130.65625
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "Checkpoint名称",
+          "name": "ckpt_name",
+          "type": "COMBO",
+          "widget": {
+            "name": "ckpt_name"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "模型",
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            3
+          ]
+        },
+        {
+          "localized_name": "CLIP",
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            1,
+            2
+          ]
+        },
+        {
+          "localized_name": "VAE",
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            4
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CheckpointLoaderSimple"
+      },
+      "widgets_values": [
+        "CHOOSE_YOUR_CHECKPOINT.safetensors"
+      ],
+      "widgets_values_named": {
+        "ckpt_name": "CHOOSE_YOUR_CHECKPOINT.safetensors"
+      }
+    },
+    {
+      "id": 3,
+      "type": "CLIPTextEncode",
+      "pos": [
+        420,
+        -350
+      ],
+      "size": [
+        350,
+        150
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "clip",
+          "name": "clip",
+          "type": "CLIP",
+          "link": 1
+        },
+        {
+          "localized_name": "文本",
+          "name": "text",
+          "type": "STRING",
+          "widget": {
+            "name": "text"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "条件",
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            5
+          ]
+        }
+      ],
+      "title": "Positive",
+      "properties": {
+        "Node name for S&R": "CLIPTextEncode"
+      },
+      "widgets_values": [
+        "A detailed natural photograph, coherent lighting, high quality"
+      ],
+      "widgets_values_named": {
+        "text": "A detailed natural photograph, coherent lighting, high quality"
+      }
+    },
+    {
+      "id": 4,
+      "type": "CLIPTextEncode",
+      "pos": [
+        800,
+        -350
+      ],
+      "size": [
+        350,
+        150
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "clip",
+          "name": "clip",
+          "type": "CLIP",
+          "link": 2
+        },
+        {
+          "localized_name": "文本",
+          "name": "text",
+          "type": "STRING",
+          "widget": {
+            "name": "text"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "条件",
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            6
+          ]
+        }
+      ],
+      "title": "Negative",
+      "properties": {
+        "Node name for S&R": "CLIPTextEncode"
+      },
+      "widgets_values": [
+        "blurry, distorted, artifacts"
+      ],
+      "widgets_values_named": {
+        "text": "blurry, distorted, artifacts"
+      }
+    },
+    {
+      "id": 5,
+      "type": "AdachiWebUIInpaint",
+      "pos": [
+        700,
+        100
+      ],
+      "size": [
+        430,
+        1020
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "MODEL",
+          "link": 3
+        },
+        {
+          "localized_name": "positive",
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 5
+        },
+        {
+          "localized_name": "negative",
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 6
+        },
+        {
+          "localized_name": "vae",
+          "name": "vae",
+          "type": "VAE",
+          "link": 4
+        },
+        {
+          "localized_name": "原图",
+          "name": "image",
+          "type": "IMAGE",
+          "link": 7
+        },
+        {
+          "localized_name": "蒙版",
+          "name": "mask",
+          "type": "MASK",
+          "link": 8
+        },
+        {
+          "localized_name": "Refiner 模型",
+          "name": "refiner_model",
+          "shape": 7,
+          "type": "MODEL",
+          "link": null
+        },
+        {
+          "localized_name": "Refiner 正面",
+          "name": "refiner_positive",
+          "shape": 7,
+          "type": "CONDITIONING",
+          "link": null
+        },
+        {
+          "localized_name": "Refiner 负面",
+          "name": "refiner_negative",
+          "shape": 7,
+          "type": "CONDITIONING",
+          "link": null
+        },
+        {
+          "localized_name": "重绘范围",
+          "name": "area",
+          "type": "COMBO",
+          "widget": {
+            "name": "area"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "宽度",
+          "name": "width",
+          "type": "INT",
+          "widget": {
+            "name": "width"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "高度",
+          "name": "height",
+          "type": "INT",
+          "widget": {
+            "name": "height"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "外扩边距",
+          "name": "padding",
+          "type": "INT",
+          "widget": {
+            "name": "padding"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "蒙版模糊",
+          "name": "mask_blur",
+          "type": "FLOAT",
+          "widget": {
+            "name": "mask_blur"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "蒙版扩张",
+          "name": "mask_grow",
+          "type": "INT",
+          "widget": {
+            "name": "mask_grow"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "蒙版内外",
+          "name": "mask_mode",
+          "type": "COMBO",
+          "widget": {
+            "name": "mask_mode"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "填充方式",
+          "name": "fill",
+          "type": "COMBO",
+          "widget": {
+            "name": "fill"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "缩放方式",
+          "name": "resize_mode",
+          "type": "COMBO",
+          "widget": {
+            "name": "resize_mode"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "随机种子",
+          "name": "seed",
+          "type": "INT",
+          "widget": {
+            "name": "seed"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "steps",
+          "name": "steps",
+          "type": "INT",
+          "widget": {
+            "name": "steps"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "cfg",
+          "name": "cfg",
+          "type": "FLOAT",
+          "widget": {
+            "name": "cfg"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "sampler_name",
+          "name": "sampler_name",
+          "type": "COMBO",
+          "widget": {
+            "name": "sampler_name"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "scheduler",
+          "name": "scheduler",
+          "type": "COMBO",
+          "widget": {
+            "name": "scheduler"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "重绘幅度",
+          "name": "denoise",
+          "type": "FLOAT",
+          "widget": {
+            "name": "denoise"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "每张生成数量",
+          "name": "batch_size",
+          "type": "INT",
+          "widget": {
+            "name": "batch_size"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "Refiner 切换",
+          "name": "refiner_switch",
+          "type": "FLOAT",
+          "widget": {
+            "name": "refiner_switch"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "专用重绘模型",
+          "name": "inpaint_model",
+          "shape": 7,
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "inpaint_model"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "额外羽化",
+          "name": "soft_edge",
+          "shape": 7,
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "soft_edge"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "羽化强度",
+          "name": "soft_strength",
+          "shape": 7,
+          "type": "FLOAT",
+          "widget": {
+            "name": "soft_strength"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "图像",
+          "name": "image",
+          "type": "IMAGE",
+          "links": [
+            10,
+            12
+          ]
+        },
+        {
+          "localized_name": "裁剪图",
+          "name": "crop",
+          "type": "IMAGE",
+          "links": null
+        },
+        {
+          "localized_name": "蒙版",
+          "name": "mask",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "AdachiWebUIInpaint"
+      },
+      "widgets_values": [
+        "only_masked",
+        1024,
+        1024,
+        32,
+        4,
+        0,
+        "inside",
+        "original",
+        "stretch",
+        42,
+        "fixed",
+        20,
+        7,
+        "dpmpp_2m",
+        "karras",
+        0.75,
+        1,
+        0.8,
+        false,
+        false,
+        0.5
+      ],
+      "widgets_values_named": {
+        "area": "only_masked",
+        "width": 1024,
+        "height": 1024,
+        "padding": 32,
+        "mask_blur": 4,
+        "mask_grow": 0,
+        "mask_mode": "inside",
+        "fill": "original",
+        "resize_mode": "stretch",
+        "seed": 42,
+        "control_after_generate": "fixed",
+        "steps": 20,
+        "cfg": 7,
+        "sampler_name": "dpmpp_2m",
+        "scheduler": "karras",
+        "denoise": 0.75,
+        "batch_size": 1,
+        "refiner_switch": 0.8,
+        "inpaint_model": false,
+        "soft_edge": false,
+        "soft_strength": 0.5
+      }
+    },
+    {
+      "id": 6,
+      "type": "AdachiImageCompare",
+      "pos": [
+        1300,
+        100
+      ],
+      "size": [
+        590,
+        620
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "原图",
+          "name": "original",
+          "type": "IMAGE",
+          "link": 9
+        },
+        {
+          "localized_name": "重绘结果",
+          "name": "result",
+          "type": "IMAGE",
+          "link": 10
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "图像",
+          "name": "image",
+          "type": "IMAGE",
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "AdachiImageCompare"
+      },
+      "widgets_values": [],
+      "widgets_values_named": {}
+    },
+    {
+      "id": 7,
+      "type": "SaveImage",
+      "pos": [
+        1300,
+        850
+      ],
+      "size": [
+        430,
+        450
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "图片",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 13
+        },
+        {
+          "localized_name": "文件名前缀",
+          "name": "filename_prefix",
+          "type": "STRING",
+          "widget": {
+            "name": "filename_prefix"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        "Adachi/CropBlend"
+      ],
+      "widgets_values_named": {
+        "filename_prefix": "Adachi/CropBlend"
+      }
+    },
+    {
+      "id": 8,
+      "type": "Note",
+      "pos": [
+        40,
+        -190
+      ],
+      "size": [
+        540,
+        280
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        "Inline Mask: Crop & Blend\n1. Select your checkpoint and upload the full source with the arrow.\n2. Choose Crop & Blend at the upper right.\n3. Pick a crop size, move the dashed frame, then left-click to lock.\n4. Paint the repaint mask (circle button); run. WebUI Inpaint.image returns to Inline Mask.result.\n5. The half-circle button edits the layer mask: brush keeps new pixels; Alt restores the original.\n6. Save Image uses full_image. Reselect merges the visible layers before choosing another area.\nSelection menu: magic wand W / brush-guided quick selection Q. Alt subtracts. Ctrl+wheel = size; Shift+wheel = hardness."
+      ],
+      "widgets_values_named": {
+        "text": "Inline Mask: Crop & Blend\n1. Select your checkpoint and upload the full source with the arrow.\n2. Choose Crop & Blend at the upper right.\n3. Pick a crop size, move the dashed frame, then left-click to lock.\n4. Paint the repaint mask (circle button); run. WebUI Inpaint.image returns to Inline Mask.result.\n5. The half-circle button edits the layer mask: brush keeps new pixels; Alt restores the original.\n6. Save Image uses full_image. Reselect merges the visible layers before choosing another area.\nSelection menu: magic wand W / brush-guided quick selection Q. Alt subtracts. Ctrl+wheel = size; Shift+wheel = hardness."
+      },
+      "color": "#432",
+      "bgcolor": "#653"
+    }
+  ],
+  "links": [
+    [
+      1,
+      2,
+      1,
+      3,
+      0,
+      "CLIP"
+    ],
+    [
+      2,
+      2,
+      1,
+      4,
+      0,
+      "CLIP"
+    ],
+    [
+      3,
+      2,
+      0,
+      5,
+      0,
+      "MODEL"
+    ],
+    [
+      4,
+      2,
+      2,
+      5,
+      3,
+      "VAE"
+    ],
+    [
+      5,
+      3,
+      0,
+      5,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      6,
+      4,
+      0,
+      5,
+      2,
+      "CONDITIONING"
+    ],
+    [
+      7,
+      1,
+      0,
+      5,
+      4,
+      "IMAGE"
+    ],
+    [
+      8,
+      1,
+      1,
+      5,
+      5,
+      "MASK"
+    ],
+    [
+      9,
+      1,
+      0,
+      6,
+      0,
+      "IMAGE"
+    ],
+    [
+      10,
+      5,
+      0,
+      6,
+      1,
+      "IMAGE"
+    ],
+    [
+      12,
+      5,
+      0,
+      1,
+      0,
+      "IMAGE"
+    ],
+    [
+      13,
+      1,
+      2,
+      7,
+      0,
+      "IMAGE"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.5,
+      "offset": [
+        0,
+        400
+      ]
+    }
+  },
+  "version": 0.4
+}

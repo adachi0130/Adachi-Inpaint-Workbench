@@ -10,9 +10,11 @@ import base64
 import binascii
 import hashlib
 import io
+import json
 import math
 from pathlib import Path
 import re
+import tempfile
 import warnings
 
 import numpy as np
@@ -310,19 +312,25 @@ class AdachiInlineMask:
             "image": ("STRING", {"default": "", "tooltip": "Input image path populated by inline upload."}),
             "mask_data": ("STRING", {"default": "", "multiline": False, "tooltip": "Editor mask PNG data URL; white repaints."}),
             "source_data": ("STRING", {"default": "", "multiline": False, "tooltip": "Embedded source image for portable workflows."}),
+        }, "optional": {
+            "result": ("IMAGE", {"lazy": True, "tooltip": "Inpaint result; ignored in ordinary mask mode."}),
+            "edit_mode": (["mask", "crop"], {"default": "mask"}),
+            "crop_state": ("STRING", {"default": "{}"}),
+            "blend_data": ("STRING", {"default": ""}),
+            "layer_image": ("STRING", {"default": ""}),
         }}
 
-    RETURN_TYPES = ("IMAGE", "MASK")
-    RETURN_NAMES = ("image", "mask")
+    RETURN_TYPES = ("IMAGE", "MASK", "IMAGE")
+    RETURN_NAMES = ("image", "mask", "full_image")
     FUNCTION = "load"
     CATEGORY = CATEGORY
     DESCRIPTION = "Paint an inpaint mask directly in the workflow."
     SEARCH_ALIASES = ["inline mask", "webui inpaint", "局部重绘", "安达", "adachi"]
 
     @classmethod
-    def IS_CHANGED(cls, image="", mask_data="", source_data=""):
+    def IS_CHANGED(cls, image="", mask_data="", source_data="", **kwargs):
         digest = hashlib.sha256()
-        for value in (image, mask_data, source_data):
+        for value in (image, mask_data, source_data, json.dumps(kwargs, sort_keys=True, default=str)):
             digest.update(str(value).encode("utf-8"))
             digest.update(b"\x00")
         if not source_data:
@@ -334,7 +342,7 @@ class AdachiInlineMask:
                 return float("nan")
         return digest.hexdigest()
 
-    def load(self, image="", mask_data="", source_data=""):
+    def load(self, image="", mask_data="", source_data="", edit_mode="mask", crop_state="{}", blend_data="", layer_image="", result=None):
         raster = _data_image(source_data) if source_data else _read_raster(_input_path(image))
         rgba = raster.convert("RGBA")
         pixels = torch.from_numpy(np.asarray(rgba.convert("RGB"), dtype=np.float32).copy() / 255.0)[None]
@@ -345,7 +353,14 @@ class AdachiInlineMask:
             mask = np.asarray(mask_image, dtype=np.float32).copy() / 255.0
         else:
             mask = 1.0 - np.asarray(rgba.getchannel("A"), dtype=np.float32).copy() / 255.0
-        return pixels, torch.from_numpy(mask)[None]
+        mask = torch.from_numpy(mask)[None]
+        if edit_mode == "crop":
+            state = _crop_state(crop_state)
+            if state.get("locked"):
+                x, y, width, height = _crop_box(state, pixels.shape[2], pixels.shape[1])
+                composite = _blend_layer(pixels, _load_layer(layer_image), blend_data, state)
+                return composite[:, y:y+height, x:x+width].clone(), mask[:, y:y+height, x:x+width].clone(), composite
+        return pixels, mask, pixels
 
 
 class AdachiInpaintPrepare:
@@ -780,7 +795,7 @@ def normalize_exclusive_prompt(data):
                 inputs.pop(name, None)
             elif name not in inputs and name in sources:
                 inputs[name] = sources[name]
-    return data
+    return normalize_crop_prompt(data)
 
 
 class AdachiExclusiveSwitch:
@@ -856,6 +871,126 @@ class AdachiExclusiveSwitch:
         return (value,)
 
 
+def _crop_state(value):
+    try:
+        state = json.loads(value or "{}")
+    except (ValueError, TypeError) as exc:
+        raise ValueError("Invalid crop selection data.") from exc
+    if not isinstance(state, dict):
+        raise ValueError("Invalid crop selection data.")
+    return state
+
+
+def _crop_box(state, image_width, image_height):
+    values = [state.get(k) for k in ("x", "y", "width", "height")]
+    if any(type(v) is not int for v in values):
+        raise ValueError("Crop coordinates and dimensions must be integers.")
+    x, y, width, height = values
+    if min(width, height) < 32 or width % 32 or height % 32:
+        raise ValueError("Crop width and height must be positive multiples of 32.")
+    if x < 0 or y < 0 or x + width > image_width or y + height > image_height:
+        raise ValueError("The crop must fit entirely inside the source image.")
+    return x, y, width, height
+
+
+def _load_layer(filename):
+    if not filename:
+        return None
+    raster = _read_raster(_input_path(filename)).convert("RGB")
+    return torch.from_numpy(np.asarray(raster, dtype=np.float32).copy() / 255)[None]
+
+
+def _blend_layer(original, generated, blend_data, state):
+    if generated is None:
+        return original
+    x, y, width, height = _crop_box(state, original.shape[2], original.shape[1])
+    generated = _image_tensor(generated).to(device=original.device, dtype=original.dtype)
+    if generated.shape[1:3] != (height, width):
+        raise ValueError(f"Inpaint result must match the selected crop ({width} x {height}); connect the inpaint node's image output.")
+    alpha = torch.ones((1, height, width, 1), device=original.device, dtype=original.dtype)
+    if blend_data:
+        raster = _data_image(blend_data).convert("L")
+        if raster.size != (width, height):
+            raise ValueError("The layer mask dimensions must match the crop.")
+        alpha = torch.from_numpy(np.asarray(raster, dtype=np.float32).copy() / 255)[None, ..., None].to(original)
+    composite = original.expand(generated.shape[0], -1, -1, -1).clone()
+    old = composite[:, y:y+height, x:x+width]
+    composite[:, y:y+height, x:x+width] = old * (1-alpha) + generated * alpha
+    return composite
+
+
+def _store_layer(image):
+    import folder_paths
+    pixels = (image.detach().cpu().clamp(0, 1).numpy()*255).round().astype(np.uint8)
+    name = f"layer-{hashlib.sha256(str(pixels.shape).encode() + pixels.tobytes()).hexdigest()}.png"
+    folder = Path(folder_paths.get_input_directory()) / "adachi-inpaint-layers"
+    folder.mkdir(parents=True, exist_ok=True)
+    if not (folder / name).exists():
+        # Readers never see an incomplete PNG when concurrent prompts reuse a layer.
+        with tempfile.NamedTemporaryFile(dir=folder, suffix=".png", delete=False) as stream:
+            temporary = Path(stream.name)
+        try:
+            Image.fromarray(pixels).save(temporary)
+            temporary.replace(folder / name)
+        finally:
+            temporary.unlink(missing_ok=True)
+    return {"filename": name, "subfolder": "adachi-inpaint-layers", "type": "input"}
+
+
+class AdachiLayerCommit:
+    """Execution-only sink; keeps the visible feedback loop acyclic at runtime."""
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required": {
+            "result": ("IMAGE",), "image": ("STRING", {"default": ""}),
+            "source_data": ("STRING", {"default": ""}), "crop_state": ("STRING", {"default": "{}"}),
+            "blend_data": ("STRING", {"default": ""}), "target": ("STRING", {"default": ""}),
+        }}
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "compose"
+    OUTPUT_NODE = True
+    CATEGORY = "_Adachi/internal"
+    DESCRIPTION = "Internal layer sink. Use Inline Mask in Crop & Blend mode."
+
+    def compose(self, result, image="", source_data="", crop_state="{}", blend_data="", target=""):
+        raster = (_data_image(source_data) if source_data else _read_raster(_input_path(image))).convert("RGB")
+        original = torch.from_numpy(np.asarray(raster, dtype=np.float32).copy()/255)[None]
+        state = _crop_state(crop_state)
+        generated = _image_tensor(result).cpu()
+        composite = _blend_layer(original, generated, blend_data, state)
+        layer = _store_layer(generated[-1])
+        return {"ui": {"adachi_layer": [{"target": target, "job": state.get("job", ""), "image": layer}]}, "result": (composite,)}
+
+
+def normalize_crop_prompt(data):
+    """One visible node, an acyclic source -> sampler -> sink execution graph."""
+    prompt = data.get("prompt", {})
+    if not isinstance(prompt, dict):
+        return data
+    for node_id, node in list(prompt.items()):
+        if not isinstance(node, dict) or node.get("class_type") != "AdachiInlineMask":
+            continue
+        inputs = node.setdefault("inputs", {})
+        result = inputs.pop("result", None)
+        if inputs.get("edit_mode", "mask") != "crop" or not result:
+            continue
+        state = _crop_state(inputs.get("crop_state", "{}"))
+        if not state.get("locked") or not state.get("job"):
+            continue
+        sink_id = f"adachi_layer_{node_id}"
+        if sink_id in prompt:
+            raise ValueError("Reserved Adachi execution node ID is already in use.")
+        sink_inputs = {key: inputs.get(key, default) for key, default in
+                       (("image", ""), ("source_data", ""), ("crop_state", "{}"), ("blend_data", ""))}
+        sink_inputs.update(result=result, target=str(node_id))
+        for other in prompt.values():
+            for name, link in list(other.get("inputs", {}).items()):
+                if isinstance(link, list) and len(link) == 2 and str(link[0]) == str(node_id) and link[1] == 2:
+                    other["inputs"][name] = [sink_id, 0]
+        prompt[sink_id] = {"class_type": "AdachiLayerCommit", "inputs": sink_inputs}
+    return data
+
+
 NODE_CLASS_MAPPINGS = {
     "AdachiInlineMask": AdachiInlineMask,
     "AdachiInpaintPrepare": AdachiInpaintPrepare,
@@ -863,6 +998,7 @@ NODE_CLASS_MAPPINGS = {
     "AdachiWebUIInpaint": AdachiWebUIInpaint,
     "AdachiImageCompare": AdachiImageCompare,
     "AdachiExclusiveSwitch": AdachiExclusiveSwitch,
+    "AdachiLayerCommit": AdachiLayerCommit,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -872,4 +1008,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "AdachiWebUIInpaint": "WebUI Inpaint",
     "AdachiImageCompare": "Image Compare",
     "AdachiExclusiveSwitch": "Auto Exclusive Switch",
+    "AdachiLayerCommit": "Internal Layer Commit",
 }
