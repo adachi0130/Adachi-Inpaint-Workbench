@@ -20,7 +20,6 @@
       "mode": 0,
       "inputs": [
         {
-          "localized_name": "宽度",
           "name": "width",
           "type": "INT",
           "widget": {
@@ -29,7 +28,6 @@
           "link": null
         },
         {
-          "localized_name": "高度",
           "name": "height",
           "type": "INT",
           "widget": {
@@ -38,7 +36,6 @@
           "link": null
         },
         {
-          "localized_name": "批量大小",
           "name": "batch_size",
           "type": "INT",
           "widget": {
@@ -47,7 +44,6 @@
           "link": null
         },
         {
-          "localized_name": "颜色",
           "name": "color",
           "type": "INT",
           "widget": {
@@ -58,7 +54,6 @@
       ],
       "outputs": [
         {
-          "localized_name": "图像",
           "name": "IMAGE",
           "type": "IMAGE",
           "links": [
@@ -92,7 +87,6 @@
       "mode": 0,
       "inputs": [
         {
-          "localized_name": "图像",
           "name": "image",
           "type": "IMAGE",
           "link": 1
@@ -100,7 +94,6 @@
       ],
       "outputs": [
         {
-          "localized_name": "图像",
           "name": "IMAGE",
           "type": "IMAGE",
           "links": [
@@ -129,7 +122,6 @@
       "mode": 0,
       "inputs": [
         {
-          "localized_name": "图像",
           "name": "image",
           "type": "IMAGE",
           "link": 2
@@ -137,7 +129,6 @@
       ],
       "outputs": [
         {
-          "localized_name": "图像",
           "name": "IMAGE",
           "type": "IMAGE",
           "links": [
@@ -166,13 +157,11 @@
       "mode": 0,
       "inputs": [
         {
-          "localized_name": "图片",
           "name": "images",
           "type": "IMAGE",
           "link": 3
         },
         {
-          "localized_name": "文件名前缀",
           "name": "filename_prefix",
           "type": "STRING",
           "widget": {
@@ -210,42 +199,42 @@
           "presets": [
             {
               "id": "01dbf1d1-c15a-4db1-97d5-9d522781c482",
-              "name": "全部打开 / All enabled",
+              "name": "All enabled",
               "groups": {
                 "group:1": {
-                  "title": "基础处理 / Base",
+                  "title": "Base",
                   "mode": 0
                 },
                 "group:2": {
-                  "title": "细节处理 / Detail",
+                  "title": "Detail",
                   "mode": 0
                 }
               }
             },
             {
               "id": "fe43bc1f-1a1e-4f49-a37b-c6e6ca7cbc8a",
-              "name": "跳过细节 / Skip detail",
+              "name": "Skip detail",
               "groups": {
                 "group:1": {
-                  "title": "基础处理 / Base",
+                  "title": "Base",
                   "mode": 0
                 },
                 "group:2": {
-                  "title": "细节处理 / Detail",
+                  "title": "Detail",
                   "mode": 4
                 }
               }
             },
             {
               "id": "b881a666-4643-4af6-8feb-f1d02c47f113",
-              "name": "全部忽略 / Bypass both",
+              "name": "Bypass both",
               "groups": {
                 "group:1": {
-                  "title": "基础处理 / Base",
+                  "title": "Base",
                   "mode": 4
                 },
                 "group:2": {
-                  "title": "细节处理 / Detail",
+                  "title": "Detail",
                   "mode": 4
                 }
               }

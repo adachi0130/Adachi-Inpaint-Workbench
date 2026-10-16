@@ -20,7 +20,6 @@
       "mode": 0,
       "inputs": [
         {
-          "localized_name": "宽度",
           "name": "width",
           "type": "INT",
           "widget": {
@@ -29,7 +28,6 @@
           "link": null
         },
         {
-          "localized_name": "高度",
           "name": "height",
           "type": "INT",
           "widget": {
@@ -38,7 +36,6 @@
           "link": null
         },
         {
-          "localized_name": "批量大小",
           "name": "batch_size",
           "type": "INT",
           "widget": {
@@ -47,7 +44,6 @@
           "link": null
         },
         {
-          "localized_name": "颜色",
           "name": "color",
           "type": "INT",
           "widget": {
@@ -58,7 +54,6 @@
       ],
       "outputs": [
         {
-          "localized_name": "图像",
           "name": "IMAGE",
           "type": "IMAGE",
           "links": [
@@ -92,7 +87,6 @@
       "mode": 0,
       "inputs": [
         {
-          "localized_name": "宽度",
           "name": "width",
           "type": "INT",
           "widget": {
@@ -101,7 +95,6 @@
           "link": null
         },
         {
-          "localized_name": "高度",
           "name": "height",
           "type": "INT",
           "widget": {
@@ -110,7 +103,6 @@
           "link": null
         },
         {
-          "localized_name": "批量大小",
           "name": "batch_size",
           "type": "INT",
           "widget": {
@@ -119,7 +111,6 @@
           "link": null
         },
         {
-          "localized_name": "颜色",
           "name": "color",
           "type": "INT",
           "widget": {
@@ -130,7 +121,6 @@
       ],
       "outputs": [
         {
-          "localized_name": "图像",
           "name": "IMAGE",
           "type": "IMAGE",
           "links": [
@@ -164,7 +154,6 @@
       "mode": 4,
       "inputs": [
         {
-          "localized_name": "图像",
           "name": "image",
           "type": "IMAGE",
           "link": 1
@@ -172,7 +161,6 @@
       ],
       "outputs": [
         {
-          "localized_name": "图像",
           "name": "IMAGE",
           "type": "IMAGE",
           "links": [
@@ -200,7 +188,6 @@
       "mode": 0,
       "inputs": [
         {
-          "localized_name": "图像",
           "name": "image",
           "type": "IMAGE",
           "link": 2
@@ -208,7 +195,6 @@
       ],
       "outputs": [
         {
-          "localized_name": "图像",
           "name": "IMAGE",
           "type": "IMAGE",
           "links": [
@@ -236,14 +222,12 @@
       "mode": 0,
       "inputs": [
         {
-          "localized_name": "输入 A",
           "name": "input_a",
           "shape": 7,
           "type": "*",
           "link": 3
         },
         {
-          "localized_name": "输入 B",
           "name": "input_b",
           "shape": 7,
           "type": "*",
@@ -252,7 +236,6 @@
       ],
       "outputs": [
         {
-          "localized_name": "输出",
           "name": "output",
           "type": "*",
           "links": [
@@ -283,13 +266,11 @@
       "mode": 0,
       "inputs": [
         {
-          "localized_name": "图片",
           "name": "images",
           "type": "IMAGE",
           "link": 5
         },
         {
-          "localized_name": "文件名前缀",
           "name": "filename_prefix",
           "type": "STRING",
           "widget": {
@@ -327,7 +308,7 @@
           "presets": [
             {
               "id": "dd436f10-d4a4-46bc-aecb-fe185710f6e0",
-              "name": "只使用 A",
+              "name": "Use A only",
               "groups": {
                 "group:1": {
                   "title": "A",
@@ -341,7 +322,7 @@
             },
             {
               "id": "2908ca1a-7a3f-4eba-8203-524ab3f52d27",
-              "name": "只使用 B",
+              "name": "Use B only",
               "groups": {
                 "group:1": {
                   "title": "A",
