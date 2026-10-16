@@ -43,6 +43,10 @@ Environment: Windows, local ComfyUI 0.19.3, ComfyUI frontend 1.42.11, PyTorch 2.
 - 0.5.5: injecting a cached widget width equal to 35% of its node width reproduces the narrow-column shape on frontend 1.52.7 classic nodes. Before the fix, a 380px inline node had a 113px editor; afterwards its editor is 360px wide, with the remaining 20px reserved for native margins. Inpaint and comparison widgets recover their full widths as well.
 - 0.5.5: browser checks on frontend 1.42.11 and 1.52.7, classic nodes and Nodes 2.0, cover attempted stale width writes, resizing node widths to 800/450/1050px, independent height expansion, graph zoom at 0.3/0.6/1.15, Fit with mask preservation, and saved workflow reload. The simulated failure is covered; the remote server itself was not accessed.
 
+- 0.5.6: inspected the supplied workflow read-only: selectors 532/533 are fed by KJ Get nodes p/p_0 and n/n_0, while the p_0/n_0 setters are bypassed. The previous direct-node check therefore incorrectly classified both branches as enabled.
+- 0.5.6: actual local KJNodes Set/Get frontend definitions were loaded only into isolated QA browsers (no KJ code is bundled). Across frontend 1.42.11/1.52.7 and classic/Nodes 2.0, 32 real CPU queue cases verify ignored setters, swapped states, ignored/muted real sources, ignored Get, explicit both/neither errors, and switching after workflow reload. Output image pixels match the selected branch; generating prompts does not change editable connections.
+- 0.5.6: dependency-free routing tests cover Get/Set, reroutes, current virtual-output APIs, mute/bypass, missing setters/inputs and cycles. All 29 backend CPU tests continue to pass.
+
 The sampling path was also checked for noise-schedule continuity against the real `common_ksampler`/`KSampler` functions in the local ComfyUI; an actual checkpoint has not been loaded to test GPU image quality or every model family, so CPU/interface tests must not be treated as model-quality verification.
 
 References used during implementation:

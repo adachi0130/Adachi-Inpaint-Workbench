@@ -153,7 +153,8 @@ Both enabled, or neither connected/enabled, produces an error instead of silentl
 The node accepts conditioning, strings, images, masks, models, latents and other ComfyUI data types; both alternatives and the downstream socket should use the same data type.
 The model-free `examples/04-exclusive-switch.json` demonstrates two branches with two group presets.
 It has no switch widget. A small internal value is computed from the graph when queuing, including when a bypassed image/model transform would otherwise pass its input through.
-Place the selector outside the two controlled groups and connect each group's final node to it; any routing nodes between them should remain enabled.
+Place the selector outside the two controlled groups and connect each group's final node to it.
+KJNodes Get/Set routes and reroutes are supported: an ignored/muted Get, its corresponding Set, or the source behind those routing nodes disables that selector branch. Missing setters and virtual routing cycles also count as unavailable. Ordinary processing nodes remain independent active sources; the selector does not guess the meaning of arbitrary processing chains.
 The ignored branch is not requested by this selector; any separate preview/save outputs on that branch may still execute independently.
 For raw API prompts, omit the ignored input and omit the internal `active_inputs` field; exactly one of `input_a` / `input_b` must remain.
 

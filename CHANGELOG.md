@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.6
+
+- Follow KJNodes Get/Set routes and reroutes when deciding which exclusive input is enabled, including the setter's and real source node's bypass/mute states.
+- Support virtual routers using the current resolveVirtualOutput API, and safely reject routing cycles or missing setters.
+- Exclude inactive inputs from detached execution DTOs before frontend link resolution, avoiding missing-input errors when a virtual Get itself is bypassed; retain all editable/saved workflow wires.
+- Add dependency-free routing regression checks to CI and validate actual KJ Get/Set workflows with real CPU queue output pixels in both supported frontend versions/renderers.
+
 ## 0.5.5
 
 - Bind the inline canvas, inpaint parameter panel and comparison widget width directly to the node's logical graph width. Cached screen-space measurements cannot shrink the widgets a second time at reduced graph zoom.
