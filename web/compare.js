@@ -35,7 +35,10 @@ export class ImageCompareView {
         this.canvas.oncontextmenu = event => event.preventDefault();
         this.canvas.addEventListener("pointerenter", event => { this.hovered = true; this.move(event); this.schedule(); });
         this.canvas.addEventListener("pointerleave", () => { this.hovered = false; this.schedule(); });
-        this.stage.append(this.canvas);
+        this.divider = element("div");
+        Object.assign(this.divider.style, { position: "absolute", background: "#ffffffb3", pointerEvents: "none" });
+        this.divider.hidden = true;
+        this.stage.append(this.canvas, this.divider);
         this.empty = element("div", "dd-empty", T("Connect an original image and a result, then run the workflow")); this.stage.append(this.empty);
         const adoption = element("div", "dd-row dd-adoption");
         adoption.append(element("span", "dd-compare-label", T("Adopt into")));
@@ -150,21 +153,43 @@ export class ImageCompareView {
     render() {
         const t = this.transform(), ratio = Math.min(devicePixelRatio || 1, 2);
         if (!t.width || !t.height) return;
-        const width = Math.round(t.width * ratio), height = Math.round(t.height * ratio);
+        // Graph zoom changes the screen rect, not the amount of source detail.
+        // Never allocate a huge upscaled bitmap just to magnify existing pixels.
+        const rasterRatio = Math.min(ratio, this.ready ? 1 / t.scale : ratio,
+            8192 / t.width, 8192 / t.height, Math.sqrt(16 * 1024 * 1024 / (t.width * t.height)));
+        const width = Math.max(1, Math.round(t.width * rasterRatio)), height = Math.max(1, Math.round(t.height * rasterRatio));
         if (this.canvas.width !== width || this.canvas.height !== height) { this.canvas.width = width; this.canvas.height = height; }
         const ctx = this.canvas.getContext("2d");
-        ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, width, height);
-        if (!this.ready) return;
-        ctx.setTransform(t.scale * ratio, 0, 0, t.scale * ratio, t.x * ratio, t.y * ratio);
-        ctx.drawImage(this.after, 0, 0, this.before.width, this.before.height);
-        if (!this.hovered) return;
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        this.divider.hidden = !this.ready || !this.hovered;
+        if (!this.ready) { ctx.clearRect(0, 0, width, height); this.lastPaint = null; return; }
         const split = this.split * this.before.width;
+        const lineX = Math.round((t.x + split * t.scale) * rasterRatio) + .5;
+        if (this.hovered) {
+            const screenScale = t.width / this.canvas.clientWidth || 1;
+            Object.assign(this.divider.style, {
+                left: `${(t.x + split * t.scale) / screenScale}px`, top: `${t.y / screenScale}px`,
+                height: `${this.before.height * t.scale / screenScale}px`, width: `${1 / screenScale}px`,
+            });
+        }
+        const key = [this.version, width, height, t.scale * rasterRatio, t.x * rasterRatio, t.y * rasterRatio].join(":");
+        const previous = this.lastPaint;
+        ctx.save();
+        // While hovering, pixels outside the old/new divider positions are
+        // unchanged. Clip the redraw to that strip rather than repainting all.
+        if (previous?.key === key && previous.hovered && this.hovered) {
+            const left = Math.max(0, Math.floor(Math.min(previous.lineX, lineX)) - 2);
+            const right = Math.min(width, Math.ceil(Math.max(previous.lineX, lineX)) + 2);
+            ctx.beginPath(); ctx.rect(left, 0, right - left, height); ctx.clip();
+        }
+        ctx.clearRect(0, 0, width, height);
+        ctx.setTransform(t.scale * rasterRatio, 0, 0, t.scale * rasterRatio, t.x * rasterRatio, t.y * rasterRatio);
+        ctx.drawImage(this.after, 0, 0, this.before.width, this.before.height);
+        this.lastPaint = { key, hovered: this.hovered, lineX };
+        if (!this.hovered) { ctx.restore(); return; }
         ctx.save(); ctx.beginPath(); ctx.rect(split, 0, this.before.width - split, this.before.height); ctx.clip();
         ctx.drawImage(this.before, 0, 0); ctx.restore();
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
-        const lineX = Math.round((t.x + split * t.scale) * ratio) + .5;
-        ctx.beginPath(); ctx.moveTo(lineX, t.y * ratio); ctx.lineTo(lineX, (t.y + this.before.height * t.scale) * ratio);
-        ctx.strokeStyle = "#ffffffb3"; ctx.lineWidth = 1; ctx.stroke();
+        ctx.restore();
     }
 
     destroy() {

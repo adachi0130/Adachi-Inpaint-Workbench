@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.9
+
+- Bound comparison bitmap resolution to source detail, 8192 pixels per edge and a 16 Mi-pixel allocation budget, avoiding quadratic bitmap growth at large workflow zoom.
+- Redraw only the strip swept by the comparison divider during pointer movement; redraw fully after image, size or hover changes.
+- Draw the divider as a separate overlay so it remains one screen pixel wide even when magnifying the workflow.
+
 ## 0.5.8
 
 - Count each comparison preview file once, even when cached execution notifications replay it; keep the selected result on replay.
