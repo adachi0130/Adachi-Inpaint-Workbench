@@ -18,9 +18,7 @@ Documentation = "https://github.com/adachi0130/Adachi-Inpaint-Workbench#readme"
 "Bug Tracker" = "https://github.com/adachi0130/Adachi-Inpaint-Workbench/issues"
 
 [tool.comfy]
-# Set this to your actual Comfy Registry publisher ID before Registry publishing.
-# GitHub publication and the Manager legacy-list submission do not require it.
-PublisherId = ""
+PublisherId = "adachi0130"
 DisplayName = "Adachi-Inpaint-Workbench"
 
 [tool.adachi-workbench]
