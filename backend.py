@@ -587,12 +587,11 @@ class AdachiExclusiveSwitch:
         if active_inputs not in (1, 2):
             raise ValueError(
                 "Auto Exclusive Switch requires exactly one enabled input. "
-                "Bypass one branch or disconnect it; both enabled / both absent are invalid. "
-                "自动二选一需要且只能有一路启用；请忽略或断开另一路。"
+                "Bypass one branch or disconnect it; both enabled / both absent are invalid."
             )
         name = "input_a" if active_inputs == 1 else "input_b"
         if (input_a if active_inputs == 1 else input_b) is _MISSING_INPUT:
-            raise ValueError(f"The enabled branch {name} has no input. 启用的分支没有输入。")
+            raise ValueError(f"The enabled branch {name} has no input.")
         return name
 
     def check_lazy_status(self, input_a=_MISSING_INPUT, input_b=_MISSING_INPUT, active_inputs=-1):
@@ -602,7 +601,7 @@ class AdachiExclusiveSwitch:
         selected = self._selected_input(input_a, input_b, active_inputs)
         value = input_a if selected == "input_a" else input_b
         if value is None:
-            raise ValueError(f"The enabled branch {selected} returned no data. 启用的分支没有返回数据。")
+            raise ValueError(f"The enabled branch {selected} returned no data.")
         return (value,)
 
 

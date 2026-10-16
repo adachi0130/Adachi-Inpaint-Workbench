@@ -133,7 +133,7 @@ app.registerExtension({
             }
         }
         GroupPresetsNode.title = T("Group Bypass Presets");
-        GroupPresetsNode.desc = "Switch saved group enable/bypass presets; no connections required. 分组忽略预设，无需接线。";
+        GroupPresetsNode.desc = T("Switch saved group enable/bypass presets; no connections required.");
         LiteGraph.registerNodeType(GROUP_PRESETS_TYPE, GroupPresetsNode);
         GroupPresetsNode.category = "Adachi-Inpaint-Workbench";
     },

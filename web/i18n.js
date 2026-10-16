@@ -7,6 +7,7 @@
 
 const ZH = {
   "Group Bypass Presets": "组忽略预设 / Group Bypass Presets",
+  "Switch saved group enable/bypass presets; no connections required.": "切换已保存的分组启用/忽略预设，无需接线。",
   "Group presets": "分组预设",
   "+ New preset": "+ 添加预设",
   "Preset name": "预设名称",
