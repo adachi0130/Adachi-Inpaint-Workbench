@@ -3,6 +3,7 @@ import { api } from "../../scripts/api.js";
 import { ImageCompareView } from "./compare.js";
 import { routeWheelOutsideImage } from "./wheel_routing.js";
 import { T } from "./i18n.js";
+import { bindWidgetToNodeWidth } from "./widget_layout.js?v=0.5.5";
 
 function viewUrl(image) {
     const type = ["input", "output", "temp"].includes(image?.type) ? image.type : "temp";
@@ -55,6 +56,7 @@ app.registerExtension({
                 serialize: false, hideOnZoom: false, getMinHeight: () => 420, getMaxHeight: () => 4096,
             });
             widget.serialize = false;
+            bindWidgetToNodeWidth(node, widget, compare.root);
             const executed = node.onExecuted;
             node.onExecuted = function (output) {
                 const result = executed?.apply(this, arguments);

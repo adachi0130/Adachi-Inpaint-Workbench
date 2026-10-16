@@ -3,6 +3,7 @@ import { InpaintParameterPanel } from "./inpaint_panel.js";
 import { connectedEditor, connectedSamplers, relocateWidgets } from "./parameter_bridge.js";
 import { routeWheelOutsideImage } from "./wheel_routing.js";
 import { T } from "./i18n.js";
+import { bindWidgetToNodeWidth } from "./widget_layout.js?v=0.5.5";
 
 export function installInpaintWorkbench(nodeType) {
     const created = nodeType.prototype.onNodeCreated;
@@ -58,6 +59,7 @@ export function installInpaintWorkbench(nodeType) {
             serialize: false, hideOnZoom: false, getMinHeight: contentHeight, getMaxHeight: () => Math.max(4096, contentHeight()),
         });
         widget.serialize = false;
+        bindWidgetToNodeWidth(node, widget, root);
         const observer = new ResizeObserver(scheduleSize); observer.observe(tools);
         const configured = node.onConfigure;
         node.onConfigure = function () { const result = configured?.apply(this, arguments); queueMicrotask(() => { if (!removed) { panel.refresh(); scheduleSize(); } }); return result; };

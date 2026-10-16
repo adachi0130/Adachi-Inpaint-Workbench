@@ -1,14 +1,15 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
-import { InlineMaskEditor } from "./editor.js?v=0.5.4";
-import { installInpaintWorkbench } from "./inpaint_node.js";
+import { InlineMaskEditor } from "./editor.js?v=0.5.5";
+import { installInpaintWorkbench } from "./inpaint_node.js?v=0.5.5";
+import { bindWidgetToNodeWidth } from "./widget_layout.js?v=0.5.5";
 import { routeWheelOutsideImage } from "./wheel_routing.js";
 import { T } from "./i18n.js";
 
 const styleId = "adachi-inpaint-style";
 const stylesheet = document.getElementById(styleId) || document.createElement("link");
 stylesheet.id = styleId; stylesheet.rel = "stylesheet";
-stylesheet.href = new URL("./editor.css?v=0.5.4", import.meta.url).href;
+stylesheet.href = new URL("./editor.css?v=0.5.5", import.meta.url).href;
 if (!stylesheet.isConnected) document.head.append(stylesheet);
 
 function hide(widget) {
@@ -63,12 +64,11 @@ app.registerExtension({
                 cancelAnimationFrame(fitFrame);
                 fitFrame = requestAnimationFrame(() => {
                     if (!editor.ready || editor.destroyed || !node.graph) return;
-                    const rect = editor.canvas.getBoundingClientRect();
-                    const scale = app.canvas?.ds?.scale || 1;
-                    if (!rect.width || !rect.height) return;
-                    const overhead = node.size[1] - rect.height / scale;
-                    const height = overhead + rect.width / scale * editor.image.height / editor.image.width;
-                    node.setSize([node.size[0], Math.max(240, Math.min(4200, Math.ceil(height)))]);
+                    const width = editor.canvas.clientWidth, height = editor.canvas.clientHeight;
+                    if (!width || !height) return;
+                    const overhead = node.size[1] - height;
+                    const fittedHeight = overhead + width * editor.image.height / editor.image.width;
+                    node.setSize([node.size[0], Math.max(240, Math.min(4200, Math.ceil(fittedHeight)))]);
                     node.properties.adachi_compact_ui = true;
                     editor.schedule();
                 });
@@ -115,7 +115,7 @@ app.registerExtension({
                     markChanged();
                 },
             });
-            editor.root.dataset.adachiVersion = "0.5.4";
+            editor.root.dataset.adachiVersion = "0.5.5";
             node.adachiEditor = editor;
             const stopWheelRouting = routeWheelOutsideImage(editor.root, editor.canvas, () => editor.ready);
             node.adachiUseResult = async file => {
@@ -131,6 +131,7 @@ app.registerExtension({
                 getMaxHeight: () => 4096,
             });
             domWidget.serialize = false;
+            bindWidgetToNodeWidth(node, domWidget, editor.root);
             // Leave computeLayoutSize in charge: a fixed computeSize height
             // prevents the DOM canvas from growing with the node vertically.
             const resizeHandle = document.createElement("div");

@@ -1,10 +1,11 @@
 # Git versions and rollback
 
-The current local version is **v0.5.4**. Both the installed plugin and the source repository retain local commits and tags. No GitHub push is part of this update.
+The current local version is **v0.5.5**. Both the installed plugin and the source repository retain local commits and tags. No GitHub push is part of this update.
 
 | Tag | Contents |
 |---|---|
-| `v0.5.4` | Isolate Fit clicks and refresh editor assets on upgrade |
+| `v0.5.5` | Bind canvas/panel widths to node geometry and retain vertical resizing |
+| `v0.5.4` / `local-before-v0.5.5` | Isolate Fit clicks and refresh editor assets on upgrade |
 | `v0.5.3` / `local-before-v0.5.4` | Fit beside Load image in the inline mask, plus the 5D VAE fix |
 | `v0.5.2` / `local-before-v0.5.3` | Single-frame 5D VAE support for image models, plus all previous features |
 | `local-before-v0.5.2` | Exact baseline before the VAE compatibility fix in each local repository |
@@ -16,13 +17,13 @@ To undo only this update, run in the plugin folder:
 
 ```powershell
 git status --short
-git switch --detach local-before-v0.5.4
+git switch --detach local-before-v0.5.5
 ```
 
 Return to this version with:
 
 ```powershell
-git switch --detach v0.5.4
+git switch --detach v0.5.5
 ```
 
 Restart ComfyUI and hard-refresh the browser (`Ctrl+F5`) after switching versions.

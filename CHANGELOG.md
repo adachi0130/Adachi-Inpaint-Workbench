@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.5
+
+- Bind the inline canvas, inpaint parameter panel and comparison widget width directly to the node's logical graph width. Cached screen-space measurements cannot shrink the widgets a second time at reduced graph zoom.
+- Keep native widget margins and vertical sizing; horizontal and vertical node resizing remain available.
+- Calculate source-image automatic canvas height from untransformed client dimensions rather than dividing screen measurements by graph zoom.
+- Verify stale-width fault injection, horizontal/vertical resize, zoom, Fit/mask preservation and workflow reload on frontend 1.42.11 and 1.52.7 in both renderers.
+
 ## 0.5.4
 
 - Prevent the inline Fit button click from bubbling into ComfyUI node selection / bring-to-front handlers, which can remeasure a saved node's DOM editor.

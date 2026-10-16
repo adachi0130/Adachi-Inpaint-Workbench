@@ -40,6 +40,9 @@ Environment: Windows, local ComfyUI 0.19.3, ComfyUI frontend 1.42.11, PyTorch 2.
 - 0.5.4: frontend 1.52.7 was downloaded as a wheel and extracted into an isolated test directory, leaving the installed frontend unchanged. With saved node dimensions from the user's workflow, the previous bubbling Fit click changed the classic editor viewport from 396x625 to 396x594. Stopping propagation keeps it at 396x625. Nodes 2.0 also retains its viewport and node dimensions.
 - 0.5.4: actual browser clicks pass with the saved workflow geometry on frontend 1.42.11 and 1.52.7 in both renderers. Fit resets zoom/pan, remains immediately after Load image, and the inpaint panel occupies over 94% of its node's logical width. The remote server and its installed extension set were not accessed, so the separate narrow-panel screenshot cannot be claimed reproduced/resolved remotely.
 
+- 0.5.5: injecting a cached widget width equal to 35% of its node width reproduces the narrow-column shape on frontend 1.52.7 classic nodes. Before the fix, a 380px inline node had a 113px editor; afterwards its editor is 360px wide, with the remaining 20px reserved for native margins. Inpaint and comparison widgets recover their full widths as well.
+- 0.5.5: browser checks on frontend 1.42.11 and 1.52.7, classic nodes and Nodes 2.0, cover attempted stale width writes, resizing node widths to 800/450/1050px, independent height expansion, graph zoom at 0.3/0.6/1.15, Fit with mask preservation, and saved workflow reload. The simulated failure is covered; the remote server itself was not accessed.
+
 The sampling path was also checked for noise-schedule continuity against the real `common_ksampler`/`KSampler` functions in the local ComfyUI; an actual checkpoint has not been loaded to test GPU image quality or every model family, so CPU/interface tests must not be treated as model-quality verification.
 
 References used during implementation:
