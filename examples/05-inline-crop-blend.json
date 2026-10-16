@@ -20,7 +20,6 @@
       "mode": 0,
       "inputs": [
         {
-          "localized_name": "原图",
           "name": "image",
           "type": "STRING",
           "widget": {
@@ -29,7 +28,6 @@
           "link": null
         },
         {
-          "localized_name": "蒙版数据",
           "name": "mask_data",
           "type": "STRING",
           "widget": {
@@ -38,7 +36,6 @@
           "link": null
         },
         {
-          "localized_name": "嵌入原图",
           "name": "source_data",
           "type": "STRING",
           "widget": {
@@ -47,7 +44,6 @@
           "link": null
         },
         {
-          "localized_name": "编辑模式",
           "name": "edit_mode",
           "shape": 7,
           "type": "COMBO",
@@ -57,7 +53,6 @@
           "link": null
         },
         {
-          "localized_name": "裁切选区",
           "name": "crop_state",
           "shape": 7,
           "type": "STRING",
@@ -67,7 +62,6 @@
           "link": null
         },
         {
-          "localized_name": "融合蒙版",
           "name": "blend_data",
           "shape": 7,
           "type": "STRING",
@@ -77,7 +71,6 @@
           "link": null
         },
         {
-          "localized_name": "重绘图层",
           "name": "layer_image",
           "shape": 7,
           "type": "STRING",
@@ -89,7 +82,6 @@
       ],
       "outputs": [
         {
-          "localized_name": "图像",
           "name": "image",
           "type": "IMAGE",
           "links": [
@@ -98,7 +90,6 @@
           ]
         },
         {
-          "localized_name": "蒙版",
           "name": "mask",
           "type": "MASK",
           "links": [
@@ -106,7 +97,6 @@
           ]
         },
         {
-          "localized_name": "完整图像",
           "name": "full_image",
           "type": "IMAGE",
           "links": [
@@ -152,7 +142,6 @@
       "mode": 0,
       "inputs": [
         {
-          "localized_name": "Checkpoint名称",
           "name": "ckpt_name",
           "type": "COMBO",
           "widget": {
@@ -163,7 +152,6 @@
       ],
       "outputs": [
         {
-          "localized_name": "模型",
           "name": "MODEL",
           "type": "MODEL",
           "links": [
@@ -171,7 +159,6 @@
           ]
         },
         {
-          "localized_name": "CLIP",
           "name": "CLIP",
           "type": "CLIP",
           "links": [
@@ -180,7 +167,6 @@
           ]
         },
         {
-          "localized_name": "VAE",
           "name": "VAE",
           "type": "VAE",
           "links": [
@@ -214,13 +200,11 @@
       "mode": 0,
       "inputs": [
         {
-          "localized_name": "clip",
           "name": "clip",
           "type": "CLIP",
           "link": 1
         },
         {
-          "localized_name": "文本",
           "name": "text",
           "type": "STRING",
           "widget": {
@@ -231,7 +215,6 @@
       ],
       "outputs": [
         {
-          "localized_name": "条件",
           "name": "CONDITIONING",
           "type": "CONDITIONING",
           "links": [
@@ -266,13 +249,11 @@
       "mode": 0,
       "inputs": [
         {
-          "localized_name": "clip",
           "name": "clip",
           "type": "CLIP",
           "link": 2
         },
         {
-          "localized_name": "文本",
           "name": "text",
           "type": "STRING",
           "widget": {
@@ -283,7 +264,6 @@
       ],
       "outputs": [
         {
-          "localized_name": "条件",
           "name": "CONDITIONING",
           "type": "CONDITIONING",
           "links": [
@@ -318,64 +298,54 @@
       "mode": 0,
       "inputs": [
         {
-          "localized_name": "model",
           "name": "model",
           "type": "MODEL",
           "link": 3
         },
         {
-          "localized_name": "positive",
           "name": "positive",
           "type": "CONDITIONING",
           "link": 5
         },
         {
-          "localized_name": "negative",
           "name": "negative",
           "type": "CONDITIONING",
           "link": 6
         },
         {
-          "localized_name": "vae",
           "name": "vae",
           "type": "VAE",
           "link": 4
         },
         {
-          "localized_name": "原图",
           "name": "image",
           "type": "IMAGE",
           "link": 7
         },
         {
-          "localized_name": "蒙版",
           "name": "mask",
           "type": "MASK",
           "link": 8
         },
         {
-          "localized_name": "Refiner 模型",
           "name": "refiner_model",
           "shape": 7,
           "type": "MODEL",
           "link": null
         },
         {
-          "localized_name": "Refiner 正面",
           "name": "refiner_positive",
           "shape": 7,
           "type": "CONDITIONING",
           "link": null
         },
         {
-          "localized_name": "Refiner 负面",
           "name": "refiner_negative",
           "shape": 7,
           "type": "CONDITIONING",
           "link": null
         },
         {
-          "localized_name": "重绘范围",
           "name": "area",
           "type": "COMBO",
           "widget": {
@@ -384,7 +354,6 @@
           "link": null
         },
         {
-          "localized_name": "宽度",
           "name": "width",
           "type": "INT",
           "widget": {
@@ -393,7 +362,6 @@
           "link": null
         },
         {
-          "localized_name": "高度",
           "name": "height",
           "type": "INT",
           "widget": {
@@ -402,7 +370,6 @@
           "link": null
         },
         {
-          "localized_name": "外扩边距",
           "name": "padding",
           "type": "INT",
           "widget": {
@@ -411,7 +378,6 @@
           "link": null
         },
         {
-          "localized_name": "蒙版模糊",
           "name": "mask_blur",
           "type": "FLOAT",
           "widget": {
@@ -420,7 +386,6 @@
           "link": null
         },
         {
-          "localized_name": "蒙版扩张",
           "name": "mask_grow",
           "type": "INT",
           "widget": {
@@ -429,7 +394,6 @@
           "link": null
         },
         {
-          "localized_name": "蒙版内外",
           "name": "mask_mode",
           "type": "COMBO",
           "widget": {
@@ -438,7 +402,6 @@
           "link": null
         },
         {
-          "localized_name": "填充方式",
           "name": "fill",
           "type": "COMBO",
           "widget": {
@@ -447,7 +410,6 @@
           "link": null
         },
         {
-          "localized_name": "缩放方式",
           "name": "resize_mode",
           "type": "COMBO",
           "widget": {
@@ -456,7 +418,6 @@
           "link": null
         },
         {
-          "localized_name": "随机种子",
           "name": "seed",
           "type": "INT",
           "widget": {
@@ -465,7 +426,6 @@
           "link": null
         },
         {
-          "localized_name": "steps",
           "name": "steps",
           "type": "INT",
           "widget": {
@@ -474,7 +434,6 @@
           "link": null
         },
         {
-          "localized_name": "cfg",
           "name": "cfg",
           "type": "FLOAT",
           "widget": {
@@ -483,7 +442,6 @@
           "link": null
         },
         {
-          "localized_name": "sampler_name",
           "name": "sampler_name",
           "type": "COMBO",
           "widget": {
@@ -492,7 +450,6 @@
           "link": null
         },
         {
-          "localized_name": "scheduler",
           "name": "scheduler",
           "type": "COMBO",
           "widget": {
@@ -501,7 +458,6 @@
           "link": null
         },
         {
-          "localized_name": "重绘幅度",
           "name": "denoise",
           "type": "FLOAT",
           "widget": {
@@ -510,7 +466,6 @@
           "link": null
         },
         {
-          "localized_name": "每张生成数量",
           "name": "batch_size",
           "type": "INT",
           "widget": {
@@ -519,7 +474,6 @@
           "link": null
         },
         {
-          "localized_name": "Refiner 切换",
           "name": "refiner_switch",
           "type": "FLOAT",
           "widget": {
@@ -528,7 +482,6 @@
           "link": null
         },
         {
-          "localized_name": "专用重绘模型",
           "name": "inpaint_model",
           "shape": 7,
           "type": "BOOLEAN",
@@ -538,7 +491,6 @@
           "link": null
         },
         {
-          "localized_name": "额外羽化",
           "name": "soft_edge",
           "shape": 7,
           "type": "BOOLEAN",
@@ -548,7 +500,6 @@
           "link": null
         },
         {
-          "localized_name": "羽化强度",
           "name": "soft_strength",
           "shape": 7,
           "type": "FLOAT",
@@ -560,7 +511,6 @@
       ],
       "outputs": [
         {
-          "localized_name": "图像",
           "name": "image",
           "type": "IMAGE",
           "links": [
@@ -568,13 +518,11 @@
           ]
         },
         {
-          "localized_name": "裁剪图",
           "name": "crop",
           "type": "IMAGE",
           "links": null
         },
         {
-          "localized_name": "蒙版",
           "name": "mask",
           "type": "MASK",
           "links": null
@@ -646,13 +594,11 @@
       "mode": 0,
       "inputs": [
         {
-          "localized_name": "原图",
           "name": "original",
           "type": "IMAGE",
           "link": 15
         },
         {
-          "localized_name": "重绘结果",
           "name": "result",
           "type": "IMAGE",
           "link": 10
@@ -660,7 +606,6 @@
       ],
       "outputs": [
         {
-          "localized_name": "图像",
           "name": "image",
           "type": "IMAGE",
           "links": []
@@ -688,13 +633,11 @@
       "mode": 0,
       "inputs": [
         {
-          "localized_name": "图片",
           "name": "images",
           "type": "IMAGE",
           "link": 13
         },
         {
-          "localized_name": "文件名前缀",
           "name": "filename_prefix",
           "type": "STRING",
           "widget": {
