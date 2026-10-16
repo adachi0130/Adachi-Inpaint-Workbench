@@ -252,12 +252,14 @@ export class InlineCropController {
     this.bar.append(this.preset);
     const button = (text, title, action) =>
       e.button(this.bar, text, T(title), () => this.run(action));
-    // Shown in both modes: one click clears the mask of the active target.
-    this.clearButton = button("🗑", "Clear the mask", () => e.action({ type: "clear" }));
-    this.bar.prepend(this.clearButton);
     this.swapButton = button("⇄", "Swap width and height, release the current selection, then left-click to place the new region.", () =>
       this.changeSize(this.cropHeight, this.cropWidth),
     );
+    // Shown in both modes: one click clears the mask of the active target.
+    // It sits right after the swap control in Crop & Blend, and is the only
+    // visible button in Mask mode.
+    this.clearButton = button("🗑", "Clear the mask", () => e.action({ type: "clear" }));
+    this.swapButton.after(this.clearButton);
     this.maskButton = button("◌", "Paint inside the selected region. Right-click releases the selection; left-click places a new one. Alt: erase. Ctrl+wheel: brush size; Shift+wheel: hardness.", () => {
       this.activate("mask");
       this.changed();

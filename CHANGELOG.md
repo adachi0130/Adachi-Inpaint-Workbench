@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.9
+
+- Place the Clear button directly after the swap width/height control in Crop & Blend; in Mask mode it is the only visible button of that bar and stays at the bottom left of the canvas.
+
 ## 0.6.8
 
 - Add a Clear button to the bottom-left canvas bar: one click empties the mask of the active target, in both Mask and Crop & Blend modes, and it stays disabled until an image is loaded.
