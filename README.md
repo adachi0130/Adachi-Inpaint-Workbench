@@ -161,6 +161,7 @@ Place the selector outside the two controlled groups and connect each group's fi
 KJNodes Get/Set routes and reroutes are supported: an ignored/muted Get, its corresponding Set, or the source behind those routing nodes disables that selector branch. Missing setters and virtual routing cycles also count as unavailable. Ordinary processing nodes remain independent active sources; the selector does not guess the meaning of arbitrary processing chains.
 The ignored branch is not requested by this selector; any separate preview/save outputs on that branch may still execute independently.
 For raw API prompts, omit the ignored input and omit the internal `active_inputs` field; exactly one of `input_a` / `input_b` must remain.
+The backend checks actual submitted connections after virtual routing: when only one input survives, it uses that branch even if cached frontend flags still report both enabled. With both connections present, the frontend flags remain necessary to distinguish bypassed transform pass-through from an enabled branch. Updating this backend logic requires a full ComfyUI restart as well as a browser refresh.
 
 ## Using a standard sampling workflow
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.11
+
+- Resolve exclusive selection against the actual submitted prompt connections, overriding stale frontend flags when only one branch survives Get/Set, mute or bypass resolution.
+- Support dynamically expanded subgraph node IDs through ComfyUI's dynamic prompt, while retaining explicit branch flags for bypassed transforms that keep both physical connections.
+- Keep both-enabled/both-absent errors and include the received branch state in their diagnostic message. Restart ComfyUI after updating this backend change.
+
 ## 0.5.10
 
 - Add a pin toggle beside Fit in Inline Mask: keep the image fitted, route plain wheel to the workflow, retain Ctrl+wheel brush sizing and save the toggle with the workflow.

@@ -632,6 +632,7 @@ class AdachiExclusiveSwitch:
                 # including bypassed transform nodes whose links otherwise pass through.
                 "active_inputs": ("INT", {"default": -1, "min": -1, "max": 3}),
             },
+            "hidden": {"prompt": "PROMPT", "dynprompt": "DYNPROMPT", "unique_id": "UNIQUE_ID"},
         }
 
     RETURN_TYPES = ("*",)
@@ -642,25 +643,42 @@ class AdachiExclusiveSwitch:
     SEARCH_ALIASES = ["exclusive switch", "auto switch", "自动二选一", "互斥", "自动切换", "adachi"]
 
     @staticmethod
-    def _selected_input(input_a, input_b, active_inputs):
+    def _selected_input(input_a, input_b, active_inputs, prompt=None, dynprompt=None, unique_id=None):
+        execution_node = None
+        if dynprompt is not None and unique_id is not None:
+            try:
+                execution_node = dynprompt.get_node(unique_id)
+            except KeyError:
+                pass
+        if execution_node is None and isinstance(prompt, dict) and unique_id is not None:
+            execution_node = prompt.get(str(unique_id), prompt.get(unique_id))
+        if isinstance(execution_node, dict) and isinstance(execution_node.get("inputs"), dict):
+            # Get/Set and mute/bypass resolution may remove a connection after
+            # widgets serialize. Trust the actual submitted connections when
+            # only one (or none) survives, regardless of stale frontend flags.
+            connected = execution_node["inputs"]
+            actual = int("input_a" in connected) | (int("input_b" in connected) << 1)
+            if actual != 3:
+                active_inputs = actual
         if active_inputs == -1:
             # Raw API prompts need no frontend state: simply omit the unused input.
             active_inputs = int(input_a is not _MISSING_INPUT) | (int(input_b is not _MISSING_INPUT) << 1)
         if active_inputs not in (1, 2):
             raise ValueError(
                 "Auto Exclusive Switch requires exactly one enabled input. "
-                "Bypass one branch or disconnect it; both enabled / both absent are invalid."
+                "Bypass one branch or disconnect it; both enabled / both absent are invalid. "
+                f"Received enabled-state={active_inputs}."
             )
         name = "input_a" if active_inputs == 1 else "input_b"
         if (input_a if active_inputs == 1 else input_b) is _MISSING_INPUT:
             raise ValueError(f"The enabled branch {name} has no input.")
         return name
 
-    def check_lazy_status(self, input_a=_MISSING_INPUT, input_b=_MISSING_INPUT, active_inputs=-1):
-        return [self._selected_input(input_a, input_b, active_inputs)]
+    def check_lazy_status(self, input_a=_MISSING_INPUT, input_b=_MISSING_INPUT, active_inputs=-1, prompt=None, dynprompt=None, unique_id=None):
+        return [self._selected_input(input_a, input_b, active_inputs, prompt, dynprompt, unique_id)]
 
-    def select(self, input_a=_MISSING_INPUT, input_b=_MISSING_INPUT, active_inputs=-1):
-        selected = self._selected_input(input_a, input_b, active_inputs)
+    def select(self, input_a=_MISSING_INPUT, input_b=_MISSING_INPUT, active_inputs=-1, prompt=None, dynprompt=None, unique_id=None):
+        selected = self._selected_input(input_a, input_b, active_inputs, prompt, dynprompt, unique_id)
         value = input_a if selected == "input_a" else input_b
         if value is None:
             raise ValueError(f"The enabled branch {selected} returned no data.")

@@ -42,6 +42,34 @@ class ExclusiveSwitchTests(unittest.TestCase):
                 self.assertIs(self.node.select(input_a=value)[0], value)
                 self.assertIs(self.node.select(input_b=value)[0], value)
 
+    def test_submitted_single_connection_overrides_stale_flags(self):
+        for name in ("input_a", "input_b"):
+            prompt = {"532": {"inputs": {name: ["source", 0], "active_inputs": 3}}}
+            for stale in (-1, 0, 1, 2, 3):
+                with self.subTest(name=name, stale=stale):
+                    args = {name: None, "active_inputs": stale, "prompt": prompt, "unique_id": "532"}
+                    self.assertEqual(self.node.check_lazy_status(**args), [name])
+                    value = object()
+                    args[name] = value
+                    self.assertIs(self.node.select(**args)[0], value)
+
+    def test_submitted_empty_or_ambiguous_connections_still_fail(self):
+        for inputs in ({}, {"input_a": ["a", 0], "input_b": ["b", 0]}):
+            with self.subTest(inputs=inputs), self.assertRaisesRegex(ValueError, "exactly one"):
+                self.node.check_lazy_status(active_inputs=3, prompt={"1": {"inputs": inputs}}, unique_id="1")
+        prompt = {"1": {"inputs": {"input_a": ["a", 0], "input_b": ["b", 0]}}}
+        self.assertEqual(self.node.check_lazy_status(input_a=None, input_b=None, active_inputs=2, prompt=prompt, unique_id="1"), ["input_b"])
+
+    def test_dynamic_subgraph_connection_is_authoritative(self):
+        class DynamicPrompt:
+            def get_node(self, node_id):
+                self_id = "subgraph:532"
+                if node_id != self_id:
+                    raise KeyError(node_id)
+                return {"inputs": {"input_b": ["nested-source", 0]}}
+        self.assertEqual(self.node.check_lazy_status(input_b=None, active_inputs=3,
+                         prompt={}, dynprompt=DynamicPrompt(), unique_id="subgraph:532"), ["input_b"])
+
 
 if __name__ == "__main__":
     unittest.main()

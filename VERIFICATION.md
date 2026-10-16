@@ -1,5 +1,7 @@
 # Verification record
 
+- 0.5.11: all 32 backend CPU tests pass, including stale branch flags with either single submitted input, strict empty/ambiguous input errors, both-connected passthrough selection and dynamic subgraph node lookup. Fifteen real CPU queue cases verify single-branch A/B output pixels for flags -1 through 3, both-connected A/B selection, and invalid cases. Sixteen real KJ Get/Set queue cases on frontend 1.52.7 cover both renderers, source/Set/Get ignore and mute states, reverse switching, both-invalid states and workflow reload.
+
 Environment: Windows, local ComfyUI 0.19.3, ComfyUI frontend 1.42.11, PyTorch 2.8.0, Pillow 11.0.0, Chrome 155, using a separate port 8190 CPU service with its own input/output directories and an in-memory database.
 
 - 16 backend CPU tests pass, covering both sampling areas, edge masks, inversion, growth, feathering, surrounding-colour fill, batch mapping, source-pixel protection, empty masks, `denoise=0`, latent noise/zero modes, dedicated inpaint conditioning, different VAE compression ratios and Refiner staging.
