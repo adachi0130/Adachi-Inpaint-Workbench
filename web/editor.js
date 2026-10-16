@@ -1,6 +1,5 @@
 /* Original implementation, MIT licensed. No WebUI source is bundled. */
 import { registerImageWheel } from "./wheel_gestures.js";
-import { selectSimilar } from "./magic_wand.js?v=0.6.0";
 import { T } from "./i18n.js";
 const el = (tag, cls, text) => {
     const node = document.createElement(tag);
@@ -124,19 +123,9 @@ export class InlineMaskEditor {
         for (const [name, label, title] of [
             ["brush", "Brush", "Brush (B)"], ["erase", "Eraser", "Eraser (E); hold Alt or right-click for temporary erase"],
             ["rect", "Rectangle", "Rectangle (R)"], ["lasso", "Lasso", "Freehand lasso (L)"],
-            ["pan", "Pan", "Pan (H), or hold Space"], ["wand", "✦", "Magic wand (W); Alt+click subtracts"], ["quick", "◉", "Quick selection (Q); drag to add, Alt to subtract"],
+            ["pan", "Pan", "Pan (H), or hold Space"],
         ]) this.toolButtons[name] = this.button(tools, T(label), T(title), () => this.setTool(name));
         this.root.append(tools);
-        this.wandSettings = el("label", "dd-row dd-wand-settings");
-        this.wandSettings.hidden = true;
-        this.wandSettings.append(document.createTextNode(T("Tolerance")));
-        this.toleranceInput = el("input"); this.toleranceInput.type = "range";
-        this.toleranceInput.min = 0; this.toleranceInput.max = 100; this.toleranceInput.value = 20;
-        this.toleranceInput.setAttribute("aria-label", T("Magic wand tolerance"));
-        this.toleranceValue = el("output", "", "20");
-        this.toleranceInput.oninput = () => this.toleranceValue.value = this.toleranceInput.value;
-        this.wandSettings.append(this.toleranceInput, this.toleranceValue);
-        this.root.append(this.wandSettings);
         const settings = el("div", "dd-settings");
         this.addSlider(settings, T("Brush size"), "brushSize", 1, 512, "px");
         this.addSlider(settings, T("Hardness"), "hardness", 0, 100, "%");
@@ -165,6 +154,7 @@ export class InlineMaskEditor {
             if (file) this.upload(file);
         });
         const actions = el("div", "dd-row dd-actions");
+        this.actions = actions;
         this.undoButton = this.button(actions, T("Undo"), T("Undo (Ctrl+Z)"), () => this.undo());
         this.redoButton = this.button(actions, T("Redo"), T("Redo (Ctrl+Shift+Z)"), () => this.redo());
         this.button(actions, T("Invert"), T("Invert the painted mask"), () => this.action({ type: "invert" }));
@@ -207,53 +197,10 @@ export class InlineMaskEditor {
             this.controls = el("div", "dd-inpaint dd-editor-controls");
             const info = el("div", "dd-row dd-source-info"); info.append(this.filename, this.sizeLabel);
             head.remove();
-            this.controls.append(info, tools, this.wandSettings, settings, actions, footer, embedRow);
-            this.toolButtons.wand.hidden = true;
-            this.toolButtons.quick.hidden = true;
+            this.controls.append(info, tools, settings, actions, footer, embedRow);
+            actions.addEventListener("keydown", event => this.keydown(event));
             this.loadButton.after(this.fitButton);
             this.fitButton.after(this.keepButton);
-            this.wandQuickButton = this.button(files, "✦", T("Selection tools"), () => {
-                this.selectionMenu.hidden = !this.selectionMenu.hidden;
-                this.wandQuickButton.setAttribute("aria-expanded", String(!this.selectionMenu.hidden));
-            });
-            this.wandQuickButton.classList.add("dd-selection-toggle");
-            this.wandQuickButton.setAttribute("aria-haspopup", "menu");
-            this.wandQuickButton.setAttribute("aria-expanded", "false");
-            this.selectionMenu = el("div", "dd-selection-menu"); this.selectionMenu.hidden = true;
-            this.selectionMenu.setAttribute("role", "menu");
-            for (const [tool, icon, label] of [["wand", "✦", "Magic wand"], ["quick", "◉", "Quick selection"]]) {
-                const choice = this.button(this.selectionMenu, `${icon}  ${T(label)}`, T(tool === "wand" ? "Magic wand (W); Alt+click subtracts" : "Quick selection (Q); drag to add, Alt to subtract"), () => {
-                    this.setTool(tool); this.selectionMenu.hidden = true; this.wandQuickButton.setAttribute("aria-expanded", "false");
-                });
-                choice.dataset.tool = tool; choice.setAttribute("role", "menuitem");
-            }
-            this.quickTolerance = el("label", "dd-selection-setting");
-            const quickInput = this.toleranceInput.cloneNode();
-            quickInput.oninput = () => { this.toleranceInput.value = quickInput.value; this.toleranceInput.dispatchEvent(new Event("input")); };
-            const previousTolerance = this.toleranceInput.oninput;
-            this.toleranceInput.oninput = () => { previousTolerance(); quickInput.value = this.toleranceInput.value; this.quickToleranceValue.textContent = quickInput.value; };
-            this.quickToleranceValue = el("output", "", "20");
-            this.quickTolerance.append(document.createTextNode(T("Tolerance")), quickInput, this.quickToleranceValue);
-            const sizeLabel = el("label", "dd-selection-setting");
-            const quickSize = el("input"); quickSize.type="range"; quickSize.min=1; quickSize.max=512; quickSize.value=this.brushSize;
-            quickSize.setAttribute("aria-label", T("Selection brush size"));
-            const quickSizeValue=el("output", "", `${this.brushSize}px`);
-            quickSize.oninput=()=>this.setBrushSize(Number(quickSize.value));
-            const previousSize=this.brushSizeInput.oninput;
-            this.brushSizeInput.oninput=()=>{previousSize();quickSize.value=this.brushSize;quickSizeValue.textContent=`${this.brushSize}px`;};
-            sizeLabel.append(document.createTextNode(T("Brush size")),quickSize,quickSizeValue);
-            this.selectionMenu.append(this.quickTolerance,sizeLabel);
-            this.root.append(this.selectionMenu);
-            this.closeSelectionMenu = event => {
-                if (event.type === "keydown" && event.key !== "Escape") return;
-                if (event.type === "pointerdown" && (this.selectionMenu.contains(event.target) || this.wandQuickButton.contains(event.target))) return;
-                if (event.type === "keydown" && !this.selectionMenu.hidden) {
-                    event.preventDefault(); event.stopPropagation(); this.wandQuickButton.focus({preventScroll:true});
-                }
-                this.selectionMenu.hidden = true; this.wandQuickButton.setAttribute("aria-expanded", "false");
-            };
-            window.addEventListener("pointerdown",this.closeSelectionMenu,true);
-            window.addEventListener("keydown",this.closeSelectionMenu,true);
             // These are the original live controls; the sampler mounts this
             // same DOM tree so brush state and callbacks are preserved.
         }
@@ -290,7 +237,7 @@ export class InlineMaskEditor {
     }
 
     async setImage(url, maskData = "", name = "") {
-        this.quickStroke = null; this.stroke = null; this.pointerId = null;
+        this.stroke = null; this.pointerId = null;
         const version = ++this.loadVersion;
         this.ready = false;
         try {
@@ -376,9 +323,6 @@ export class InlineMaskEditor {
     }
 
     updateButtons() {
-        if (this.wandSettings) this.wandSettings.hidden = this.options.compact || !["wand","quick"].includes(this.tool);
-        this.wandQuickButton?.classList.toggle("dd-active", ["wand","quick"].includes(this.tool));
-        this.wandQuickButton?.setAttribute("aria-pressed", String(["wand","quick"].includes(this.tool)));
         this.keepButton?.classList.toggle("dd-active", !!this.keepFit);
         this.keepButton?.setAttribute("aria-pressed", String(!!this.keepFit));
         this.stage?.classList.toggle("dd-erasing", !!(this.altErase || this.tool === "erase" || this.stroke?.type === "erase"));
@@ -414,17 +358,7 @@ export class InlineMaskEditor {
     }
 
     pointerDown(event) {
-        if (!this.ready || this.pointerId != null || this.wandBusy) return;
-        if (this.tool === "quick" && !this.space && event.button !== 1) {
-            event.preventDefault();event.stopPropagation();this.root.focus({preventScroll:true});
-            this.pointerId=event.pointerId;this.canvas.setPointerCapture(event.pointerId);
-            this.cursor=this.point(event);this.quickStroke={points:[this.cursor],subtract:event.altKey||event.button===2};
-            this.schedule();return;
-        }
-        if (this.tool === "wand" && !this.space && event.button !== 1) {
-            event.preventDefault(); event.stopPropagation();
-            this.root.focus({preventScroll:true}); this.magicWand(event); return;
-        }
+        if (!this.ready || this.pointerId != null) return;
         if (this.keepFit && (this.space || (!event.altKey && this.tool === "pan") || event.button === 1)) return;
         event.preventDefault(); event.stopPropagation(); this.root.focus({ preventScroll: true });
         this.altErase = !!event.altKey; this.updateButtons();
@@ -446,12 +380,6 @@ export class InlineMaskEditor {
         if (!this.ready) return;
         if (this.altErase !== !!event.altKey) { this.altErase = !!event.altKey; this.updateButtons(); }
         this.cursor = this.point(event);
-        if(this.quickStroke && event.pointerId===this.pointerId){
-            event.preventDefault();event.stopPropagation();
-            const last=this.quickStroke.points.at(-1);
-            if(Math.hypot(this.cursor.x-last.x,this.cursor.y-last.y)>Math.max(1,this.brushSize/4))this.quickStroke.points.push(this.cursor);
-            this.schedule();return;
-        }
         if (event.pointerId === this.pointerId) {
             event.preventDefault(); event.stopPropagation();
             if (this.drag) {
@@ -484,13 +412,6 @@ export class InlineMaskEditor {
     pointerUp(event) {
         if (event.pointerId !== this.pointerId) return;
         event.preventDefault(); event.stopPropagation();
-        if (this.quickStroke) {
-            const selected=this.quickStroke;this.quickStroke=null;
-            selected.points.push(this.point(event));
-            const id=this.pointerId;this.pointerId=null;
-            if(this.canvas.hasPointerCapture(id))this.canvas.releasePointerCapture(id);
-            this.selectPixels(selected.points,selected.subtract,true);this.schedule();return;
-        }
         if (this.stroke) {
             const command = this.stroke;
             this.stroke = null;
@@ -505,31 +426,11 @@ export class InlineMaskEditor {
         this.schedule();
     }
 
-    magicWand(event) { return this.selectPixels([this.point(event)],event.altKey || event.button === 2,false); }
-
-    async selectPixels(points, subtract, quick) {
-        const p = points[0], epoch = this.loadVersion, mask = this.mask, revision = this.maskRevision;
-        const x = Math.floor(p.x), y = Math.floor(p.y);
-        if (x < 0 || y < 0 || x >= this.image.width || y >= this.image.height) return;
-        const scratch = makeCanvas(); scratch.width = this.image.width; scratch.height = this.image.height;
-        const ctx = scratch.getContext("2d", {willReadFrequently:true});
-        if (!this.options.drawSource?.(ctx)) ctx.drawImage(this.image, 0, 0);
-        const pixels = ctx.getImageData(0, 0, scratch.width, scratch.height);
-        scratch.width = scratch.height = 0;
-        this.wandBusy = true; this.stage.classList.add("dd-wand-busy");
-        try {
-            const selected = await selectSimilar(pixels, x, y, Number(this.toleranceInput.value), this.options.selectionBounds?.(), quick ? {points,size:this.brushSize} : null);
-            if (this.destroyed || this.loadVersion !== epoch || this.mask !== mask || this.maskRevision !== revision || !selected) return;
-            const image = makeCanvas(); image.width = selected.width; image.height = selected.height;
-            image.getContext("2d").putImageData(new ImageData(new Uint8ClampedArray(selected.pixels), selected.width, selected.height), 0, 0);
-            this.action({type:"selection", image, x:selected.x, y:selected.y, subtract});
-        } catch (error) { this.status(error.message, true); }
-        finally { this.wandBusy = false; this.stage.classList.remove("dd-wand-busy"); }
-    }
-
     paintSegment(ctx, command, a, b) {
         if (ctx.canvas === this.mask) this.maskRevision++;
         ctx.save();
+        const bounds = this.options.paintBounds?.();
+        if (bounds) { ctx.beginPath(); ctx.rect(bounds.x, bounds.y, bounds.width, bounds.height); ctx.clip(); }
         ctx.globalCompositeOperation = command.type === "erase" ? "destination-out" : "source-over";
         ctx.globalAlpha = command.opacity / 100;
         if (command.hardness >= 99 && a.p === 1 && b.p === 1) {
@@ -556,18 +457,25 @@ export class InlineMaskEditor {
     }
 
     drawCommand(ctx, command) {
+        ctx.save();
+        const bounds = this.options.paintBounds?.();
+        if (bounds) { ctx.beginPath(); ctx.rect(bounds.x, bounds.y, bounds.width, bounds.height); ctx.clip(); }
         const w = this.mask.width, h = this.mask.height;
         if (["brush", "erase"].includes(command.type)) {
             this.paintSegment(ctx, command, command.points[0], command.points[0]);
             for (let i = 1; i < command.points.length; i++) this.paintSegment(ctx, command, command.points[i - 1], command.points[i]);
-        } else if (command.type === "selection") {
-            ctx.save(); ctx.globalCompositeOperation = command.subtract ? "destination-out" : "source-over";
-            ctx.drawImage(command.image, command.x, command.y); ctx.restore();
         } else if (command.type === "clear") ctx.clearRect(0, 0, w, h);
         else if (command.type === "fill") { ctx.save(); ctx.fillStyle = "white"; ctx.fillRect(0, 0, w, h); ctx.restore(); }
         else if (command.type === "invert") {
             ctx.save(); ctx.globalCompositeOperation = "xor"; ctx.fillStyle = "white"; ctx.fillRect(0, 0, w, h); ctx.restore();
-        } else if (command.type === "import") this.importMask(ctx, command.image);
+        } else if (command.type === "import") {
+            if (!bounds) this.importMask(ctx, command.image);
+            else {
+                const imported = makeCanvas(); imported.width = w; imported.height = h;
+                this.importMask(imported.getContext("2d"), command.image);
+                ctx.clearRect(0, 0, w, h); ctx.drawImage(imported, 0, 0); imported.width = imported.height = 0;
+            }
+        }
         else if (["rect", "lasso"].includes(command.type)) {
             const a = command.points[0], b = command.points.at(-1);
             ctx.save(); ctx.fillStyle = "white"; ctx.globalAlpha = command.opacity / 100;
@@ -575,6 +483,7 @@ export class InlineMaskEditor {
             else { ctx.beginPath(); ctx.moveTo(a.x, a.y); for (const p of command.points) ctx.lineTo(p.x, p.y); ctx.closePath(); ctx.fill(); }
             ctx.restore();
         }
+        ctx.restore();
     }
 
     remember(command) {
@@ -697,7 +606,7 @@ export class InlineMaskEditor {
         else if ((event.ctrlKey || event.metaKey) && key === "y") { event.preventDefault(); event.stopPropagation(); this.redo(); }
         else if (event.ctrlKey || event.metaKey || event.altKey) return;
         else if (event.code === "Space") { event.preventDefault(); event.stopPropagation(); this.space = true; this.stage.classList.add("dd-pan"); }
-        else if ({ b: "brush", e: "erase", r: "rect", l: "lasso", h: "pan", w: "wand", q: "quick" }[key]) { event.preventDefault(); event.stopPropagation(); this.setTool({ b: "brush", e: "erase", r: "rect", l: "lasso", h: "pan", w: "wand", q: "quick" }[key]); }
+        else if ({ b: "brush", e: "erase", r: "rect", l: "lasso", h: "pan" }[key]) { event.preventDefault(); event.stopPropagation(); this.setTool({ b: "brush", e: "erase", r: "rect", l: "lasso", h: "pan" }[key]); }
         else if (["[", "]"].includes(key)) { event.preventDefault(); event.stopPropagation(); this.setBrushSize(this.brushSize + (key === "]" ? 8 : -8)); }
     }
 
@@ -735,11 +644,6 @@ export class InlineMaskEditor {
         ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, w, h); ctx.drawImage(this.scene, 0, 0);
         ctx.setTransform(ratio * d.scale, 0, 0, ratio * d.scale, ratio * d.x, ratio * d.y);
         this.options.drawOverlay?.(ctx, d);
-        if(this.quickStroke){
-            ctx.save();ctx.strokeStyle="#ffc07977";ctx.lineWidth=this.brushSize;ctx.lineCap="round";ctx.lineJoin="round";
-            ctx.beginPath();const points=this.quickStroke.points;ctx.moveTo(points[0].x,points[0].y);
-            for(const p of points)ctx.lineTo(p.x,p.y);ctx.lineTo(this.cursor.x,this.cursor.y);ctx.stroke();ctx.restore();
-        }
         if (this.stroke && ["rect", "lasso"].includes(this.stroke.type)) {
             ctx.save(); ctx.strokeStyle = "#ffcf85"; ctx.lineWidth = 1.5 / d.scale; ctx.setLineDash([5 / d.scale, 4 / d.scale]);
             const a = this.stroke.points[0], b = this.stroke.points.at(-1);
@@ -747,7 +651,7 @@ export class InlineMaskEditor {
             else { ctx.beginPath(); ctx.moveTo(a.x, a.y); for (const p of this.stroke.points) ctx.lineTo(p.x, p.y); ctx.stroke(); }
             ctx.restore();
         }
-        if (this.cursor && (this.altErase || ["brush", "erase", "quick"].includes(this.tool)) && !this.drag) {
+        if (this.cursor && (this.altErase || ["brush", "erase"].includes(this.tool)) && !this.drag) {
             const erasing = this.altErase || this.tool === "erase" || this.stroke?.type === "erase";
             ctx.save();
             if (erasing) ctx.setLineDash([4 / d.scale, 3 / d.scale]);
@@ -762,7 +666,6 @@ export class InlineMaskEditor {
         this.destroyed = true; ++this.loadVersion;
         cancelAnimationFrame(this.frame); this.observer.disconnect();
         this.stopWheelCapture();
-        if(this.closeSelectionMenu){window.removeEventListener("pointerdown",this.closeSelectionMenu,true);window.removeEventListener("keydown",this.closeSelectionMenu,true);}
         window.removeEventListener("keydown", this.modifierDown, true);
         window.removeEventListener("keyup", this.modifierUp, true);
         window.removeEventListener("blur", this.modifierUp);

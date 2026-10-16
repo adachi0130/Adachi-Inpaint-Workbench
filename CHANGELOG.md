@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.6.2
+
+- Remove magic wand and quick selection, including their toolbar menu and background workers.
+- Locking a crop dims the outside and starts an empty repaint mask, ready for manual painting. Brush, shape and mask actions stay inside the locked crop.
+- Reduce presets to six sizes with 64-aligned dimensions from 512 through 2048; retain the width/height swap button. Custom sizing steps by 64 pixels.
+
+## 0.6.1
+
+- Add a collapsed painting-tools/mask-settings section in WebUI Inpaint and Inpaint Prepare. Keep the complete Undo/Redo/Invert/Fill/Clear/Import/Export row visible, and save the fold state in the workflow.
+- Reproduce browser draft quota failures with a large embedded source. Before a mode change or enabling embedding, probe available draft capacity using a temporary plugin-owned key; credit the existing current draft and preserve all other browser storage.
+- If the embedded source does not fit, upload an exact PNG copy first, then use the input-file reference without reloading pixels or clearing repaint masks, fusion masks, layers or undo commands. A failed upload retains the original embedded data and mode. Small embeddings remain embedded.
+- Share in-flight recovery across embedding/mode changes, respect disabled ComfyUI browser persistence, and keep the recovery notice above the crop toolbar.
+
 ## 0.6.0
 
 - Merge rectangular cropping and two-layer blending into Inline Mask, with a compact mode selector; ordinary mask mode ignores the result input.

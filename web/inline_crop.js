@@ -1,4 +1,4 @@
-import { CROP_PRESETS, cropAt } from "./crop_geometry.js?v=0.6.0";
+import { CROP_PRESETS, cropAt } from "./crop_geometry.js?v=0.6.2";
 import { T } from "./i18n.js";
 
 const fields = ["mask", "baseMask", "history", "future", "lastMask", "dirty"];
@@ -17,8 +17,12 @@ const make = (tag, cls) => {
 };
 
 export class InlineCropController {
-  constructor(node, editor, { find, hide, changed, imageUrl }) {
-    Object.assign(this, { node, editor, changed, imageUrl });
+  constructor(
+    node,
+    editor,
+    { find, hide, changed, imageUrl, beforeModeChange },
+  ) {
+    Object.assign(this, { node, editor, changed, imageUrl, beforeModeChange });
     this.widgets = Object.fromEntries(
       ["edit_mode", "crop_state", "blend_data", "layer_image"].map((name) => [
         name,
@@ -68,7 +72,7 @@ export class InlineCropController {
     editor.options.showMask = () =>
       this.mode !== "crop" || (this.target === "mask" && this.region?.locked);
     editor.options.drawOverlay = (ctx, d) => this.drawOverlay(ctx, d);
-    editor.options.selectionBounds = () =>
+    editor.options.paintBounds = () =>
       this.mode === "crop" && this.region?.locked ? this.region : undefined;
     const down = editor.pointerDown.bind(editor),
       move = editor.pointerMove.bind(editor);
@@ -231,16 +235,16 @@ export class InlineCropController {
     for (const key of ["cropWidth", "cropHeight"]) {
       const input = make("input", "");
       input.type = "number";
-      input.min = 32;
+      input.min = 64;
       input.max = 16384;
-      input.step = 32;
+      input.step = 64;
       input.value = this[key];
       input.setAttribute(
         "aria-label",
         T(key === "cropWidth" ? "Width" : "Height"),
       );
       input.onchange = () => {
-        this[key] = Math.max(32, Math.round(Number(input.value) / 32) * 32);
+        this[key] = Math.max(64, Math.min(16384, Math.round(Number(input.value) / 64) * 64));
         input.value = this[key];
         this.sizeChanged();
       };
@@ -253,9 +257,7 @@ export class InlineCropController {
   async run(action) {
     if (
       this.busy ||
-      this.editor.stroke ||
-      this.editor.quickStroke ||
-      this.editor.wandBusy
+      this.editor.stroke
     )
       return;
     try {
@@ -265,6 +267,7 @@ export class InlineCropController {
     }
   }
   sync() {
+    this.editor.root.classList.toggle("dd-crop-mode", this.mode === "crop");
     this.modeSelect.value = this.mode;
     this.bar.hidden = this.mode !== "crop";
     this.blendButton.disabled = !this.layer;
@@ -274,24 +277,47 @@ export class InlineCropController {
     this.modeSelect.disabled = !!this.busy;
     this.preset.disabled = !!this.region?.locked;
     this.swapButton.disabled = !!this.region?.locked;
-    for (const input of this.custom.children) input.disabled = !!this.region?.locked;
+    for (const input of this.custom.children)
+      input.disabled = !!this.region?.locked;
   }
   setMode(mode) {
     if (
       this.editor.stroke ||
-      this.editor.quickStroke ||
-      this.editor.wandBusy ||
       this.busy
     ) {
       this.sync();
       return;
     }
-    this.activate("mask");
-    this.widgets.edit_mode.value = mode;
-    this.state({ ...this.region, job: crypto.randomUUID() });
-    this.editor.fit();
+    if (mode === this.mode) {
+      this.sync();
+      return;
+    }
+    const apply = () => {
+      this.activate("mask");
+      this.widgets.edit_mode.value = mode;
+      this.state({ ...this.region, job: crypto.randomUUID() });
+      this.editor.fit();
+      this.sync();
+      this.changed();
+    };
+    const recovery = this.beforeModeChange?.();
+    if (!recovery?.then) {
+      if (recovery !== false) apply();
+      return;
+    }
+    this.busy = true;
     this.sync();
-    this.changed();
+    return recovery
+      .then((ok) => {
+        this.busy = false;
+        if (ok !== false && !this.editor.destroyed) apply();
+        else this.sync();
+      })
+      .catch((error) => {
+        this.busy = false;
+        this.sync();
+        this.editor.status(error.message, true);
+      });
   }
   syncPreset() {
     const value = `${this.cropWidth}x${this.cropHeight}`;
@@ -323,15 +349,14 @@ export class InlineCropController {
         o.disabled = w > width || h > height;
       }
     if (this.cropWidth > width || this.cropHeight > height) {
-      this.cropWidth = Math.min(1024, Math.floor(width / 32) * 32);
-      this.cropHeight = Math.min(1536, Math.floor(height / 32) * 32);
+      this.cropWidth = Math.min(1024, Math.floor(width / 64) * 64);
+      this.cropHeight = Math.min(1536, Math.floor(height / 64) * 64);
     }
     this.syncPreset();
     this.sync();
     this.editor.schedule();
   }
   lock(region) {
-    if (this.editor.wandBusy) return;
     this.activate("mask");
     this.contexts.blend = null;
     this.layer = null;
@@ -339,15 +364,11 @@ export class InlineCropController {
     this.widgets.blend_data.value = "";
     this.state({ ...region, locked: true, job: crypto.randomUUID() });
     const e = this.editor;
-    // A fresh region starts with its entire rectangle selected. Earlier strokes do not leak into it.
+    // A new crop only limits the painting area; the repaint mask starts empty.
     for (const c of [e.mask, e.baseMask])
       c.getContext("2d").clearRect(0, 0, c.width, c.height);
     e.history = [];
     e.future = [];
-    const ctx = e.baseMask.getContext("2d");
-    ctx.fillStyle = "white";
-    ctx.fillRect(region.x, region.y, region.width, region.height);
-    e.mask.getContext("2d").drawImage(e.baseMask, 0, 0);
     e.changed();
     this.sync();
     this.changed();
@@ -415,7 +436,7 @@ export class InlineCropController {
       this.busy
     )
       return;
-    if (this.editor.stroke || this.editor.quickStroke || this.editor.wandBusy) {
+    if (this.editor.stroke) {
       this.pendingResult = record;
       clearTimeout(this.resultTimer);
       this.resultTimer = setTimeout(() => {
@@ -536,7 +557,11 @@ export class InlineCropController {
     }
   }
   async reselect() {
-    if (this.busy || this.editor.wandBusy || this.editor.stroke || this.editor.quickStroke) return;
+    if (
+      this.busy ||
+      this.editor.stroke
+    )
+      return;
     await this.flatten();
     this.activate("mask");
     this.state({ locked: false, job: crypto.randomUUID() });

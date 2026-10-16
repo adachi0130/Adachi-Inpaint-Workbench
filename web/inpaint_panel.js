@@ -114,8 +114,11 @@ export class InpaintParameterPanel {
     grid(parent) { const grid = el("div", "dd-param-grid"); parent.append(grid); return grid; }
 
     build() {
-        this.enum(this.body, "mask_mode", "Mask mode", true);
-        this.enum(this.body, "fill", "Fill content", true);
+        this.maskSettings = el("div", "dd-param-mask-settings");
+        this.enum(this.maskSettings, "mask_mode", "Mask mode", true);
+        this.enum(this.maskSettings, "fill", "Fill content", true);
+        this.body.append(this.maskSettings);
+        this.options.onMaskSettings?.(this.maskSettings);
         this.enum(this.body, "area", "Sampling area", true);
         const resolution = el("div", "dd-param-resolution"); resolution.append(el("span", "dd-param-label", T("Sampling resolution")));
         this.sourceSize = el("button", "", T("Use source size")); this.sourceSize.type = "button";

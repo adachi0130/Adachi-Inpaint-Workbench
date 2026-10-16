@@ -6,11 +6,8 @@
 // buttons are drawn by this plugin, so they translate here by reading Comfy.Locale.
 
 const ZH = {
-  "Selection tools": "选区工具",
-  "Magic wand": "魔棒",
-  "Quick selection": "快速选择",
-  "Quick selection (Q); drag to add, Alt to subtract": "快速选择 (Q)：拖动添加，Alt 减选",
-  "Selection brush size": "选区笔径",
+  "Painting tools and mask settings": "绘图工具与蒙版设置",
+  "Browser draft storage was full. The source was saved as an input file; the image, masks and layers are preserved.": "浏览器草稿空间不足，已将原图保存为图片文件；图像、蒙版和图层均已保留。",
   "Editing mode": "编辑模式",
   "Crop & Blend": "裁切融合",
   "Crop size": "裁切尺寸",
@@ -20,9 +17,6 @@ const ZH = {
   "Repaint mask": "重绘蒙版",
   "Blend layers: brush keeps new pixels; Alt restores original": "图层融合：画笔保留新图，Alt 擦回原图",
   "Merge the visible layers": "合并当前可见图层",
-  "Magic wand (W); Alt+click subtracts": "魔棒 (W)；Alt＋左键减去选区",
-  "Tolerance": "容差",
-  "Magic wand tolerance": "魔棒颜色容差",
   "Group Bypass Presets": "组忽略预设 / Group Bypass Presets",
   "Switch saved group enable/bypass presets; no connections required.": "切换已保存的分组启用/忽略预设，无需接线。",
   "Group presets": "分组预设",

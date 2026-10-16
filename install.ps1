@@ -54,5 +54,14 @@ Get-ChildItem -LiteralPath $packageRoot -Force | Where-Object {
 } | ForEach-Object {
     Copy-Item -LiteralPath $_.FullName -Destination $destination -Recurse -Force
 }
+# These tracked files were retired in 0.6.2. The previous installation ZIP above
+# retains them for rollback; remove them from an overwritten installation too.
+foreach ($retiredRelative in @('web\magic_wand.js', 'web\magic_wand_worker.js', 'web\wand_selection.js', 'tests\test_magic_wand.mjs')) {
+    $retiredPath = [IO.Path]::GetFullPath((Join-Path $destination $retiredRelative))
+    if (-not $retiredPath.StartsWith($destination.TrimEnd('\') + '\', [StringComparison]::OrdinalIgnoreCase)) {
+        throw 'Retired plugin file must stay within the install directory.'
+    }
+    if (Test-Path -LiteralPath $retiredPath -PathType Leaf) { Remove-Item -LiteralPath $retiredPath -Force }
+}
 Write-Host "Installed Adachi-Inpaint-Workbench: $destination"
 Write-Host 'Restart ComfyUI, then refresh the browser with Ctrl+F5.'

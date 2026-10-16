@@ -1,16 +1,17 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
-import { InlineMaskEditor } from "./editor.js?v=0.6.0";
-import { installInpaintWorkbench } from "./inpaint_node.js?v=0.6.0";
+import { InlineMaskEditor } from "./editor.js?v=0.6.2";
+import { installInpaintWorkbench } from "./inpaint_node.js?v=0.6.1";
 import { bindWidgetToNodeWidth } from "./widget_layout.js?v=0.5.5";
 import { routeWheelOutsideImage } from "./wheel_routing.js";
-import { InlineCropController } from "./inline_crop.js?v=0.6.0";
+import { InlineCropController } from "./inline_crop.js?v=0.6.2";
+import { canStoreDraft } from "./draft_guard.js?v=0.6.1";
 import { T } from "./i18n.js";
 
 const styleId = "adachi-inpaint-style";
 const stylesheet = document.getElementById(styleId) || document.createElement("link");
 stylesheet.id = styleId; stylesheet.rel = "stylesheet";
-stylesheet.href = new URL("./editor.css?v=0.6.0", import.meta.url).href;
+stylesheet.href = new URL("./editor.css?v=0.6.2", import.meta.url).href;
 if (!stylesheet.isConnected) document.head.append(stylesheet);
 
 function hide(widget) {
@@ -59,6 +60,8 @@ app.registerExtension({
             const imageWidget = find("image"), maskWidget = find("mask_data"), sourceWidget = find("source_data");
             for (const widget of [imageWidget, maskWidget, sourceWidget]) hide(widget);
             let crop;
+            let draftRecovery = null;
+            let draftNoticeTimer = 0;
             let restoring = false;
             let restoreFrame = 0;
             let uploadVersion = 0;
@@ -118,11 +121,48 @@ app.registerExtension({
                 },
                 onEmbed(enabled) {
                     if (sourceWidget) sourceWidget.value = enabled ? editor.sourceData() : "";
+                    const recovery = enabled ? beforeModeChange() : null;
+                    if (recovery?.then) return recovery.then(() => markChanged()).catch(error => editor.status(error.message, true));
                     markChanged();
                 },
             });
-            editor.root.dataset.adachiVersion = "0.6.0";
-            crop = new InlineCropController(node, editor, {find, hide, changed:markChanged, imageUrl});
+            editor.root.dataset.adachiVersion = "0.6.2";
+            const beforeModeChange = () => {
+                if (draftRecovery) return draftRecovery;
+                const embedded = sourceWidget?.value;
+                if (!editor.ready || !embedded?.startsWith("data:") || embedded.length < 256 * 1024) return;
+                if (app.ui.settings.getSettingValue("Comfy.Workflow.Persist") === false) return;
+                let workspace = "personal";
+                try { const current = JSON.parse(sessionStorage.getItem("Comfy.Workspace.Current") || "null"); if (current?.type !== "personal" && current?.id) workspace = current.id; } catch { /* Personal workspace. */ }
+                const graph = app.rootGraph || node.graph;
+                const path = app.extensionManager?.workflow?.activeWorkflow?.path || "";
+                if (canStoreDraft(graph.serialize(), {path, workspace}) !== false) return;
+                // Persist a fresh, exact copy before dropping any embedded bytes.
+                // This also repairs portable workflows whose original input path is absent.
+                draftRecovery = (async () => {
+                    const version = editor.loadVersion;
+                    const blob = await (await fetch(embedded)).blob();
+                    if (blob.size > 64 * 1024 * 1024) throw Error(T("File is too large (max 64 MB)"));
+                    const body = new FormData();
+                    body.append("image", blob, `source-${crypto.randomUUID()}.png`);
+                    body.append("type", "input"); body.append("subfolder", "adachi-inpaint");
+                    const response = await api.fetchApi("/upload/image", {method:"POST", body});
+                    if (!response.ok) throw Error(`${T("Upload failed")} (${response.status})`);
+                    const uploaded = await response.json();
+                    if (typeof uploaded.name !== "string" || !uploaded.name) throw Error(T("Upload failed"));
+                    if (editor.destroyed || editor.loadVersion !== version || sourceWidget.value !== embedded) return false;
+                    imageWidget.value = uploaded.subfolder ? `${uploaded.subfolder}/${uploaded.name}` : uploaded.name;
+                    sourceWidget.value = ""; editor.embed.checked = false;
+                    editor.message.textContent = T("Browser draft storage was full. The source was saved as an input file; the image, masks and layers are preserved.");
+                    editor.message.classList.remove("dd-error"); editor.message.hidden = false;
+                    const notice = editor.message.textContent;
+                    clearTimeout(draftNoticeTimer);
+                    draftNoticeTimer = setTimeout(() => { if (!editor.destroyed && editor.message.textContent === notice) editor.message.hidden = true; }, 8000);
+                    return true;
+                })().finally(() => { draftRecovery = null; });
+                return draftRecovery;
+            };
+            crop = new InlineCropController(node, editor, {find, hide, changed:markChanged, imageUrl, beforeModeChange});
             node.adachiCrop = crop;
             node.adachiEditor = editor;
             const stopWheelRouting = routeWheelOutsideImage(editor.root, editor.canvas, () => editor.ready);
@@ -207,7 +247,7 @@ app.registerExtension({
             const previousImageCallback = imageWidget.callback;
             imageWidget.callback = function () { previousImageCallback?.apply(this, arguments); restore(); };
             const previousRemoved = node.onRemoved;
-            node.onRemoved = function () { cancelAnimationFrame(restoreFrame); cancelAnimationFrame(fitFrame); stopWheelRouting(); crop.destroy(); editor.destroy(); return previousRemoved?.apply(this, arguments); };
+            node.onRemoved = function () { clearTimeout(draftNoticeTimer); cancelAnimationFrame(restoreFrame); cancelAnimationFrame(fitFrame); stopWheelRouting(); crop.destroy(); editor.destroy(); return previousRemoved?.apply(this, arguments); };
             node.setSize([Math.max(380, node.size[0]), Math.max(480, node.size[1])]);
             restoreFrame = requestAnimationFrame(restore);
             return result;

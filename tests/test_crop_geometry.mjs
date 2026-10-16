@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { CROP_PRESETS, cropAt } from "../web/crop_geometry.js";
-assert.ok(CROP_PRESETS.every(([w, h]) => w % 32 === 0 && h % 32 === 0));
+assert.ok(CROP_PRESETS.length <= 6);
+assert.ok(CROP_PRESETS.some(([w,h]) => w === 512 && h === 512));
+assert.ok(CROP_PRESETS.some(([w,h]) => w === 2048 && h === 2048));
+assert.ok(CROP_PRESETS.every(([w, h]) => w % 64 === 0 && h % 64 === 0 && Math.min(w,h) >= 512 && Math.max(w,h) <= 2048));
 assert.deepEqual(cropAt(2048, 3072, 1024, 1536, 400, 700), {
   x: 400,
   y: 700,

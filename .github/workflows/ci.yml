@@ -37,7 +37,7 @@ jobs:
       - name: Check comparison result history
         run: node --experimental-default-type=module tests/test_compare_history.mjs
 
-      - name: Check crop geometry and magic wand
+      - name: Check crop geometry
         run: |
           node --experimental-default-type=module tests/test_crop_geometry.mjs
-          node --experimental-default-type=module tests/test_magic_wand.mjs
+          node --experimental-default-type=module tests/test_draft_guard.mjs
