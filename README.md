@@ -186,7 +186,9 @@ Embedding grows the workflow file, and the source and mask then travel with the 
 This is an original WebUI-style implementation and does not promise pixel-perfect agreement with AUTOMATIC1111/Forge results.
 `soft_edge` is extra Gaussian feathering with `soft_strength` controlling the extra radius; it **does not reimplement WebUI's Soft Inpainting algorithm or its full parameter set**.
 Samplers, schedulers and Refiner use the current ComfyUI implementations, and the fill algorithms are this plugin's own.
-Static images and 4-dimensional latents are supported; video VAEs, WebUI scripts/extensions and automatic reading of WebUI plugin configuration are not.
+Static-image pipelines support ordinary 4D `[B,C,H,W]` latents and single-frame 5D `[B,C,1,H,W]` latents, without hardcoding a model name or channel count. This includes the Wan-derived VAE used by Anima and Qwen-image pipelines. Independent images/variants stay in the batch dimension, with their own masks; they are not encoded as consecutive video frames.
+Use the matching model, VAE and text conditioning for the model family. For ordinary Anima img2img, keep **inpaint_model** disabled; that option invokes native conditioning for dedicated inpainting architectures, and is not required merely because a mask is painted.
+Actual multi-frame video, audio/3D latents, model-specific control pipelines, WebUI scripts/extensions and automatic WebUI plugin configuration are not implemented.
 Limits are 64 MiB per file, 32 megapixels per image and 16384 px per side; no models are bundled and nothing is downloaded.
 Node loading, canvas editing, workflow/executed-parameter save and restore have been verified in an isolated CPU ComfyUI service on the development machine, and the backend is verified with mock VAE/samplers; real-checkpoint image quality and compatibility across every model family and Refiner have not been tested.
 
@@ -213,3 +215,5 @@ python -m unittest discover -s tests -v
 
 新增「自动二选一」：把两个正面条件（或图像、模型等同类型数据）接到输入 A/B，输出接共同下游；忽略其中一个分支，就自动使用另一个。两路都启用或都无输入会报错，不需要 switch。切换节点放在两个被控制分组之外，也能配合组忽略预设使用。
 
+
+Anima 兼容：支持其 Wan/Qwen VAE 的单帧五维潜空间，也保留普通四维 VAE；会同步适配蒙版、填充、批次和解码回贴。普通 Anima 图生图请保持“专用重绘模型”关闭，并使用配套模型、VAE 与文本条件；这不是多帧视频重绘功能。

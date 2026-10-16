@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.2
+
+- Support still-image inpainting with both 4D `[B,C,H,W]` and single-frame 5D `[B,C,1,H,W]` VAE latents, including the Wan-derived VAE used by Anima/Qwen-image pipelines.
+- Preserve the independent image/variant batch axis when a video-derived VAE would otherwise interpret the batch as frames.
+- Match noise/fill masks to latent rank and convert single-frame decoded images back to ordinary IMAGE batches before compositing.
+- Keep native inpaint conditioning and its batch/mask metadata compatible with single-frame 5D latents.
+- Add regression coverage and verify actual ComfyUI Wan VAE encode/decode and native mask preparation with tiny random test weights; no real Anima checkpoint was available locally.
+
 ## 0.5.1
 
 - Add Auto Exclusive Switch: two generic lazy inputs, no manual switch control, and exactly one enabled branch required.

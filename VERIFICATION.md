@@ -31,6 +31,10 @@ Environment: Windows, local ComfyUI 0.19.3, ComfyUI frontend 1.42.11, PyTorch 2.
 - 0.5.1: 26 real CPU queue cases across classic nodes and Nodes 2.0 cover A/B selection, bypassed transform pass-through, mute, both-enabled/both-bypassed/both-disconnected errors, reroutes, one connected input, group presets, cache changes, workflow reload and switching reloaded presets. Output pixels match the selected image; the unused branch was not requested by the selector. A raw API prompt works without frontend metadata.
 - 0.5.1: the 40%-width preset list retains internal scrolling and has no horizontal overflow in a 360px node at a 390px viewport.
 
+- 0.5.2: all 29 CPU tests pass. New cases cover single-frame 5D image latents, per-source/variant masks, both crop modes, noise/zero fill, third-party VAE wrappers, native inpaint conditioning, refiner continuation, and explicit rejection of real multi-frame output.
+- 0.5.2: actual ComfyUI `VAE` + `WanVAE` encode/decode and `prepare_mask` were exercised with a small randomly initialized Wan architecture (16 latent channels). Four cases cover whole-image/original, masked-area/noise, zero-latent fill, and native inpaint conditioning, with two independent sources and two variants each. Latents were `[4,16,1,8,8]`, masks `[4,1,1,8,8]`, decoded images `[4,64,64,3]`, and all protected source pixels remained exact.
+- Anima checkpoint image generation was not performed: this machine does not have the user's Anima/Qwen VAE checkpoint files. The workflow was inspected read-only, confirming node 501 uses VAE node 358 (`qwen_image_vae.safetensors`) and the Anima model branch.
+
 The sampling path was also checked for noise-schedule continuity against the real `common_ksampler`/`KSampler` functions in the local ComfyUI; an actual checkpoint has not been loaded to test GPU image quality or every model family, so CPU/interface tests must not be treated as model-quality verification.
 
 References used during implementation:

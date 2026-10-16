@@ -396,6 +396,58 @@ def _vae_ratio(vae):
     return int(ratio) if isinstance(ratio, (int, float)) and ratio >= 1 else 8
 
 
+def _check_image_latents(samples, batch):
+    if not isinstance(samples, torch.Tensor) or samples.ndim not in (4, 5) or min(samples.shape) < 1:
+        raise ValueError("Image VAE must return [B,C,H,W] or [B,C,1,H,W] latents.")
+    if samples.shape[0] != batch:
+        raise ValueError("VAE latent batch must match the number of independent input images.")
+    if samples.ndim == 5 and samples.shape[2] != 1:
+        raise ValueError("Still-image inpainting requires one latent frame per image (T=1); multi-frame video is not supported.")
+    return samples
+
+
+def _encode_still_images(vae, pixels):
+    # Video-derived VAEs can interpret a 4D IMAGE batch as consecutive frames.
+    # Encode those VAEs one image at a time so sources/variants remain independent.
+    if getattr(vae, "latent_dim", None) == 3 and pixels.shape[0] > 1:
+        samples = torch.cat([_check_image_latents(vae.encode(frame[None]), 1) for frame in pixels], dim=0)
+    else:
+        samples = vae.encode(pixels)
+        # Also support third-party VAE wrappers without a latent_dim attribute.
+        if isinstance(samples, torch.Tensor) and samples.ndim == 5 and pixels.shape[0] > 1:
+            if samples.shape[0] != pixels.shape[0] or samples.shape[2] != 1:
+                samples = torch.cat([_check_image_latents(vae.encode(frame[None]), 1) for frame in pixels], dim=0)
+    return _check_image_latents(samples, pixels.shape[0])
+
+
+class _StillImageVAE:
+    """Keep native inpaint conditioning while making its VAE encodes batch-safe."""
+
+    def __init__(self, vae):
+        self.vae = vae
+
+    def __getattr__(self, name):
+        return getattr(self.vae, name)
+
+    def encode(self, pixels):
+        return _encode_still_images(self.vae, pixels)
+
+
+def _decode_still_images(vae, samples, batch):
+    _check_image_latents(samples, batch)
+    decoded = vae.decode(samples)
+    if isinstance(decoded, tuple):
+        decoded = decoded[0]
+    if isinstance(decoded, torch.Tensor) and decoded.ndim == 5:
+        if decoded.shape[1] != 1:
+            raise ValueError("VAE decoded multiple frames for a still image; expected [B,1,H,W,C].")
+        decoded = decoded[:, 0]
+    decoded = _image_tensor(decoded)
+    if decoded.shape[0] != batch:
+        raise ValueError("VAE decoded image batch does not match the input image batch.")
+    return decoded
+
+
 def _check_refiner(model, refiner):
     """Reject known incompatible latent formats while allowing SDXL base/refiner."""
     first = getattr(getattr(model, "model", None), "latent_format", None)
@@ -478,13 +530,26 @@ class AdachiWebUIInpaint:
             masks = _resize_mask(masks, target_height, target_width)
         if inpaint_model:
             positive, negative, latent = nodes.InpaintModelConditioning().encode(
-                positive=positive, negative=negative, pixels=pixels, vae=vae, mask=masks, noise_mask=True)
+                positive=positive, negative=negative, pixels=pixels, vae=_StillImageVAE(vae), mask=masks, noise_mask=True)
         else:
-            latent = {"samples": vae.encode(pixels)}
-        samples = latent["samples"]
-        if not isinstance(samples, torch.Tensor) or samples.ndim != 4:
-            raise ValueError("This node supports still-image VAEs with 4D image latents.")
+            latent = {"samples": _encode_still_images(vae, pixels)}
+        samples = _check_image_latents(latent["samples"], pixels.shape[0])
         latent_mask = _resize_mask(masks.to(device=samples.device, dtype=samples.dtype), samples.shape[-2], samples.shape[-1])[:, None]
+        if samples.ndim == 5:
+            latent_mask = latent_mask.unsqueeze(2)
+            if inpaint_model:
+                # Native conditioning provides a pixel-space [B,1,H,W] mask;
+                # retain the independent batch axis for volumetric model inputs.
+                def volumetric_conditioning(conditioning):
+                    result = []
+                    for embedding, metadata in conditioning:
+                        metadata = metadata.copy()
+                        concat_mask = metadata.get("concat_mask")
+                        if isinstance(concat_mask, torch.Tensor) and concat_mask.ndim == 4:
+                            metadata["concat_mask"] = concat_mask.unsqueeze(2)
+                        result.append([embedding, metadata])
+                    return result
+                positive, negative = volumetric_conditioning(positive), volumetric_conditioning(negative)
         latent["noise_mask"] = latent_mask
         fill = kwargs.get("fill", "original")
         if fill in {"latent_noise", "latent_nothing"}:
@@ -512,10 +577,7 @@ class AdachiWebUIInpaint:
         else:
             sampled = nodes.common_ksampler(model, int(seed), int(steps), float(cfg), sampler_name, scheduler,
                                            positive, negative, latent, denoise=float(denoise))[0]
-        decoded = vae.decode(sampled["samples"])
-        if isinstance(decoded, tuple):
-            decoded = decoded[0]
-        decoded = _image_tensor(decoded)
+        decoded = _decode_still_images(vae, sampled["samples"], pixels.shape[0])
         return _composite(decoded, context), decoded, masks
 
 
