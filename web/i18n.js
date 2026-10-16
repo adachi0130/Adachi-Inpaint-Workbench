@@ -72,7 +72,7 @@ const ZH = {
   "Brush": "画笔",
   "Brush (B)": "画笔 (B)",
   "Eraser": "橡皮",
-  "Eraser (E); hold Alt or right-click for temporary erase": "橡皮 (E)，按住 Alt 或鼠标右键临时擦除",
+  "Eraser (E); hold Alt for temporary erase": "橡皮 (E)，按住 Alt 临时擦除",
   "Rectangle": "矩形",
   "Rectangle (R)": "矩形 (R)",
   "Lasso": "套索",

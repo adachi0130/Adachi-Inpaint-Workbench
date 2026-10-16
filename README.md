@@ -72,7 +72,7 @@ In Crop & Blend mode, choose one of six 64-aligned presets spanning 512–2048 p
 
 Generate, inspect the result in **Image Compare**, then click **Adopt this result** to return it. There is no feedback wire and generation does not automatically replace the editor image. Use the inpaint node's **image** output for comparison; its `crop` output is the sampling canvas and can have a different size. [Open the ready-wired example](examples/05-inline-crop-blend.json).
 
-After adoption, **◐ blend layers** shows the original under the new result. Paint to keep new pixels, hold **Alt** to restore original pixels, and use soft brush edges to blend seams. This layer mask is independent of the repaint mask and is kept for another pass at the same coordinates. **✓** merges the visible layers; **↖ reselect** merges first, then lets you choose a fresh region. There is no crop version timeline. For a generated batch, choose the desired result in Image Compare before adopting it. A result tagged with an older crop is rejected after selecting another region.
+After adoption, **◐ blend layers** shows the original under the new result. Paint to keep new pixels, hold **Alt** to restore original pixels, and use soft brush edges to blend seams. This layer mask is independent of the repaint mask and is kept for another pass at the same coordinates. **✓** merges the visible layers; **right-click in the picture** merges first and releases the selection, then the next left-click locks a new region. The **↶ Undo** button sits to the right of ✓ and undoes mask strokes in the active mask or blend layer. There is no crop version timeline. For a generated batch, choose the desired result in Image Compare before adopting it. A result tagged with an older crop is rejected after selecting another region.
 
 ### Inpaint the whole image or just the masked region
 
@@ -186,9 +186,10 @@ For modular sampling: `Prepare.pixels → VAE Encode → Set Latent Noise Mask �
 | Action | Shortcut / control |
 | --- | --- |
 | Brush / eraser / rectangle / lasso | `B` / `E` / `R` / `L` |
-| Temporary eraser | Hold `Alt`, or use the right mouse button; release to return to the previous tool |
+| Temporary eraser | Hold `Alt`; release to return to the previous tool |
 | Brush size | `Ctrl` + wheel, or `[` / `]` |
 | Brush hardness | `Shift` + wheel |
+| Release crop selection | Right-click in the picture, then left-click to select a new region |
 | Undo / redo | `Ctrl+Z` / `Ctrl+Shift+Z`, or `Ctrl+Y` |
 | Image zoom / pan, when unpinned | Wheel / Space + drag, middle-button drag, or the pan tool (`H`) |
 | Keep the image fitted | Pin beside **Fit**; click again to unlock |

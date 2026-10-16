@@ -86,6 +86,13 @@ export class InlineCropController {
         e.stopPropagation();
         return;
       }
+      if (this.mode === "crop" && e.button === 2) {
+        e.preventDefault();
+        e.stopPropagation();
+        editor.root.focus({ preventScroll: true });
+        if (this.region.locked) this.run(() => this.reselect());
+        return;
+      }
       if (
         this.mode === "crop" &&
         !this.region?.locked &&
@@ -212,9 +219,6 @@ export class InlineCropController {
     this.swapButton = button("⇄", "Swap crop dimensions", () =>
       this.changeSize(this.cropHeight, this.cropWidth),
     );
-    this.reselectButton = button("↖", "Choose another region", () =>
-      this.reselect(),
-    );
     this.maskButton = button("◌", "Repaint mask", () => {
       this.activate("mask");
       this.changed();
@@ -230,6 +234,10 @@ export class InlineCropController {
     this.commitButton = button("✓", "Merge the visible layers", () =>
       this.flatten(),
     );
+    // Move the original live button, retaining its history and disabled state.
+    this.undoButton = e.undoButton;
+    this.undoButton.textContent = "↶";
+    this.commitButton.after(this.undoButton);
     this.custom = make("div", "dd-crop-custom");
     this.custom.hidden = true;
     for (const key of ["cropWidth", "cropHeight"]) {
@@ -269,7 +277,11 @@ export class InlineCropController {
   sync() {
     this.editor.root.classList.toggle("dd-crop-mode", this.mode === "crop");
     this.modeSelect.value = this.mode;
-    this.bar.hidden = this.mode !== "crop";
+    for (const control of [this.preset, this.swapButton, this.maskButton, this.blendButton, this.commitButton]) {
+      control.hidden = this.mode !== "crop";
+    }
+    this.custom.hidden = this.mode !== "crop" || this.preset.value !== "custom";
+    this.undoButton.disabled = !!this.busy || !this.editor.history.length;
     this.blendButton.disabled = !this.layer;
     this.commitButton.disabled = !this.layer;
     this.maskButton.classList.toggle("dd-active", this.target === "mask");

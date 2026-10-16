@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.6
+
+- Right-click releases a locked crop without painting; the next plain click selects a new region. Adopted layer effects are merged before reselection. Right-click no longer paints or erases in either mode; Alt remains the temporary eraser.
+- Remove the redundant reselect button. Move the existing mask Undo button from the inpaint controls to the inline toolbar, immediately after Merge, using a return-arrow icon. Undo also remains accessible in ordinary mask mode.
+
 ## 0.6.5
 
 - Keep crop size presets, width/height swap and custom dimensions available after locking a region. Changing dimensions automatically unlocks it for a new selection.

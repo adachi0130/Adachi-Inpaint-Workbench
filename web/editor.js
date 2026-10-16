@@ -121,7 +121,7 @@ export class InlineMaskEditor {
         const tools = el("div", "dd-row dd-tools");
         this.toolButtons = {};
         for (const [name, label, title] of [
-            ["brush", "Brush", "Brush (B)"], ["erase", "Eraser", "Eraser (E); hold Alt or right-click for temporary erase"],
+            ["brush", "Brush", "Brush (B)"], ["erase", "Eraser", "Eraser (E); hold Alt for temporary erase"],
             ["rect", "Rectangle", "Rectangle (R)"], ["lasso", "Lasso", "Freehand lasso (L)"],
             ["pan", "Pan", "Pan (H), or hold Space"],
         ]) this.toolButtons[name] = this.button(tools, T(label), T(title), () => this.setTool(name));
@@ -139,7 +139,7 @@ export class InlineMaskEditor {
         this.empty.append(el("span", "dd-empty-symbol", "+"), el("strong", "", T("Drop an image here")), el("span", "", T("Paint the areas to repaint directly in this node")));
         this.stage.append(this.empty);
         this.root.append(this.stage, settings);
-        this.canvas.oncontextmenu = event => event.preventDefault();
+        this.canvas.oncontextmenu = event => { event.preventDefault(); event.stopPropagation(); };
         this.canvas.addEventListener("pointerdown", event => this.pointerDown(event));
         this.canvas.addEventListener("pointermove", event => this.pointerMove(event));
         this.canvas.addEventListener("pointerup", event => this.pointerUp(event));
@@ -358,6 +358,7 @@ export class InlineMaskEditor {
     }
 
     pointerDown(event) {
+        if (event.button === 2) { event.preventDefault(); event.stopPropagation(); return; }
         if (!this.ready || this.pointerId != null) return;
         if (this.keepFit && (this.space || (!event.altKey && this.tool === "pan") || event.button === 1)) return;
         event.preventDefault(); event.stopPropagation(); this.root.focus({ preventScroll: true });
@@ -370,7 +371,7 @@ export class InlineMaskEditor {
             return;
         }
         if (this.view === "image") { this.view = "overlay"; this.updateButtons(); }
-        this.stroke = { type: event.button === 2 || event.altKey ? "erase" : this.tool, size: this.brushSize, hardness: this.hardness, opacity: this.brushOpacity, points: [this.cursor] };
+        this.stroke = { type: event.altKey ? "erase" : this.tool, size: this.brushSize, hardness: this.hardness, opacity: this.brushOpacity, points: [this.cursor] };
         this.updateButtons();
         if (["brush", "erase"].includes(this.stroke.type)) this.paintSegment(this.mask.getContext("2d"), this.stroke, this.cursor, this.cursor);
         this.schedule();
@@ -388,7 +389,7 @@ export class InlineMaskEditor {
             } else if (this.stroke) {
                 const events = event.getCoalescedEvents?.() || [event];
                 if (["brush", "erase"].includes(this.stroke.type)) {
-                    const type = event.altKey || (event.buttons & 2) ? "erase" : this.tool;
+                    const type = event.altKey ? "erase" : this.tool;
                     if (["brush", "erase"].includes(type) && type !== this.stroke.type) {
                         // Keep separate commands when Alt is pressed/released mid-stroke.
                         const pivot = this.stroke.points.at(-1);
