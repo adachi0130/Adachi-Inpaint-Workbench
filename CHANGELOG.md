@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.8
+
+- Move the selected-region painting help from the canvas hover text to the repaint mask button, so the crop canvas no longer repeats it while a region is locked.
+- Remove the now-unused repaint mask description entry from the locale dictionary.
+
 ## 0.6.7
 
 - Before merging an adopted crop layer, hold the right mouse button to preview the original; release, pointer cancellation or window blur restores the workspace. Preview changes display only. After merge, right-click again releases the crop selection.

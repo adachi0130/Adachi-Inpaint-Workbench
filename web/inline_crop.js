@@ -255,7 +255,7 @@ export class InlineCropController {
     this.swapButton = button("⇄", "Swap width and height, release the current selection, then left-click to place the new region.", () =>
       this.changeSize(this.cropHeight, this.cropWidth),
     );
-    this.maskButton = button("◌", "Edit the repaint mask: paint the area to regenerate; Alt erases. This mask is separate from layer blending.", () => {
+    this.maskButton = button("◌", "Paint inside the selected region. Right-click releases the selection; left-click places a new one. Alt: erase. Ctrl+wheel: brush size; Shift+wheel: hardness.", () => {
       this.activate("mask");
       this.changed();
     });
@@ -322,7 +322,7 @@ export class InlineCropController {
         : this.layer
           ? "Unmerged result: hold right-click to see the original; release to see the workspace. In the blend mask, brush keeps new pixels and Alt restores old pixels. Ctrl+wheel: size; Shift+wheel: hardness. Click the check mark to merge."
           : this.region.locked
-            ? "Paint inside the selected region. Right-click releases the selection; left-click places a new one. Alt: erase. Ctrl+wheel: brush size; Shift+wheel: hardness."
+            ? ""
             : "Move the dashed frame and left-click to select a region. Paint a mask inside it, generate, then use Adopt this result in Image Compare.");
     for (const control of [this.preset, this.swapButton, this.maskButton, this.blendButton, this.commitButton]) {
       control.hidden = this.mode !== "crop";

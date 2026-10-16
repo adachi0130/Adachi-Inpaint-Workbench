@@ -9,7 +9,6 @@ const ZH = {
   "Mask: paint the full image. Crop & Blend: select a region, inpaint it, then adopt and blend the result.": "普通蒙版：在整图涂抹。裁切融合：选定局部、重绘，再从图像对比采用结果并融合图层。",
   "Crop resolution presets. Changing size releases the current selection; left-click the image to place a new region. Inpaint dimensions follow when selected.": "裁切分辨率预设。切换尺寸会取消当前选定，再左键点击图片定位新区域；选定后自动填写 Inpaint 宽高。",
   "Swap width and height, release the current selection, then left-click to place the new region.": "交换宽高并取消当前选定，再左键点击图片选择新区域。",
-  "Edit the repaint mask: paint the area to regenerate; Alt erases. This mask is separate from layer blending.": "编辑重绘蒙版：涂抹需要重新生成的区域，Alt 临时擦除；与图层融合蒙版相互独立。",
   "Edit layer blending: brush keeps the new result; Alt restores original pixels. Hold right-click to preview the original, release to return.": "编辑融合蒙版：画笔保留重绘结果，Alt 擦回原图。按住右键查看原图，松开恢复当前工作区。",
   "Merge the visible result and blend mask into the source image. After merging, right-click releases the selected region.": "将当前可见结果和融合蒙版合并到原图。合并后，右键恢复为取消选区。",
   "Undo the last stroke in the active repaint or blend mask (Ctrl+Z). Redo with Ctrl+Shift+Z.": "撤销当前重绘蒙版或融合蒙版的上一笔（Ctrl+Z）；Ctrl+Shift+Z 可重做。",
