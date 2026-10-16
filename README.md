@@ -163,6 +163,7 @@ The ignored branch is not requested by this selector; any separate preview/save 
 For raw API prompts, omit the ignored input and omit the internal `active_inputs` field; exactly one of `input_a` / `input_b` must remain.
 Without workflow metadata, the backend checks actual submitted connections after virtual routing: when only one input survives, it uses that branch even if cached frontend flags still report both enabled. With both connections present and no workflow metadata, the frontend flags remain necessary to distinguish bypassed transform pass-through from an enabled branch. Updating this backend logic requires a full ComfyUI restart as well as a browser refresh.
 When workflow metadata accompanies the request, the server independently follows Get → named Set → source node. Both Gets can stay enabled: bypassing one branch's Set or encoder disables that branch. The server normalizes flags and removes ignored execution inputs before validation and cache lookup, while the saved workflow retains its connections. Without workflow metadata the submitted connections/frontend flags remain the fallback.
+If the enabled input was dropped during frontend execution serialization, the server can restore its saved connection, including a subgraph output mapped to a flattened node ID. It only reconnects an existing submitted node whose type matches the saved source; it does not create missing model/encoder nodes.
 
 ## Using a standard sampling workflow
 

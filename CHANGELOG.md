@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.13
+
+- Restore a missing enabled execution input by resolving its saved workflow route through Get/Set, reroutes and subgraph output slots to an existing flattened execution node.
+- Fix the captured remote failure where the selected positive branch existed in a tag subgraph but its input link was absent from the submitted exclusive node. Never invent missing backend nodes or connect a different node type.
+- Include node ID, frontend/workflow flags and submitted-connection flags in selection errors to distinguish an ignored branch from lost execution wiring.
+- Validate three actual failed remote request snapshots locally and two lightweight CPU queue probes with the same missing-link/subgraph mapping. Restart ComfyUI after this backend update.
+
 ## 0.5.12
 
 - Trace enabled Get nodes back through their named Set and encoder in saved workflow metadata; ignored Sets disable their branch even when both Gets remain enabled and both execution links survive.

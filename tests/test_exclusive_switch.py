@@ -135,6 +135,42 @@ class ExclusiveSwitchTests(unittest.TestCase):
         self.assertEqual(backend._workflow_exclusive_flags({"workflow": workflow}, "349:532"), 2)
         self.assertIsNone(backend._workflow_exclusive_flags({"workflow": workflow}, "532"))
 
+    def test_missing_selected_link_is_restored_through_get_set(self):
+        workflow = self.workflow()
+        request = {"prompt": {"2": {"class_type": "CLIPTextEncode", "inputs": {}},
+                              "532": {"class_type": "AdachiExclusiveSwitch", "inputs": {"active_inputs": 0}}},
+                   "extra_data": {"extra_pnginfo": {"workflow": workflow}}}
+        backend.normalize_exclusive_prompt(request)
+        self.assertEqual(request["prompt"]["532"]["inputs"], {"active_inputs": 2, "input_b": ["2", 0]})
+
+    def test_missing_subgraph_output_link_is_restored_to_flattened_node(self):
+        workflow = {"nodes": [
+            {"id": 349, "type": "child", "mode": 0},
+            {"id": 521, "type": "CLIPTextEncode", "mode": 4},
+            {"id": 532, "type": "AdachiExclusiveSwitch", "inputs": [{"name": "input_a", "link": 1}, {"name": "input_b", "link": 2}]},
+        ], "links": [[1, 349, 2, 532, 0, "CONDITIONING"], [2, 521, 0, 532, 1, "CONDITIONING"]],
+            "definitions": {"subgraphs": [{"id": "child", "nodes": [{"id": 412, "type": "CLIPTextEncode", "mode": 0}],
+                "outputs": [{"linkIds": []}, {"linkIds": []}, {"linkIds": [2019]}],
+                "links": [{"id": 2019, "origin_id": 412, "origin_slot": 0, "target_id": -20, "target_slot": 2}]}]}}
+        request = {"prompt": {"349:412": {"class_type": "CLIPTextEncode", "inputs": {}},
+                              "532": {"class_type": "AdachiExclusiveSwitch", "inputs": {"active_inputs": 1}}},
+                   "extra_data": {"extra_pnginfo": {"workflow": workflow}}}
+        saved = copy.deepcopy(workflow)
+        backend.normalize_exclusive_prompt(request)
+        self.assertEqual(request["prompt"]["532"]["inputs"], {"active_inputs": 1, "input_a": ["349:412", 0]})
+        self.assertEqual(workflow, saved)
+        # Do not invent a source that was never submitted, or use a mismatched
+        # node type that happens to have the same execution ID.
+        for source in (None, {"class_type": "OtherNode", "inputs": {}}):
+            bad = copy.deepcopy(request)
+            bad["prompt"]["532"]["inputs"].pop("input_a")
+            if source is None:
+                bad["prompt"].pop("349:412")
+            else:
+                bad["prompt"]["349:412"] = source
+            backend.normalize_exclusive_prompt(bad)
+            self.assertNotIn("input_a", bad["prompt"]["532"]["inputs"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -680,6 +680,86 @@ def _workflow_exclusive_flags(extra_pnginfo, unique_id):
     return flags
 
 
+def _workflow_exclusive_sources(extra_pnginfo, unique_id, prompt):
+    """Resolve saved graph outputs to existing flattened execution nodes only."""
+    workflow = extra_pnginfo.get("workflow") if isinstance(extra_pnginfo, dict) else None
+    if not isinstance(workflow, dict):
+        return {}
+    definitions = {str(g.get("id")): g for g in workflow.get("definitions", {}).get("subgraphs", [])}
+
+    def index(graph):
+        nodes = {str(n.get("id")): n for n in graph.get("nodes", [])}
+        links = {}
+        for link in graph.get("links", []):
+            if isinstance(link, dict):
+                links[str(link["id"])] = (str(link["origin_id"]), link.get("origin_slot", 0))
+            else:
+                links[str(link[0])] = (str(link[1]), link[2])
+        return nodes, links
+
+    graph, path = workflow, []
+    parts = str(unique_id).split(":")
+    for parent_id in parts[:-1]:
+        nodes, _ = index(graph)
+        parent = nodes.get(parent_id)
+        graph = definitions.get(str(parent.get("type"))) if parent else None
+        if graph is None:
+            return {}
+        path.append(parent_id)
+    nodes, links = index(graph)
+    selector = nodes.get(parts[-1])
+    if not selector or selector.get("type") != "AdachiExclusiveSwitch":
+        return {}
+
+    def resolve(current, node_id, slot, prefix, seen):
+        key = (id(current), node_id, slot)
+        if key in seen or len(seen) > 64:
+            return None
+        seen = seen | {key}
+        current_nodes, current_links = index(current)
+        node = current_nodes.get(node_id)
+        if not node or node.get("mode", 0) in (2, 4):
+            return None
+        kind = node.get("type")
+        if kind == "GetNode":
+            values = node.get("widgets_values", [])
+            name = values[0] if isinstance(values, list) and values else None
+            setter = next((n for n in current_nodes.values() if n.get("type") == "SetNode"
+                           and isinstance(n.get("widgets_values"), list)
+                           and n["widgets_values"] and n["widgets_values"][0] == name), None) if name else None
+            return resolve(current, str(setter["id"]), slot, prefix, seen) if setter else None
+        if kind in ("SetNode", "Reroute"):
+            inputs = node.get("inputs", [])
+            source = inputs[slot] if isinstance(slot, int) and 0 <= slot < len(inputs) else inputs[0] if inputs else {}
+            link = current_links.get(str(source.get("link")))
+            return resolve(current, *link, prefix, seen) if link else None
+        if kind in definitions:
+            child = definitions[kind]
+            outputs = child.get("outputs", [])
+            if not isinstance(slot, int) or not 0 <= slot < len(outputs):
+                return None
+            _, child_links = index(child)
+            output_links = [child_links[str(i)] for i in outputs[slot].get("linkIds", []) if str(i) in child_links]
+            if len(output_links) != 1:
+                return None
+            return resolve(child, *output_links[0], prefix + [node_id], seen)
+        execution_id = ":".join(prefix + [node_id])
+        execution_node = prompt.get(execution_id)
+        if isinstance(execution_node, dict) and execution_node.get("class_type") == kind:
+            return [execution_id, slot]
+        return None
+
+    result = {}
+    for source in selector.get("inputs", []):
+        name = source.get("name")
+        link = links.get(str(source.get("link")))
+        if name in ("input_a", "input_b") and link:
+            resolved = resolve(graph, *link, path, set())
+            if resolved is not None:
+                result[name] = resolved
+    return result
+
+
 def normalize_exclusive_prompt(data):
     """Resolve flags before validation/cache keys, without changing workflow wires."""
     prompt = data.get("prompt", {})
@@ -694,9 +774,12 @@ def normalize_exclusive_prompt(data):
             continue
         inputs = node.setdefault("inputs", {})
         inputs["active_inputs"] = flags
+        sources = _workflow_exclusive_sources(extra, node_id, prompt) if flags in (1, 2) else {}
         for name, bit in (("input_a", 1), ("input_b", 2)):
             if not flags & bit:
                 inputs.pop(name, None)
+            elif name not in inputs and name in sources:
+                inputs[name] = sources[name]
     return data
 
 
@@ -726,6 +809,7 @@ class AdachiExclusiveSwitch:
 
     @staticmethod
     def _selected_input(input_a, input_b, active_inputs, prompt=None, dynprompt=None, unique_id=None, extra_pnginfo=None):
+        frontend_flags, submitted_flags = active_inputs, None
         workflow_flags = _workflow_exclusive_flags(extra_pnginfo, unique_id)
         if workflow_flags is not None:
             active_inputs = workflow_flags
@@ -743,6 +827,7 @@ class AdachiExclusiveSwitch:
             # only one (or none) survives, regardless of stale frontend flags.
             connected = execution_node["inputs"]
             actual = int("input_a" in connected) | (int("input_b" in connected) << 1)
+            submitted_flags = actual
             if actual != 3:
                 active_inputs = actual if workflow_flags is None else actual & workflow_flags
         if active_inputs == -1:
@@ -752,7 +837,8 @@ class AdachiExclusiveSwitch:
             raise ValueError(
                 "Auto Exclusive Switch requires exactly one enabled input. "
                 "Bypass one branch or disconnect it; both enabled / both absent are invalid. "
-                f"Received enabled-state={active_inputs}."
+                f"Received enabled-state={active_inputs}. "
+                f"node={unique_id}, frontend={frontend_flags}, workflow={workflow_flags}, submitted={submitted_flags}."
             )
         name = "input_a" if active_inputs == 1 else "input_b"
         if (input_a if active_inputs == 1 else input_b) is _MISSING_INPUT:

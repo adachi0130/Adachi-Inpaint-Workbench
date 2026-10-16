@@ -1,10 +1,11 @@
 # Git versions and rollback
 
-The current local version is **v0.5.12**. Both the installed plugin and the source repository retain local commits and tags. This update is also pushed to the GitHub main branch.
+The current local version is **v0.5.13**. Both the installed plugin and the source repository retain local commits and tags. This update is also pushed to the GitHub main branch.
 
 | Tag | Contents |
 |---|---|
-| `v0.5.12` | Trace Get/Set source states server-side before prompt validation and caching |
+| `v0.5.13` | Restore dropped enabled inputs through saved subgraph output routes |
+| `v0.5.12` / `local-before-v0.5.13` | Trace Get/Set source states server-side before prompt validation and caching |
 | `v0.5.11` / `local-before-v0.5.12` | Resolve exclusive selection from actual submitted connections despite stale frontend flags |
 | `v0.5.10` / `local-before-v0.5.11` | Pin inline fit, bound/cache inline previews, Upload label and restart comparison rounds after adoption |
 | `v0.5.9` / `local-before-v0.5.10` | Bound comparison bitmap allocations and redraw only the swept divider strip |
@@ -24,13 +25,13 @@ To undo only this update, run in the plugin folder:
 
 ```powershell
 git status --short
-git switch --detach local-before-v0.5.12
+git switch --detach local-before-v0.5.13
 ```
 
 Return to this version with:
 
 ```powershell
-git switch --detach v0.5.12
+git switch --detach v0.5.13
 ```
 
 Restart ComfyUI and hard-refresh the browser (`Ctrl+F5`) after switching versions.
