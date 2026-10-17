@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.0
+
+- Add a download button next to the inline upload button: it saves the current source image as a PNG at its own resolution. It stays disabled until an image is loaded.
+- Change the pin toggle so it freezes the view exactly as it is drawn instead of re-fitting the image: panning and zooming stay available while pinned, and the pinned view survives canvas resizes.
+- Keep routing the plain wheel to the workflow canvas while pinned, as before.
+
 ## 0.6.9
 
 - Place the Clear button directly after the swap width/height control in Crop & Blend; in Mask mode it is the only visible button of that bar and stays at the bottom left of the canvas.

@@ -95,6 +95,7 @@ export class InlineMaskEditor {
         this.root.append(head);
         const files = el("div", "dd-row dd-files");
         this.loadButton = this.button(files, "↑", T("Upload an image, or drop / paste one"), () => this.imageInput.click(), "dd-primary");
+        this.downloadButton = this.button(files, "↓", T("Download the source image"), () => this.downloadSource(), "dd-primary");
         this.filename = el("span", "dd-filename", T("Drop an image onto the canvas"));
         files.append(this.filename);
         this.root.append(files);
@@ -174,7 +175,7 @@ export class InlineMaskEditor {
         this.zoomLabel = el("span", "dd-zoom", "100%");
         footer.append(this.zoomLabel);
         this.fitButton = this.button(footer, "⛶", T("Fit the image to the canvas"), () => this.fit());
-        this.keepButton = this.button(footer, "", T("Keep"), event => { event.stopPropagation(); this.setKeepFit(!this.keepFit); });
+        this.keepButton = this.button(footer, "", T("Pin the current view"), event => { event.stopPropagation(); this.setKeepFit(!this.keepFit); });
         this.keepButton.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 3 5 5-4 1-4 4 1 4-3 3-3-6-6-3 3-3 4 1 4-4zM8 16l-6 6"/></svg>';
         // The inline button must not select/bring forward the ComfyUI node:
         // newer frontends can remeasure its DOM widget on that bubbling click.
@@ -201,6 +202,7 @@ export class InlineMaskEditor {
             actions.addEventListener("keydown", event => this.keydown(event));
             this.loadButton.after(this.fitButton);
             this.fitButton.after(this.keepButton);
+            this.loadButton.after(this.downloadButton);
             // These are the original live controls; the sampler mounts this
             // same DOM tree so brush state and callbacks are preserved.
         }
@@ -325,6 +327,7 @@ export class InlineMaskEditor {
     updateButtons() {
         this.keepButton?.classList.toggle("dd-active", !!this.keepFit);
         this.keepButton?.setAttribute("aria-pressed", String(!!this.keepFit));
+        if (this.downloadButton) this.downloadButton.disabled = !this.image;
         this.stage?.classList.toggle("dd-erasing", !!(this.altErase || this.tool === "erase" || this.stroke?.type === "erase"));
         for (const [name, button] of Object.entries(this.toolButtons || {})) {
             const active = name === (this.altErase ? "erase" : this.tool);
@@ -341,7 +344,6 @@ export class InlineMaskEditor {
 
     dimensions() {
         const r = this.canvas.getBoundingClientRect();
-        if (this.keepFit) { this.zoom = 1; this.pan = { x: 0, y: 0 }; }
         if (this.viewport?.width && this.viewport?.height && r.width && r.height) {
             this.pan.x *= r.width / this.viewport.width;
             this.pan.y *= r.height / this.viewport.height;
@@ -360,7 +362,6 @@ export class InlineMaskEditor {
     pointerDown(event) {
         if (event.button === 2) { event.preventDefault(); event.stopPropagation(); return; }
         if (!this.ready || this.pointerId != null) return;
-        if (this.keepFit && (this.space || (!event.altKey && this.tool === "pan") || event.button === 1)) return;
         event.preventDefault(); event.stopPropagation(); this.root.focus({ preventScroll: true });
         this.altErase = !!event.altKey; this.updateButtons();
         this.pointerId = event.pointerId;
@@ -556,11 +557,25 @@ export class InlineMaskEditor {
         const link = el("a"); link.download = "adachi-mask.png"; link.href = this.flush(); link.click();
     }
 
+    downloadSource() {
+        if (!this.image) return;
+        const out = makeCanvas();
+        out.width = this.image.naturalWidth || this.image.width;
+        out.height = this.image.naturalHeight || this.image.height;
+        out.getContext("2d").drawImage(this.image, 0, 0);
+        const label = String(this.filename.textContent || "").split(/[\\/]/).pop().replace(/\.[^.]+$/, "");
+        const link = el("a");
+        link.download = `${label || "adachi-source"}.png`;
+        link.href = out.toDataURL("image/png");
+        link.click();
+        out.width = out.height = 0;
+    }
+
     fit() { this.zoom = 1; this.pan = { x: 0, y: 0 }; this.schedule(); }
 
     setKeepFit(enabled, notify = true) {
+        // Pin freezes the view exactly as drawn; it must not re-fit the image.
         this.keepFit = !!enabled;
-        if (this.keepFit) this.fit();
         this.updateButtons(); this.schedule();
         if (notify) this.options.onKeepFit?.(this.keepFit);
     }

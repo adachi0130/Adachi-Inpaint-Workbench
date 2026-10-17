@@ -111,6 +111,8 @@ const ZH = {
   "Mask": "蒙版",
   "Fit": "适应",
   "Keep": "保持",
+  "Pin the current view": "固定当前视图",
+  "Download the source image": "下载原图",
   "Upload": "上传",
   "Fit the image to the canvas": "适应画布",
   "File is too large (max 64 MB)": "图片文件不能超过 64 MB",
