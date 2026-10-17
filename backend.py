@@ -333,10 +333,13 @@ class AdachiInlineMask:
             digest.update(str(value).encode("utf-8"))
             digest.update(b"\x00")
         if not source_data:
+            # The source is a stable input file; hashing its size and mtime is
+            # enough to detect a replacement and avoids reading a full high-res
+            # PNG on every change/execution. Content-hash the bytes only when
+            # the metadata cannot be read (the loader will then raise anyway).
             try:
-                with _input_path(image).open("rb") as stream:
-                    for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-                        digest.update(chunk)
+                stat = _input_path(image).stat()
+                digest.update(f"{stat.st_size}:{stat.st_mtime_ns}".encode("utf-8"))
             except (ValueError, OSError):
                 return float("nan")
         return digest.hexdigest()

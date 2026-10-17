@@ -4,7 +4,7 @@ import { InlineMaskEditor } from "./editor.js?v=0.7.1";
 import { installInpaintWorkbench } from "./inpaint_node.js?v=0.6.1";
 import { bindWidgetToNodeWidth } from "./widget_layout.js?v=0.5.5";
 import { routeWheelOutsideImage } from "./wheel_routing.js";
-import { InlineCropController } from "./inline_crop.js?v=0.7.2";
+import { InlineCropController } from "./inline_crop.js?v=0.8.0";
 import { canStoreDraft, prepareInlineDraft, syncInlineWidgets } from "./draft_guard.js?v=0.6.3";
 import { T } from "./i18n.js";
 import { removeLegacyFeedback } from "./legacy_feedback.js?v=0.6.4";

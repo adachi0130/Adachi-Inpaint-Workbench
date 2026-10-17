@@ -267,10 +267,14 @@ export class InlineCropController {
     this.blendButton = button(
       "◐",
       "Edit layer blending: brush keeps the new result; Alt restores original pixels. Hold right-click to preview the original, release to return.",
-      () => {
-        this.activate("blend");
-        this.changed();
-      },
+      () =>
+        this.run(async () => {
+          // Blending is opt-in after adoption: build the blend mask on first
+          // use, then switch the editor into the blend layer.
+          if (!this.contexts.blend) await this.makeBlend(this.widgets.blend_data.value);
+          this.activate("blend");
+          this.changed();
+        }),
     );
     this.commitButton = button("✓", "Merge the visible result and blend mask into the source image. After merging, right-click releases the selected region.", () =>
       this.flatten(),
@@ -498,7 +502,8 @@ export class InlineCropController {
       if (this.widgets.layer_image.value) {
         this.layer = await load(this.imageUrl(this.widgets.layer_image.value));
         await this.makeBlend(this.widgets.blend_data.value);
-        if (this.mode === "crop") this.activate("blend");
+        // Stay on the repaint mask; the adopted layer is baked into the source,
+        // and blending is entered explicitly through the ◐ button.
       }
     }
     this.revision++;
@@ -543,9 +548,11 @@ export class InlineCropController {
       return;
     this.layer = decoded;
     this.widgets.layer_image.value = name;
-    if (!this.contexts.blend && this.target !== "blend")
-      await this.makeBlend(this.widgets.blend_data.value);
-    this.activate("blend");
+    // Adopt then return: with an empty blend mask the backend hard-composites
+    // the whole crop from layer_image, so the result is immediately baked into
+    // the source and the repaint mask is reused on the next generation. Blending
+    // is no longer entered automatically; the ◐ button opens it on demand.
+    this.activate("mask");
     this.revision++;
     this.sync();
     this.editor.schedule();

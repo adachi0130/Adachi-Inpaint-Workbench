@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.8.0
+
+- Restructure adoption in Crop & Blend: after "Adopt this result" the layer is baked into the source at full quality and the editor returns to the repaint mask immediately, so you can generate again right away. The ◐ button now enters layer blending explicitly instead of auto-entering after adoption.
+- Speed up inline mask change detection: the source image is fingerprinted by size and mtime instead of hashing its full high-resolution bytes on every change/execution.
+
 ## 0.7.2
 
 - Adopting a result no longer decodes the full-size image a second time: the already-decoded image is reused for the crop layer, cutting one download/decode round trip.
