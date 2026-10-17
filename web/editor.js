@@ -227,12 +227,16 @@ export class InlineMaskEditor {
     status(message, error = false) {
         this.message.textContent = message;
         this.message.classList.toggle("dd-error", error);
-        // Errors and deliberate notices stay visible; transient progress lines hide.
-        this.message.hidden = !message || (!error && !this.notice);
-        this.notice = false;
+        // Only errors stay visible; transient hints and progress lines hide.
+        this.message.hidden = !error;
     }
 
-    notice(message) { this.notice = true; this.status(message); }
+    notice(message) {
+        // An explicit non-error notice that should remain visible.
+        this.message.textContent = message;
+        this.message.classList.remove("dd-error");
+        this.message.hidden = false;
+    }
 
     async upload(file) {
         if (file.size > 64 * 1024 * 1024) { this.status(T("File is too large (max 64 MB)"), true); return; }
