@@ -93,14 +93,17 @@ export class InlineCropController {
         e.preventDefault();
         e.stopPropagation();
         editor.root.focus({ preventScroll: true });
-        if (this.layer && this.region.locked && !editor.stroke && editor.pointerId == null) {
+        // Hold-right preview only makes sense while adjusting the blend layer.
+        // After adoption the layer is already baked, so right-click reselects
+        // (reselect flattens any remaining layer first).
+        if (this.target === "blend" && this.layer && this.region.locked && !editor.stroke && editor.pointerId == null) {
           this.previewOriginal = true;
           this.originalPreviewPointer = e.pointerId;
           editor.canvas.setPointerCapture(e.pointerId);
           editor.cursor = null;
           this.revision++;
           editor.schedule();
-        } else if (!this.layer && this.region.locked) this.run(() => this.reselect());
+        } else if (this.region.locked) this.run(() => this.reselect());
         return;
       }
       if (
@@ -276,14 +279,10 @@ export class InlineCropController {
           this.changed();
         }),
     );
-    this.commitButton = button("✓", "Merge the visible result and blend mask into the source image. After merging, right-click releases the selected region.", () =>
-      this.flatten(),
-    );
     // Move the original live button, retaining its history and disabled state.
     this.undoButton = e.undoButton;
     this.undoButton.textContent = "↶";
     this.undoButton.title = T("Undo the last stroke in the active repaint or blend mask (Ctrl+Z). Redo with Ctrl+Shift+Z.");
-    this.commitButton.after(this.undoButton);
     this.custom = make("div", "dd-crop-custom");
     this.custom.hidden = true;
     for (const key of ["cropWidth", "cropHeight"]) {
@@ -326,14 +325,13 @@ export class InlineCropController {
     this.modeSelect.value = this.mode;
     // No hover text on the painting canvas; the bottom controls carry the hints.
     this.editor.canvas.removeAttribute("title");
-    for (const control of [this.preset, this.swapButton, this.maskButton, this.blendButton, this.commitButton]) {
+    for (const control of [this.preset, this.swapButton, this.maskButton, this.blendButton]) {
       control.hidden = this.mode !== "crop";
     }
     this.custom.hidden = this.mode !== "crop" || this.preset.value !== "custom";
     this.undoButton.disabled = !!this.busy || !this.editor.history.length;
     this.clearButton.disabled = !!this.busy || !this.editor.ready;
     this.blendButton.disabled = !this.layer;
-    this.commitButton.disabled = !this.layer;
     this.maskButton.classList.toggle("dd-active", this.target === "mask");
     this.blendButton.classList.toggle("dd-active", this.target === "blend");
     this.modeSelect.disabled = !!this.busy;
@@ -502,8 +500,10 @@ export class InlineCropController {
       if (this.widgets.layer_image.value) {
         this.layer = await load(this.imageUrl(this.widgets.layer_image.value));
         await this.makeBlend(this.widgets.blend_data.value);
-        // Stay on the repaint mask; the adopted layer is baked into the source,
-        // and blending is entered explicitly through the ◐ button.
+        // Restore the state the user left: a non-empty blend mask means they were
+        // still adjusting the blend layer, otherwise the adopted layer is already
+        // baked and we stay on the repaint mask.
+        if (this.widgets.blend_data.value && this.mode === "crop") this.activate("blend");
       }
     }
     this.revision++;
