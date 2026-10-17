@@ -227,14 +227,20 @@ export class InlineMaskEditor {
     status(message, error = false) {
         this.message.textContent = message;
         this.message.classList.toggle("dd-error", error);
-        this.message.hidden = !error;
+        // Errors and deliberate notices stay visible; transient progress lines hide.
+        this.message.hidden = !message || (!error && !this.notice);
+        this.notice = false;
     }
+
+    notice(message) { this.notice = true; this.status(message); }
 
     async upload(file) {
         if (file.size > 64 * 1024 * 1024) { this.status(T("File is too large (max 64 MB)"), true); return; }
         try {
             this.status(T("Loading image…"));
-            await this.options.onUpload?.(file);
+            // Keep the painted mask when a new source replaces the current one,
+            // the same way adopting a result does. A first upload starts empty.
+            await this.options.onUpload?.(file, { preserveMask: !!this.image });
         } catch (error) { this.status(error.message, true); }
     }
 
@@ -287,10 +293,10 @@ export class InlineMaskEditor {
     async replaceSource(url, name = "") {
         const version = ++this.loadVersion;
         const image = await loadImage(url);
-        if (version !== this.loadVersion || this.destroyed) return;
-        if (image.width !== this.mask.width || image.height !== this.mask.height) {
-            throw new Error(T("The result size must match the source image to preserve the mask"));
-        }
+        if (version !== this.loadVersion || this.destroyed) return false;
+        // A different size cannot keep the painted mask; report it so the caller
+        // can fall back to a fresh load instead of failing the upload.
+        if (image.width !== this.mask.width || image.height !== this.mask.height) return false;
         // Replacing only the source preserves mask pixels, the base snapshot,
         // command history, redo history, active strokes and the current view.
         this.flush();
@@ -298,6 +304,7 @@ export class InlineMaskEditor {
         this.filename.textContent = name || T("Embedded image");
         this.filename.title = this.filename.textContent;
         this.updateButtons(); this.schedule();
+        return true;
     }
 
     importMask(ctx, image) {

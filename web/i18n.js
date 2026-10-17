@@ -124,8 +124,8 @@ const ZH = {
   // inline_inpaint.js
   "The inline mask node was removed": "内联蒙版节点已移除",
   "Adopted the result as the new source image; the mask and undo history were preserved": "已采用重绘结果作为新原图，蒙版与撤销记录已保留",
-  "The result size must match the source image to preserve the mask": "为保留蒙版，重绘结果尺寸必须与原图一致",
-  "Wait for the source image to finish loading before adopting a result": "请等待原图加载完成后再采用结果",
+  "The new image has a different size, so the mask was reset": "新图尺寸与原图不同，蒙版已重置",
+  "Wait for the current image to finish loading": "请等待当前图片加载完成",
   "Drag to resize canvas height": "上下拖动调整画布高度",
   "Resize canvas height": "调整画布高度",
   "Upload failed": "上传失败",

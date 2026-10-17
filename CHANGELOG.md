@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.1
+
+- Uploading a new source image now keeps the painted mask, undo/redo history and viewport, the same way adopting a result does; only the source pixels change. A first upload still starts with an empty mask.
+- When the new image has a different size the mask cannot be kept, so the image loads fresh and a notice explains that the mask was reset instead of failing the upload.
+
 ## 0.7.0
 
 - Add a download button next to the inline upload button: it saves the current source image as a PNG at its own resolution. It stays disabled until an image is loaded.

@@ -1,6 +1,6 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
-import { InlineMaskEditor } from "./editor.js?v=0.7.0";
+import { InlineMaskEditor } from "./editor.js?v=0.7.1";
 import { installInpaintWorkbench } from "./inpaint_node.js?v=0.6.1";
 import { bindWidgetToNodeWidth } from "./widget_layout.js?v=0.5.5";
 import { routeWheelOutsideImage } from "./wheel_routing.js";
@@ -132,7 +132,7 @@ app.registerExtension({
                 onImage() { if (!restoring || !node.properties.adachi_compact_ui) fitNodeToImage(); },
                 onGraphWheel: event => app.canvas?.processMouseWheel(event),
                 async onUpload(file, { preserveMask = false, preserveCrop = false } = {}) {
-                    if (preserveMask && editor.image && !editor.ready) throw new Error(T("Wait for the source image to finish loading before adopting a result"));
+                    if (preserveMask && editor.image && !editor.ready) throw new Error(T("Wait for the current image to finish loading"));
                     const version = ++uploadVersion;
                     const body = new FormData();
                     body.append("image", file, file.name);
@@ -145,14 +145,16 @@ app.registerExtension({
                     const name = uploaded.subfolder ? `${uploaded.subfolder}/${uploaded.name}` : uploaded.name;
                     restoring = false;
                     crop?.activate("mask");
-                    if (preserveMask && editor.ready) await editor.replaceSource(imageUrl(name), file.name);
+                    let kept = false;
+                    if (preserveMask && editor.ready) kept = await editor.replaceSource(imageUrl(name), file.name);
                     else await editor.setImage(imageUrl(name), "", file.name);
                     if (version !== uploadVersion || editor.destroyed) return;
                     imageWidget.value = name;
-                    maskWidget.value = preserveMask ? editor.flush() : "";
+                    maskWidget.value = kept ? editor.flush() : "";
                     sourceWidget.value = editor.embed.checked ? editor.sourceData() : "";
                     if (!preserveCrop) crop?.reset();
                     await beforeModeChange();
+                    if (preserveMask && !kept) editor.notice(T("The new image has a different size, so the mask was reset"));
                     markChanged();
                 },
                 onEmbed(enabled) {
