@@ -40,9 +40,12 @@ export function installResultAdoption(node, crop) {
                 throw Error(T("The crop changed while adopting the result"));
             }
             const descriptor = {filename:uploaded.name, subfolder:uploaded.subfolder || "", type:"input"};
-            await crop.accept({job:region.job, image:descriptor}, {allowBusy:true});
+            await crop.accept({job:region.job, image:descriptor}, {allowBusy:true, image});
             const name = descriptor.subfolder ? `${descriptor.subfolder}/${descriptor.filename}` : descriptor.filename;
-            if (crop.widgets.layer_image.value !== name) throw Error(T("The crop changed while adopting the result"));
+            if (crop.widgets.layer_image.value !== name) {
+                // accept() may have skipped silently (busy / changed job / duplicate).
+                throw Error(T("The result was not applied; the crop or layer state changed"));
+            }
             editor.status("");
         } finally {
             URL.revokeObjectURL(objectUrl); crop.busy = false; crop.sync();

@@ -1,7 +1,7 @@
 import { CROP_PRESETS, cropAt } from "./crop_geometry.js?v=0.6.2";
 import { T } from "./i18n.js";
 import { syncCropDimensions } from "./parameter_bridge.js?v=0.6.4";
-import { installResultAdoption } from "./result_adoption.js?v=0.6.4";
+import { installResultAdoption } from "./result_adoption.js?v=0.7.2";
 
 const fields = ["mask", "baseMask", "history", "future", "lastMask", "dirty"];
 const canvas = (w, h) =>
@@ -505,7 +505,7 @@ export class InlineCropController {
     this.sync();
     this.editor.schedule();
   }
-  async accept(record, {allowBusy = false} = {}) {
+  async accept(record, {allowBusy = false, image = null} = {}) {
     if (
       this.editor.destroyed ||
       this.mode !== "crop" ||
@@ -520,7 +520,7 @@ export class InlineCropController {
       this.resultTimer = setTimeout(() => {
         const next = this.pendingResult;
         this.pendingResult = null;
-        this.accept(next).catch((error) =>
+        this.accept(next, {allowBusy}).catch((error) =>
           this.editor.status(error.message, true),
         );
       }, 50);
@@ -531,7 +531,9 @@ export class InlineCropController {
       : record.image.filename;
     if (name === this.widgets.layer_image.value) return;
     const version = ++this.acceptVersion;
-    const image = await load(this.imageUrl(name));
+    // The adoption path already decoded this image once; reuse it instead of
+    // downloading and decoding the full-size result a second time.
+    const decoded = image || await load(this.imageUrl(name));
     if (
       this.editor.destroyed ||
       version !== this.acceptVersion ||
@@ -539,7 +541,7 @@ export class InlineCropController {
       this.mode !== "crop"
     )
       return;
-    this.layer = image;
+    this.layer = decoded;
     this.widgets.layer_image.value = name;
     if (!this.contexts.blend && this.target !== "blend")
       await this.makeBlend(this.widgets.blend_data.value);

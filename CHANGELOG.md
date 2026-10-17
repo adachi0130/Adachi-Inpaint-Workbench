@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.2
+
+- Adopting a result no longer decodes the full-size image a second time: the already-decoded image is reused for the crop layer, cutting one download/decode round trip.
+- Show a visible message when adoption is skipped because the preview is still loading, no target is selected, or the crop/layer state changed, instead of failing silently.
+- Bump the asset versions for the crop, comparison and result-adoption modules.
+
 ## 0.7.1
 
 - Uploading a new source image now keeps the painted mask, undo/redo history and viewport, the same way adopting a result does; only the source pixels change. A first upload still starts with an empty mask.

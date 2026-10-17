@@ -1,6 +1,6 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
-import { ImageCompareView } from "./compare.js?v=0.5.9";
+import { ImageCompareView } from "./compare.js?v=0.7.2";
 import { appendComparison } from "./compare_history.js?v=0.5.8";
 import { routeWheelOutsideImage } from "./wheel_routing.js";
 import { T } from "./i18n.js";

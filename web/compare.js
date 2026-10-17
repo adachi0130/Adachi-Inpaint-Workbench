@@ -118,7 +118,9 @@ export class ImageCompareView {
 
     async adopt() {
         this.refreshTargets();
-        if (!this.ready || !this.targetSelect.value || this.busy) return;
+        if (this.busy) return;
+        if (!this.ready) { this.status(T("The result preview is still loading"), true); return; }
+        if (!this.targetSelect.value) { this.status(T("Select an inline mask to adopt into"), true); return; }
         const target = this.targetSelect.value, result = this.results[this.index];
         this.busy = true; this.updateButton(); this.status(T("Setting the result as the new source image…"));
         try {
