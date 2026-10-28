@@ -1,10 +1,10 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
 import { InlineMaskEditor } from "./editor.js?v=0.8.0";
-import { installInpaintWorkbench } from "./inpaint_node.js?v=0.6.1";
+import { installInpaintWorkbench } from "./inpaint_node.js?v=0.8.2";
 import { bindWidgetToNodeWidth } from "./widget_layout.js?v=0.5.5";
 import { routeWheelOutsideImage } from "./wheel_routing.js";
-import { InlineCropController } from "./inline_crop.js?v=0.8.1";
+import { InlineCropController } from "./inline_crop.js?v=0.8.2";
 import { canStoreDraft, prepareInlineDraft, syncInlineWidgets } from "./draft_guard.js?v=0.6.3";
 import { T } from "./i18n.js";
 import { removeLegacyFeedback } from "./legacy_feedback.js?v=0.6.4";
@@ -146,8 +146,13 @@ app.registerExtension({
                     restoring = false;
                     crop?.activate("mask");
                     let kept = false;
-                    if (preserveMask && editor.ready) kept = await editor.replaceSource(imageUrl(name), file.name);
-                    else await editor.setImage(imageUrl(name), "", file.name);
+                    if (preserveMask && editor.ready) {
+                        kept = await editor.replaceSource(imageUrl(name), file.name);
+                        if (version !== uploadVersion || editor.destroyed) return;
+                        // A different-sized replacement cannot reuse the old mask.
+                        // Actually load it as a fresh image before clearing state.
+                        if (!kept) await editor.setImage(imageUrl(name), "", file.name);
+                    } else await editor.setImage(imageUrl(name), "", file.name);
                     if (version !== uploadVersion || editor.destroyed) return;
                     imageWidget.value = name;
                     maskWidget.value = kept ? editor.flush() : "";

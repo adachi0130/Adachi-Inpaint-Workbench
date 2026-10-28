@@ -1,6 +1,6 @@
 import { CROP_PRESETS, cropAt } from "./crop_geometry.js?v=0.6.2";
 import { T } from "./i18n.js";
-import { syncCropDimensions } from "./parameter_bridge.js?v=0.6.4";
+import { syncCropDimensions, syncCurrentDimensions } from "./parameter_bridge.js?v=0.8.2";
 import { installResultAdoption } from "./result_adoption.js?v=0.7.2";
 
 const fields = ["mask", "baseMask", "history", "future", "lastMask", "dirty"];
@@ -42,6 +42,16 @@ export class InlineCropController {
     this.patchCanvas = canvas(1, 1);
     this.build();
     installResultAdoption(node, this);
+    // Only user uploads go through editor.upload; internal layer merges and
+    // adopting an already-sized result call onUpload directly instead.
+    const upload = editor.upload.bind(editor);
+    editor.upload = async file => {
+      const previous = editor.image;
+      await upload(file);
+      if (!editor.destroyed && editor.ready && editor.image !== previous && this.mode === "mask") {
+        syncCurrentDimensions(node);
+      }
+    };
     const originalFlush = editor.flush.bind(editor);
     editor.flush = () => {
       if (this.target !== "blend") return originalFlush();
@@ -359,6 +369,7 @@ export class InlineCropController {
       this.state({ ...this.region, job: crypto.randomUUID() });
       this.editor.fit();
       this.sync();
+      if (mode === "mask") syncCurrentDimensions(this.node);
       this.changed();
     };
     const recovery = this.beforeModeChange?.();

@@ -1,6 +1,6 @@
 import { app } from "../../scripts/app.js";
 import { InpaintParameterPanel } from "./inpaint_panel.js?v=0.6.1";
-import { connectedEditor, connectedSamplers, relocateWidgets } from "./parameter_bridge.js";
+import { connectedEditor, connectedSamplers, relocateWidgets, syncCurrentDimensions } from "./parameter_bridge.js?v=0.8.2";
 import { routeWheelOutsideImage } from "./wheel_routing.js";
 import { T } from "./i18n.js";
 import { bindWidgetToNodeWidth } from "./widget_layout.js?v=0.5.5";
@@ -83,7 +83,18 @@ export function installInpaintWorkbench(nodeType) {
         const configured = node.onConfigure;
         node.onConfigure = function () { const result = configured?.apply(this, arguments); fold.open = !!node.properties.adachi_tools_open; queueMicrotask(() => { if (!removed) { panel.refresh(); scheduleSize(); } }); return result; };
         const connections = node.onConnectionsChange;
-        node.onConnectionsChange = function () { const result = connections?.apply(this, arguments); queueMicrotask(() => { if (!removed) panel.refresh(); }); return result; };
+        node.onConnectionsChange = function (type, slot, connected) {
+            const result = connections?.apply(this, arguments);
+            // Graph restoration also connects wires: never overwrite the sizes
+            // saved in a workflow while it is being configured.
+            const userImageConnection = !app.configuringGraph && type === 1 && connected && node.inputs?.[slot]?.name === "image";
+            queueMicrotask(() => {
+                if (removed) return;
+                panel.refresh();
+                if (userImageConnection) syncCurrentDimensions(connectedEditor(node), node);
+            });
+            return result;
+        };
         const previousRemoved = node.onRemoved;
         node.onRemoved = function () {
             removed = true; cancelAnimationFrame(frame); observer.disconnect();

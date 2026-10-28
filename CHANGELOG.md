@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.8.2
+
+- Actually display a newly uploaded image when its dimensions differ; the incompatible old mask is reset. Same-size replacement continues to preserve the mask.
+- Automatically fill connected inpaint dimensions from an uploaded image in Mask mode and from a locked crop in Crop & Blend mode. Existing saved workflow dimensions and linked parameter inputs are respected.
+
 ## 0.8.1
 
 - Expire only this plugin's comparison preview PNGs after 24 hours, checking hourly even in a long-running ComfyUI. Adopted input images and unrelated temporary files are preserved. Cached comparisons refresh before the expiry deadline.

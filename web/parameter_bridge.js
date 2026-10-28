@@ -36,9 +36,10 @@ export function connectedSamplers(source) {
 }
 
 // Use the same rounding, range and linked-input rules as Use source size.
-export function syncCropDimensions(source, width, height) {
+export function syncCropDimensions(source, width, height, onlyTarget = null) {
     const aligned = value => Math.max(64, Math.min(8192, Math.round(value / 8) * 8));
     for (const target of connectedSamplers(source)) {
+        if (onlyTarget && target !== onlyTarget) continue;
         target.adachiParameters?.refresh();
         for (const [name, value] of [["width", width], ["height", height]]) {
             if (target.inputs?.some(input => input.name === name && input.link != null)) continue;
@@ -50,6 +51,16 @@ export function syncCropDimensions(source, width, height) {
         }
         target.adachiParameters?.refresh();
     }
+}
+
+// The crop output does not have dimensions until the user locks a region.
+export function syncCurrentDimensions(source, onlyTarget = null) {
+    const editor = source?.adachiEditor, crop = source?.adachiCrop;
+    if (!editor?.ready || !editor.image) return;
+    const region = crop?.mode === "crop" ? crop.region : null;
+    if (crop?.mode === "crop" && !region?.locked) return;
+    const image = region || editor.image;
+    syncCropDimensions(source, image.naturalWidth || image.width, image.naturalHeight || image.height, onlyTarget);
 }
 
 export function relocateWidgets(owner, previous, next) {

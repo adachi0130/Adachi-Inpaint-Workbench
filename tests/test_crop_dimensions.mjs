@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {syncCropDimensions} from '../web/parameter_bridge.js';
+import {syncCropDimensions,syncCurrentDimensions} from '../web/parameter_bridge.js';
 const nodes=new Map(),links={},graph={links,getNodeById:id=>nodes.get(id),_nodes:[]};
 const source={id:1,type:'AdachiInlineMask',graph};nodes.set(1,source);graph._nodes.push(source);
 const make=(id,type,linkedWidth=false)=>{
@@ -10,4 +10,14 @@ const sampler=make(2,'AdachiWebUIInpaint'),prepare=make(3,'AdachiInpaintPrepare'
 syncCropDimensions(source,1024,1536);
 assert.deepEqual(sampler.widgets.map(w=>w.value),[1024,1536]);assert.deepEqual(prepare.widgets.map(w=>w.value),[640,1536]);
 syncCropDimensions(source,9000,17);assert.deepEqual(sampler.widgets.map(w=>w.value),[8192,64]);
-console.log('Crop resolution sync: connected targets, linked-input protection and source-size limits passed');
+source.adachiEditor={ready:true,image:{width:1001,height:1551}};
+source.adachiCrop={mode:'mask',region:{locked:false}};
+syncCurrentDimensions(source,sampler);
+assert.deepEqual(sampler.widgets.map(w=>w.value),[1000,1552]);
+assert.deepEqual(prepare.widgets.map(w=>w.value),[640,64]);
+source.adachiCrop={mode:'crop',region:{locked:false,width:512,height:768}};
+syncCurrentDimensions(source);assert.deepEqual(sampler.widgets.map(w=>w.value),[1000,1552]);
+source.adachiCrop.region.locked=true;
+syncCurrentDimensions(source);assert.deepEqual(sampler.widgets.map(w=>w.value),[512,768]);
+assert.deepEqual(prepare.widgets.map(w=>w.value),[640,768]);
+console.log('Resolution sync: source/crop modes, connection target, linked-input protection and alignment passed');

@@ -39,7 +39,7 @@ English and Simplified Chinese interfaces follow the ComfyUI language setting. T
 
 ### Paint directly on the graph
 
-Upload, drop or paste a source image and paint on **Inline Mask** itself. Mask strokes stay in the browser and are saved with the workflow; painting does not require a disk save/load round-trip for every stroke.
+Upload, drop or paste a source image and paint on **Inline Mask** itself. In Mask mode, uploading an image automatically fills the connected inpaint dimensions; a replacement of the same size keeps the mask, while a different-sized image starts with a fresh mask. Mask strokes stay in the browser and are saved with the workflow; painting does not require a disk save/load round-trip for every stroke.
 
 - Brush, soft edges, hardness, opacity, pen pressure, temporary erasing and shape tools.
 - A compact **↑ upload / ⛶ fit / pin** toolbar, with a mode selector at the upper right. Enable the pin (**Keep**) to keep the image fitted and centered; plain wheel then navigates the workflow, while `Ctrl` + wheel still changes brush size and `Shift` + wheel changes hardness.
