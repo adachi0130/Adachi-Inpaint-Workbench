@@ -58,28 +58,20 @@ class FakeVAE:
 
 
 class BackendTests(unittest.TestCase):
-    def test_comparison_cache_expires_before_preview_cleanup(self):
-        with patch.object(backend.time, "time", return_value=1_000):
-            first = backend.AdachiImageCompare.IS_CHANGED(None, None)
-        with patch.object(backend.time, "time", return_value=1_000 + 24 * 60 * 60):
-            later = backend.AdachiImageCompare.IS_CHANGED(None, None)
-        self.assertNotEqual(first, later)
-
     def test_comparison_previews_and_result_passthrough(self):
         image, _ = source()
         result = image.repeat_interleave(3, 0)
-        calls = []
-        class Preview:
-            def save_images(self, images, filename_prefix):
-                calls.append((images.clone(), filename_prefix))
-                return {"ui": {"images": [{"filename": f"{filename_prefix}_{i}.png", "subfolder": "", "type": "temp"} for i in range(len(images))]}}
-        with patch.dict(sys.modules, {"nodes": types.SimpleNamespace(PreviewImage=Preview)}):
-            output = backend.AdachiImageCompare().compare(image, result)
+        output = backend.AdachiImageCompare().compare(image, result, unique_id="test")
         self.assertTrue(torch.equal(output["result"][0], result))
         self.assertEqual(len(output["ui"]["adachi_originals"]), 1)
         self.assertEqual(len(output["ui"]["adachi_results"]), 3)
-        self.assertTrue(torch.equal(calls[0][0], image))
-        self.assertTrue(torch.equal(calls[1][0], result))
+        for preview in output["ui"]["adachi_originals"] + output["ui"]["adachi_results"]:
+            self.assertEqual(preview["type"], "adachi_memory")
+            raw = backend.PREVIEWS.get(preview["filename"][:-4])
+            with Image.open(io.BytesIO(raw)) as png:
+                actual = np.asarray(png)
+            expected = np.clip(255 * image[0].numpy(), 0, 255).astype(np.uint8)
+            np.testing.assert_array_equal(actual, expected)
 
     def test_comparison_rejects_crop_and_incompatible_batch(self):
         image, _ = source(batch=2)

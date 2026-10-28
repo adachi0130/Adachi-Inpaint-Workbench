@@ -15,13 +15,17 @@ import math
 from pathlib import Path
 import re
 import tempfile
-import time
 import warnings
 
 import numpy as np
 from PIL import Image, ImageFilter, ImageOps, UnidentifiedImageError
 import torch
 import torch.nn.functional as F
+
+if __package__:
+    from .preview_store import PREVIEWS
+else:  # Standalone CPU tests load this module directly.
+    from preview_store import PREVIEWS
 
 
 CATEGORY = "Adachi-Inpaint-Workbench"
@@ -619,13 +623,11 @@ class AdachiImageCompare:
 
     @classmethod
     def IS_CHANGED(cls, original, result, **kwargs):
-        # UI references point to temporary PNGs. Refresh cached previews before
-        # their 24-hour cleanup deadline, even if upstream tensors are unchanged.
-        return int(time.time() // (12 * 60 * 60))
+        # All evictions invalidate old cached UI descriptors; the store also
+        # identifies its process so a restarted server cannot replay stale URLs.
+        return PREVIEWS.fingerprint()
 
     def compare(self, original, result, prompt=None, unique_id=None, dynprompt=None):
-        import nodes
-
         original, result = _image_tensor(original), _image_tensor(result)
         if original.shape[1:3] != result.shape[1:3]:
             raise ValueError("Image sizes must match. Connect the final image output, not crop.")
@@ -633,9 +635,19 @@ class AdachiImageCompare:
             raise ValueError("Result batch must be a multiple of the original batch.")
         if original.shape[1] * original.shape[2] > MAX_IMAGE_PIXELS or max(original.shape[1:3]) > 16384:
             raise ValueError("Comparison images exceed the inline editor's 32 megapixel / 16384px limit.")
-        preview = nodes.PreviewImage()
-        before = preview.save_images(original, filename_prefix="adachi_compare_original")["ui"]["images"]
-        after = preview.save_images(result, filename_prefix="adachi_compare_result")["ui"]["images"]
+        images, encoded_size = [], 0
+        for batch in (original, result):
+            for pixels in batch:
+                rgb = np.clip(255.0 * pixels.cpu().numpy(), 0, 255).astype(np.uint8)
+                stream = io.BytesIO()
+                Image.fromarray(rgb).save(stream, format="PNG", compress_level=1)
+                data = stream.getvalue()
+                encoded_size += len(data)
+                if encoded_size > PREVIEWS.limit:
+                    raise ValueError("The comparison batch exceeds the in-memory preview limit. Reduce batch size or increase ADACHI_COMPARE_MEMORY_MIB (64–4096 MiB).")
+                images.append(data)
+        refs = PREVIEWS.put_batch(images, unique_id)
+        before, after = refs[:original.shape[0]], refs[original.shape[0]:]
         origin = _comparison_origin(prompt, unique_id, dynprompt)
         return {"ui": {"adachi_originals": before, "adachi_results": after, "adachi_origin": [origin] if origin else []}, "result": (result,)}
 

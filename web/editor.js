@@ -139,7 +139,16 @@ export class InlineMaskEditor {
         this.empty = el("div", "dd-empty");
         this.empty.append(el("span", "dd-empty-symbol", "+"), el("strong", "", T("Drop an image here")), el("span", "", T("Paint the areas to repaint directly in this node")));
         this.stage.append(this.empty);
-        this.root.append(this.stage, settings);
+        this.uploadIndicator = el("div", "dd-upload-progress");
+        this.uploadIndicator.hidden = true;
+        this.uploadIndicator.setAttribute("role", "status");
+        this.uploadIndicator.setAttribute("aria-live", "polite");
+        this.uploadLabel = el("span", "dd-upload-label");
+        this.uploadBar = el("progress", "dd-upload-bar");
+        this.uploadBar.max = 100;
+        this.uploadBar.setAttribute("aria-label", T("Image upload progress"));
+        this.uploadIndicator.append(this.uploadLabel, this.uploadBar);
+        this.root.append(this.stage, settings, this.uploadIndicator);
         this.canvas.oncontextmenu = event => { event.preventDefault(); event.stopPropagation(); };
         this.canvas.addEventListener("pointerdown", event => this.pointerDown(event));
         this.canvas.addEventListener("pointermove", event => this.pointerMove(event));
@@ -240,12 +249,30 @@ export class InlineMaskEditor {
 
     async upload(file) {
         if (file.size > 64 * 1024 * 1024) { this.status(T("File is too large (max 64 MB)"), true); return; }
+        const version = this.uploadUiVersion = (this.uploadUiVersion || 0) + 1;
+        const progress = ({phase, loaded = 0, total = 0}) => {
+            if (version !== this.uploadUiVersion || this.destroyed) return;
+            this.uploadIndicator.hidden = false;
+            if (phase === "upload" && total > 0) {
+                const percent = Math.max(0, Math.min(100, Math.round(100 * loaded / total)));
+                this.uploadLabel.textContent = `${T("Uploading image")} ${percent}%`;
+                this.uploadBar.value = percent;
+            } else {
+                this.uploadLabel.textContent = T(phase === "processing" ? "Upload complete, loading image…" : phase === "authenticated" ? "Uploading with authentication…" : "Uploading image…");
+                this.uploadBar.removeAttribute("value");
+            }
+        };
+        progress({phase: "upload"});
         try {
             this.status(T("Loading image…"));
             // Keep the painted mask when a new source replaces the current one,
             // the same way adopting a result does. A first upload starts empty.
-            await this.options.onUpload?.(file, { preserveMask: !!this.image });
-        } catch (error) { this.status(error.message, true); }
+            await this.options.onUpload?.(file, { preserveMask: !!this.image, onProgress: progress });
+        } catch (error) {
+            if (version === this.uploadUiVersion && !this.destroyed) this.status(error.message, true);
+        } finally {
+            if (version === this.uploadUiVersion && !this.destroyed) this.uploadIndicator.hidden = true;
+        }
     }
 
     async setImage(url, maskData = "", name = "") {

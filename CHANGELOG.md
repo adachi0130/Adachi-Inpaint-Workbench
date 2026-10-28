@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.0
+
+- Keep new comparison originals and results in a bounded in-memory cache instead of creating preview files. Existing disk-backed preview references remain supported; adopted sources and layers remain persistent input files. The cache defaults to 512 MiB, adjustable with `ADACHI_COMPARE_MEMORY_MIB` (64–4096 MiB); restart or eviction expires old previews.
+- Show actual browser upload progress for source images, followed by a loading indication. Authentication fallback uses an indeterminate indicator rather than inventing a percentage.
+
 ## 0.8.2
 
 - Actually display a newly uploaded image when its dimensions differ; the incompatible old mask is reset. Same-size replacement continues to preserve the mask.

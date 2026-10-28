@@ -1,6 +1,6 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
-import { InlineMaskEditor } from "./editor.js?v=0.8.0";
+import { InlineMaskEditor } from "./editor.js?v=0.9.0";
 import { installInpaintWorkbench } from "./inpaint_node.js?v=0.8.2";
 import { bindWidgetToNodeWidth } from "./widget_layout.js?v=0.5.5";
 import { routeWheelOutsideImage } from "./wheel_routing.js";
@@ -8,11 +8,12 @@ import { InlineCropController } from "./inline_crop.js?v=0.8.2";
 import { canStoreDraft, prepareInlineDraft, syncInlineWidgets } from "./draft_guard.js?v=0.6.3";
 import { T } from "./i18n.js";
 import { removeLegacyFeedback } from "./legacy_feedback.js?v=0.6.4";
+import { uploadImageWithProgress } from "./upload_transport.js?v=0.9.0";
 
 const styleId = "adachi-inpaint-style";
 const stylesheet = document.getElementById(styleId) || document.createElement("link");
 stylesheet.id = styleId; stylesheet.rel = "stylesheet";
-stylesheet.href = new URL("./editor.css?v=0.6.2", import.meta.url).href;
+stylesheet.href = new URL("./editor.css?v=0.9.0", import.meta.url).href;
 if (!stylesheet.isConnected) document.head.append(stylesheet);
 
 function hide(widget) {
@@ -131,16 +132,21 @@ app.registerExtension({
                 onKeepFit(enabled) { node.properties.adachi_keep_fit = enabled; markChanged(); },
                 onImage() { if (!restoring || !node.properties.adachi_compact_ui) fitNodeToImage(); },
                 onGraphWheel: event => app.canvas?.processMouseWheel(event),
-                async onUpload(file, { preserveMask = false, preserveCrop = false } = {}) {
+                async onUpload(file, { preserveMask = false, preserveCrop = false, onProgress = null } = {}) {
                     if (preserveMask && editor.image && !editor.ready) throw new Error(T("Wait for the current image to finish loading"));
                     const version = ++uploadVersion;
                     const body = new FormData();
                     body.append("image", file, file.name);
                     body.append("type", "input");
                     body.append("subfolder", "adachi-inpaint");
-                    const response = await api.fetchApi("/upload/image", { method: "POST", body });
-                    if (!response.ok) throw new Error(`${T("Upload failed")} (${response.status})`);
-                    const uploaded = await response.json();
+                    let uploaded;
+                    if (onProgress) uploaded = await uploadImageWithProgress(api, body, onProgress);
+                    else {
+                        const response = await api.fetchApi("/upload/image", { method: "POST", body });
+                        if (!response.ok) throw new Error(`${T("Upload failed")} (${response.status})`);
+                        uploaded = await response.json();
+                    }
+                    if (typeof uploaded?.name !== "string" || !uploaded.name) throw new Error(T("Upload failed"));
                     if (version !== uploadVersion || editor.destroyed) return;
                     const name = uploaded.subfolder ? `${uploaded.subfolder}/${uploaded.name}` : uploaded.name;
                     restoring = false;

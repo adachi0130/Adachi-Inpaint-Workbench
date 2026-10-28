@@ -6,10 +6,12 @@ import { routeWheelOutsideImage } from "./wheel_routing.js";
 import { T } from "./i18n.js";
 import { bindWidgetToNodeWidth } from "./widget_layout.js?v=0.5.5";
 
-function viewUrl(image) {
+function viewPath(image) {
+    if (image?.type === "adachi_memory") return `/adachi-inpaint/compare/${encodeURIComponent(image.filename || "")}`;
     const type = ["input", "output", "temp"].includes(image?.type) ? image.type : "temp";
-    return api.apiURL(`/view?${new URLSearchParams({ filename: image?.filename || "", subfolder: image?.subfolder || "", type })}`);
+    return `/view?${new URLSearchParams({ filename: image?.filename || "", subfolder: image?.subfolder || "", type })}`;
 }
+const viewUrl = image => api.apiURL(viewPath(image));
 
 function targets(node) {
     const graph = node.graph;
@@ -42,14 +44,14 @@ app.registerExtension({
                 getTargets: () => targets(node),
                 onSelect: index => { node.properties.adachi_result_index = index; },
                 async fetchResult(image) {
-                    const response = await api.fetchApi(`/view?${new URLSearchParams({ filename: image.filename, subfolder: image.subfolder || "", type: image.type || "temp" })}`);
+                    const response = await api.fetchApi(viewPath(image));
                     if (!response.ok) throw new Error(T("Result preview expired; run the workflow again"));
                     return response.blob();
                 },
                 async onAdopt(id, image) {
                     const target = node.graph?.getNodeById(id);
                     if (!target?.adachiUseResult) throw new Error(T("No inline mask node is available to receive the result"));
-                    const response = await api.fetchApi(`/view?${new URLSearchParams({ filename: image.filename, subfolder: image.subfolder || "", type: image.type || "temp" })}`);
+                    const response = await api.fetchApi(viewPath(image));
                     if (!response.ok) throw new Error(T("Result preview expired; run the workflow again"));
                     const blob = await response.blob();
                     if (blob.size > 64 * 1024 * 1024) throw new Error(T("Result image exceeds 64 MiB; downscale it first"));
