@@ -1,5 +1,7 @@
 # Verification record
 
+- 1.0.0: all 54 CPU backend tests and all seven JavaScript regression suites pass; every frontend module passes syntax checking and all bundled examples parse as JSON. The release updates documentation and metadata on top of 0.9.0; no full model generation was run for this release.
+
 - 0.9.0: 54 backend CPU tests cover in-memory PNG pixels, atomic batch storage, LRU eviction, cached execution invalidation and oversized batch rejection. Actual CPU image queues in frontend 1.52.7 and both node renderers verify comparison history, download bytes, ordinary and crop adoption, mask retention, layer blending, workflow reload and legacy disk-backed references; no new comparison temp files are created. Real Chrome network throttling confirms intermediate upload percentages, loading indication, user header, failure and concurrent upload behavior in both renderers. Proxy paths and auth fallback were separately tested; the user's actual cloud environment and full model inference were not tested.
 
 - 0.8.2: Chrome interaction with an isolated ComfyUI and frontend 1.52.7 passes in classic nodes and Nodes 2.0. Actual uploads confirm different-size source pixels and canvas display update, same-size masks are preserved, connected inpaint dimensions follow ordinary uploads and crop selection, switching back restores image dimensions, a newly connected inpaint node receives the size, and reopening a saved workflow preserves manually saved dimensions. No model inference was run.

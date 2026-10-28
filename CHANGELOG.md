@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.0
+
+- First stable release of the inline inpainting workspace, comparison, crop blending and workflow switching tools.
+- Includes in-memory comparisons and source upload progress from 0.9.0. Update the bilingual crop instructions and example to match the current editing controls.
+
 ## 0.9.0
 
 - Keep new comparison originals and results in a bounded in-memory cache instead of creating preview files. Existing disk-backed preview references remain supported; adopted sources and layers remain persistent input files. The cache defaults to 512 MiB, adjustable with `ADACHI_COMPARE_MEMORY_MIB` (64–4096 MiB); restart or eviction expires old previews.
