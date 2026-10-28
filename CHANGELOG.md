@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.8.1
+
+- Expire only this plugin's comparison preview PNGs after 24 hours, checking hourly even in a long-running ComfyUI. Adopted input images and unrelated temporary files are preserved. Cached comparisons refresh before the expiry deadline.
+- Add a compact download button for the latest generated image, including the last image in a batch, independently of the history selection.
+
 ## 0.8.0
 
 - Restructure adoption in Crop & Blend: after "Adopt this result" the layer is baked into the source at full quality and the editor returns to the repaint mask immediately, so you can generate again right away. The ◐ button now enters layer blending explicitly instead of auto-entering after adoption.

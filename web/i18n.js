@@ -6,6 +6,7 @@
 // buttons are drawn by this plugin, so they translate here by reading Comfy.Locale.
 
 const ZH = {
+  "Download the latest generated image": "下载最新生成的图片",
   "Mask: paint the full image. Crop & Blend: select a region, inpaint it, then adopt and blend the result.": "普通蒙版：在整图涂抹。裁切融合：选定局部、重绘，再从图像对比采用结果并融合图层。",
   "Crop resolution presets. Changing size releases the current selection; left-click the image to place a new region. Inpaint dimensions follow when selected.": "裁切分辨率预设。切换尺寸会取消当前选定，再左键点击图片定位新区域；选定后自动填写 Inpaint 宽高。",
   "Swap width and height, release the current selection, then left-click to place the new region.": "交换宽高并取消当前选定，再左键点击图片选择新区域。",

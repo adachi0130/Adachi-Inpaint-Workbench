@@ -27,6 +27,11 @@ export class ImageCompareView {
         this.resultSelect.onchange = () => { this.index = Number(this.resultSelect.value); this.options.onSelect?.(this.index); this.loadSelected(); };
         toolbar.append(this.resultSelect, this.dimensionsLabel);
         const spacer = element("span", "dd-spacer"); toolbar.append(spacer);
+        this.downloadButton = element("button", "", "↓"); this.downloadButton.type = "button";
+        this.downloadButton.title = T("Download the latest generated image");
+        this.downloadButton.setAttribute("aria-label", this.downloadButton.title);
+        this.downloadButton.onclick = event => { event.preventDefault(); event.stopPropagation(); this.downloadLatest(); };
+        toolbar.append(this.downloadButton);
         const fit = element("button", "", T("Fit")); fit.type = "button";
         fit.onclick = event => { event.preventDefault(); event.stopPropagation(); this.schedule(); }; toolbar.append(fit);
         this.stage = element("div", "dd-stage dd-compare-stage");
@@ -83,7 +88,29 @@ export class ImageCompareView {
         this.updateButton();
     }
 
-    updateButton() { this.adoptButton.disabled = !this.ready || !this.targetSelect.value || !!this.busy; this.adoptButton.textContent = this.busy ? T("Adopting…") : T("Adopt this result"); }
+    updateButton() {
+        this.adoptButton.disabled = !this.ready || !this.targetSelect.value || !!this.busy;
+        this.adoptButton.textContent = this.busy ? T("Adopting…") : T("Adopt this result");
+        this.downloadButton.disabled = !this.latestResult || !!this.downloading;
+    }
+
+    setLatestResult(result) { this.latestResult = result || null; this.updateButton(); }
+
+    async downloadLatest() {
+        if (!this.latestResult || this.downloading) return;
+        const result = this.latestResult;
+        this.downloading = true; this.updateButton();
+        try {
+            const blob = await this.options.fetchResult(result);
+            if (this.destroyed) return;
+            const url = URL.createObjectURL(blob), link = document.createElement("a");
+            link.href = url; link.download = "adachi-inpaint-result.png";
+            document.body.append(link); link.click(); link.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 60000);
+            this.status("");
+        } catch (error) { if (!this.destroyed) this.status(error.message, true); }
+        finally { this.downloading = false; if (!this.destroyed) this.updateButton(); }
+    }
 
     async setData(data, index = this.index) {
         this.originals = Array.isArray(data?.originals) ? data.originals : [];

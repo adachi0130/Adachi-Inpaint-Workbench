@@ -1,6 +1,6 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
-import { ImageCompareView } from "./compare.js?v=0.7.2";
+import { ImageCompareView } from "./compare.js?v=0.8.1";
 import { appendComparison } from "./compare_history.js?v=0.5.8";
 import { routeWheelOutsideImage } from "./wheel_routing.js";
 import { T } from "./i18n.js";
@@ -41,6 +41,11 @@ app.registerExtension({
                 onGraphWheel: event => app.canvas?.processMouseWheel(event),
                 getTargets: () => targets(node),
                 onSelect: index => { node.properties.adachi_result_index = index; },
+                async fetchResult(image) {
+                    const response = await api.fetchApi(`/view?${new URLSearchParams({ filename: image.filename, subfolder: image.subfolder || "", type: image.type || "temp" })}`);
+                    if (!response.ok) throw new Error(T("Result preview expired; run the workflow again"));
+                    return response.blob();
+                },
                 async onAdopt(id, image) {
                     const target = node.graph?.getNodeById(id);
                     if (!target?.adachiUseResult) throw new Error(T("No inline mask node is available to receive the result"));
@@ -78,6 +83,8 @@ app.registerExtension({
                         ? {...image, adachi_origin:output.adachi_origin[0]} : image),
                 });
                 node.properties.adachi_compare = data;
+                node.properties.adachi_latest_result = data.results[data.results.length - 1];
+                compare.setLatestResult(node.properties.adachi_latest_result);
                 node.properties.adachi_compare_new_round = false;
                 node.properties.adachi_result_index = data.results.length > previous.results.length
                     ? data.results.length - 1 : Math.max(0, Math.min(data.results.length - 1, node.properties.adachi_result_index || 0));
@@ -89,6 +96,7 @@ app.registerExtension({
                 const result = configured?.apply(this, arguments);
                 if (node.properties.adachi_compare) {
                     node.properties.adachi_compare = appendComparison(node.properties.adachi_compare);
+                    compare.setLatestResult(node.properties.adachi_latest_result || node.properties.adachi_compare.results.at(-1));
                     node.properties.adachi_result_index = Math.max(0, Math.min(node.properties.adachi_compare.results.length - 1, node.properties.adachi_result_index || 0));
                     compare.setData(node.properties.adachi_compare, node.properties.adachi_result_index);
                 }

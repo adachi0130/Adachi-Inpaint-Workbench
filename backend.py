@@ -15,6 +15,7 @@ import math
 from pathlib import Path
 import re
 import tempfile
+import time
 import warnings
 
 import numpy as np
@@ -615,6 +616,12 @@ class AdachiImageCompare:
     CATEGORY = CATEGORY
     DESCRIPTION = "Hover to compare; adopt a result into the upstream inline editor."
     SEARCH_ALIASES = ["compare", "before after", "图像对比", "adachi", "安达工作台"]
+
+    @classmethod
+    def IS_CHANGED(cls, original, result, **kwargs):
+        # UI references point to temporary PNGs. Refresh cached previews before
+        # their 24-hour cleanup deadline, even if upstream tensors are unchanged.
+        return int(time.time() // (12 * 60 * 60))
 
     def compare(self, original, result, prompt=None, unique_id=None, dynprompt=None):
         import nodes

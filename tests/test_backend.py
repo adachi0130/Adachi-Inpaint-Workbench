@@ -58,6 +58,13 @@ class FakeVAE:
 
 
 class BackendTests(unittest.TestCase):
+    def test_comparison_cache_expires_before_preview_cleanup(self):
+        with patch.object(backend.time, "time", return_value=1_000):
+            first = backend.AdachiImageCompare.IS_CHANGED(None, None)
+        with patch.object(backend.time, "time", return_value=1_000 + 24 * 60 * 60):
+            later = backend.AdachiImageCompare.IS_CHANGED(None, None)
+        self.assertNotEqual(first, later)
+
     def test_comparison_previews_and_result_passthrough(self):
         image, _ = source()
         result = image.repeat_interleave(3, 0)
