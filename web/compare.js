@@ -8,8 +8,9 @@ const element = (tag, className, text) => {
 };
 const imageFrom = url => new Promise((resolve, reject) => {
     const image = new Image();
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error(T("Preview unavailable; run the workflow again")));
+    const timer = setTimeout(() => { image.src = ""; reject(new Error(T("Preview unavailable; run the workflow again"))); }, 15000);
+    image.onload = () => { clearTimeout(timer); resolve(image); };
+    image.onerror = () => { clearTimeout(timer); reject(new Error(T("Preview unavailable; run the workflow again"))); };
     image.src = url;
 });
 
@@ -27,6 +28,10 @@ export class ImageCompareView {
         this.resultSelect.onchange = () => { this.index = Number(this.resultSelect.value); this.options.onSelect?.(this.index); this.loadSelected(); };
         toolbar.append(this.resultSelect, this.dimensionsLabel);
         const spacer = element("span", "dd-spacer"); toolbar.append(spacer);
+        this.reloadButton = element("button", "", "↻"); this.reloadButton.type = "button";
+        this.reloadButton.title = T("Reload comparison images"); this.reloadButton.setAttribute("aria-label", this.reloadButton.title);
+        this.reloadButton.onclick = event => { event.preventDefault(); event.stopPropagation(); this.loadSelected(); };
+        toolbar.append(this.reloadButton);
         this.downloadButton = element("button", "", "↓"); this.downloadButton.type = "button";
         this.downloadButton.title = T("Download the latest generated image");
         this.downloadButton.setAttribute("aria-label", this.downloadButton.title);
@@ -128,12 +133,24 @@ export class ImageCompareView {
 
     async loadSelected() {
         const version = ++this.version;
+        this.reloadButton.disabled = !this.originals.length || !this.results.length;
         this.ready = false; this.updateButton();
         if (!this.originals.length || !this.results.length) return;
         const repetitions = this.results.length / this.originals.length;
         const original = this.originals[Math.min(this.originals.length - 1, Math.floor(this.index / repetitions))];
         try {
-            const images = await Promise.all([imageFrom(this.options.resolveUrl(original)), imageFrom(this.options.resolveUrl(this.results[this.index]))]);
+            let images;
+            for (let attempt = 0; attempt < 3; attempt++) {
+                try {
+                    images = await Promise.all([imageFrom(this.options.resolveUrl(original)), imageFrom(this.options.resolveUrl(this.results[this.index]))]);
+                    break;
+                } catch (error) {
+                    if (version !== this.version || this.destroyed) return;
+                    if (attempt === 2) throw error;
+                    await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+                    if (version !== this.version || this.destroyed) return;
+                }
+            }
             if (version !== this.version || this.destroyed) return;
             this.before = images[0]; this.after = images[1];
             this.ready = true; this.empty.hidden = true;

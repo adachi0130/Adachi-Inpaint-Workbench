@@ -91,6 +91,8 @@ The panel includes mask inside/outside, original/fill/noise/zero-latent content,
 
 Move the pointer over **Image Compare**: **result on the left, original on the right**. Leave the picture to see the full result. The divider stays thin, the image stays fitted, and scrolling navigates the workflow background.
 
+Loading errors and timeouts are retried automatically; **↻** reloads the comparison manually. If the temporary memory preview has expired after server restart or cache eviction, run the workflow again.
+
 Results accumulate within an editing round, with the newest selected automatically. Each result retains its matching original; replayed preview notifications are not counted twice.
 
 Use the **↓** button to download the latest generated result at its original resolution, even when an older result is selected in the list. For a batch, it downloads the last image in that batch.

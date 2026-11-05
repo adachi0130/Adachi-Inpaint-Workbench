@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.1
+
+- Retry comparison image loading after network errors or timeouts and add a manual reload button. Expired preview references still require a new generation.
+
 ## 1.0.0
 
 - First stable release of the inline inpainting workspace, comparison, crop blending and workflow switching tools.
