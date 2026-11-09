@@ -1,6 +1,8 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
-import { ImageCompareView } from "./compare.js?v=1.0.1";
+import { ImageCompareView } from "./compare.js?v=workspace-network2";
+import { readPreview } from "./preview_transport.js";
+import { installComparisonRecovery } from "./result_recovery.js";
 import { appendComparison } from "./compare_history.js?v=0.5.8";
 import { routeWheelOutsideImage } from "./wheel_routing.js";
 import { T } from "./i18n.js";
@@ -33,13 +35,20 @@ function targets(node) {
 
 app.registerExtension({
     name: "Adachi.ImageCompare",
+    setup() { installComparisonRecovery(api,()=>app.graph); },
     async beforeRegisterNodeDef(nodeType, nodeData) {
         if (nodeData.name !== "AdachiImageCompare") return;
         const created = nodeType.prototype.onNodeCreated;
         nodeType.prototype.onNodeCreated = function () {
             const value = created?.apply(this, arguments), node = this;
+            const recovery=installComparisonRecovery(api,()=>app.graph);
+            node.adachiTrackPrompt=id=>recovery.track(node.graph,id,node.id);
             const compare = new ImageCompareView({
                 resolveUrl: viewUrl,
+                loadPreview: (image,options)=>readPreview(api.fetchApi.bind(api),viewPath(image),options),
+                recover: ()=>recovery.recover(),
+                waitingText: T("Waiting for the generated image…"),
+                failedText: T("Generation failed; check the ComfyUI task history"),
                 onGraphWheel: event => app.canvas?.processMouseWheel(event),
                 getTargets: () => targets(node),
                 onSelect: index => { node.properties.adachi_result_index = index; },

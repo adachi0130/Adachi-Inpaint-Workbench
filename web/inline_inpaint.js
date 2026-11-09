@@ -13,7 +13,7 @@ import { uploadImageWithProgress } from "./upload_transport.js?v=0.9.0";
 const styleId = "adachi-inpaint-style";
 const stylesheet = document.getElementById(styleId) || document.createElement("link");
 stylesheet.id = styleId; stylesheet.rel = "stylesheet";
-stylesheet.href = new URL("./editor.css?v=0.9.0", import.meta.url).href;
+stylesheet.href = new URL("./editor.css?v=workspace-network2", import.meta.url).href;
 if (!stylesheet.isConnected) document.head.append(stylesheet);
 
 function hide(widget) {

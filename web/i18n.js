@@ -6,6 +6,14 @@
 // buttons are drawn by this plugin, so they translate here by reading Comfy.Locale.
 
 const ZH = {
+  "Comparison image loading progress": "对比图片加载进度",
+  "Waiting for the generated image…": "等待生成结果，完成后自动找回…",
+  "Generation failed; check the ComfyUI task history": "生成失败，请查看 ComfyUI 任务历史",
+  "Loading comparison images": "正在加载对比图片",
+  "Retrying comparison images": "正在重试对比图片",
+  "Decoding comparison images…": "下载完成，正在解码图片…",
+  "Waiting to retry comparison images": "等待自动重试图片",
+  "Image loading failed; retrying automatically. You can also click reload.": "图片加载失败，正在自动重试；也可点击刷新。",
   "Show group details": "展开分组详情",
   "Hide group details": "收起分组详情",
   "Reload comparison images": "重新加载对比图片",

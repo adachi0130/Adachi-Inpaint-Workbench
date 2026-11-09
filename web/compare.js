@@ -6,13 +6,15 @@ const element = (tag, className, text) => {
     if (text) node.textContent = text;
     return node;
 };
-const imageFrom = url => new Promise((resolve, reject) => {
-    const image = new Image();
-    const timer = setTimeout(() => { image.src = ""; reject(new Error(T("Preview unavailable; run the workflow again"))); }, 15000);
-    image.onload = () => { clearTimeout(timer); resolve(image); };
-    image.onerror = () => { clearTimeout(timer); reject(new Error(T("Preview unavailable; run the workflow again"))); };
-    image.src = url;
-});
+const decodePreview = async (blob, signal) => {
+    const url=URL.createObjectURL(blob), image=new Image();
+    const abort=()=>{image.src="";};
+    signal.addEventListener("abort",abort,{once:true});
+    const timer=setTimeout(abort,20000);
+    try { image.src=url;await image.decode();if(signal.aborted)throw new DOMException("Cancelled","AbortError");return {image,url}; }
+    catch(error){URL.revokeObjectURL(url);throw error;}
+    finally{clearTimeout(timer);signal.removeEventListener("abort",abort);}
+};
 
 export class ImageCompareView {
     constructor(options) {
@@ -30,7 +32,7 @@ export class ImageCompareView {
         const spacer = element("span", "dd-spacer"); toolbar.append(spacer);
         this.reloadButton = element("button", "", "↻"); this.reloadButton.type = "button";
         this.reloadButton.title = T("Reload comparison images"); this.reloadButton.setAttribute("aria-label", this.reloadButton.title);
-        this.reloadButton.onclick = event => { event.preventDefault(); event.stopPropagation(); this.loadSelected(); };
+        this.reloadButton.onclick = async event => { event.preventDefault(); event.stopPropagation(); await this.options.recover?.(); this.loadSelected(); };
         toolbar.append(this.reloadButton);
         this.downloadButton = element("button", "", "↓"); this.downloadButton.type = "button";
         this.downloadButton.title = T("Download the latest generated image");
@@ -49,6 +51,13 @@ export class ImageCompareView {
         Object.assign(this.divider.style, { position: "absolute", background: "#ffffffb3", pointerEvents: "none" });
         this.divider.hidden = true;
         this.stage.append(this.canvas, this.divider);
+        this.progressBox=element("div","dd-preview-progress");this.progressBox.hidden=true;
+        this.progressBox.setAttribute("role","status");
+        this.progressText=element("span");this.progressBar=document.createElement("progress");this.progressBar.max=1;
+        this.progressBar.setAttribute("aria-label",T("Comparison image loading progress"));
+        this.progressBox.append(this.progressText,this.progressBar);this.stage.append(this.progressBox);
+        this.retryOnOnline=()=>{if(!this.ready && !this.loadingActive && this.results.length)this.loadSelected();};
+        window.addEventListener("online",this.retryOnOnline);
         this.empty = element("div", "dd-empty", T("Connect an original image and a result, then run the workflow")); this.stage.append(this.empty);
         const adoption = element("div", "dd-row dd-adoption");
         adoption.append(element("span", "dd-compare-label", T("Adopt into")));
@@ -131,33 +140,65 @@ export class ImageCompareView {
         await this.loadSelected();
     }
 
-    async loadSelected() {
-        const version = ++this.version;
-        this.reloadButton.disabled = !this.originals.length || !this.results.length;
-        this.ready = false; this.updateButton();
-        if (!this.originals.length || !this.results.length) return;
-        const repetitions = this.results.length / this.originals.length;
-        const original = this.originals[Math.min(this.originals.length - 1, Math.floor(this.index / repetitions))];
+    loading(text, states) {
+        this.progressBox.hidden=false;this.progressText.textContent=text;
+        if(states) {
+            const loaded=states.reduce((n,s)=>n+s.loaded,0),total=states.every(s=>s.total>0)?states.reduce((n,s)=>n+s.total,0):0;
+            const size=n=>n>=1048576?`${(n/1048576).toFixed(1)} MiB`:`${Math.round(n/1024)} KiB`;
+            this.progressText.textContent+=total?` · ${Math.min(100,Math.round(loaded/total*100))}% · ${size(loaded)} / ${size(total)}`:` · ${size(loaded)}`;
+            if(total)this.progressBar.value=Math.min(1,loaded/total);else this.progressBar.removeAttribute("value");
+        } else this.progressBar.removeAttribute("value");
+    }
+
+    async loadSelected({background=false}={}) {
+        clearTimeout(this.retryTimer);this.loadController?.abort();
+        const version=++this.version,controller=this.loadController=new AbortController();
+        this.reloadButton.disabled=false;this.loadingActive=true;
+        this.ready=false;this.updateButton();this.schedule();
+        if(!this.originals.length || !this.results.length){this.loadingActive=false;this.progressBox.hidden=true;return;}
+        const repetitions=this.results.length/this.originals.length;
+        const original=this.originals[Math.min(this.originals.length-1,Math.floor(this.index/repetitions))];
+        const current=()=>version===this.version && !this.destroyed && !controller.signal.aborted;
+        const blobKey=JSON.stringify([original,this.results[this.index]]);
+        if(this.blobKey!==blobKey){this.blobKey=blobKey;this.pendingBlobs=[null,null];}
+        const blobs=this.pendingBlobs||[null,null];
         try {
             let images;
-            for (let attempt = 0; attempt < 3; attempt++) {
+            for(let attempt=0;attempt<3;attempt++) {
+                const states=blobs.map(blob=>({loaded:blob?.size||0,total:blob?.size||0,complete:!!blob})),decoded=[];
+                this.loading(attempt?T("Retrying comparison images")+` (${attempt+1}/3)`:T("Loading comparison images"),states);
+                const pair=new AbortController();const cancel=()=>pair.abort();controller.signal.addEventListener("abort",cancel,{once:true});
                 try {
-                    images = await Promise.all([imageFrom(this.options.resolveUrl(original)), imageFrom(this.options.resolveUrl(this.results[this.index]))]);
+                    images=await Promise.all([original,this.results[this.index]].map(async (ref,i)=>{
+                        const blob=blobs[i] || await this.options.loadPreview(ref,{signal:pair.signal,onProgress:state=>{states[i]=state;if(current() && !pair.signal.aborted)this.loading(T("Loading comparison images"),states);}});
+                        blobs[i]=blob;
+                        if(current() && states.every(s=>s.complete))this.loading(T("Decoding comparison images…"));
+                        if(!current())throw new DOMException("Cancelled","AbortError");
+                        const result=await decodePreview(blob,pair.signal);decoded.push(result);return result;
+                    }));
                     break;
-                } catch (error) {
-                    if (version !== this.version || this.destroyed) return;
-                    if (attempt === 2) throw error;
-                    await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
-                    if (version !== this.version || this.destroyed) return;
-                }
+                } catch(error) {
+                    pair.abort();for(const item of decoded)URL.revokeObjectURL(item.url);
+                    if(!current())return;
+                    if(attempt===2)throw error;
+                    await new Promise(resolve=>{const timer=setTimeout(resolve,1000*(attempt+1));controller.signal.addEventListener("abort",()=>{clearTimeout(timer);resolve();},{once:true});});
+                } finally {controller.signal.removeEventListener("abort",cancel);}
             }
-            if (version !== this.version || this.destroyed) return;
-            this.before = images[0]; this.after = images[1];
-            this.ready = true; this.empty.hidden = true;
-            this.dimensionsLabel.textContent = `${this.before.width} × ${this.before.height}`;
-            this.status("");
-            this.updateButton(); this.schedule();
-        } catch (error) { if (version === this.version && !this.destroyed) this.status(error.message, true); }
+            if(!current()){for(const item of images||[])URL.revokeObjectURL(item.url);return;}
+            for(const url of this.previewUrls||[])URL.revokeObjectURL(url);
+            this.previewUrls=images.map(item=>item.url);this.before=images[0].image;this.after=images[1].image;
+            this.ready=true;this.pendingBlobs=null;this.retryCount=0;this.empty.hidden=true;this.progressBox.hidden=true;
+            this.dimensionsLabel.textContent=`${this.before.width} × ${this.before.height}`;
+            this.status("");this.updateButton();this.schedule();
+        } catch(error) {
+            if(!current())return;
+            this.progressBox.title=error.message;
+            if([404,410].includes(error.status)){this.progressBox.hidden=true;this.pendingBlobs=null;this.status(T("Result preview expired; run the workflow again"),true);return;}
+            this.status(T("Image loading failed; retrying automatically. You can also click reload."),true);
+            const seconds=Math.min(60,5*2**Math.min(this.retryCount||0,4));this.retryCount=(this.retryCount||0)+1;
+            this.loading(T("Waiting to retry comparison images")+` · ${seconds}s`);
+            this.retryTimer=setTimeout(()=>this.loadSelected({background:true}),seconds*1000);
+        } finally {if(version===this.version)this.loadingActive=false;}
     }
 
     async adopt() {
@@ -239,7 +280,9 @@ export class ImageCompareView {
     }
 
     destroy() {
-        this.destroyed = true; ++this.version; cancelAnimationFrame(this.frame); this.observer.disconnect();
-        this.before = this.after = null; this.canvas.width = this.canvas.height = 0; this.root.remove();
+        this.destroyed = true; ++this.version; clearTimeout(this.retryTimer);this.loadController?.abort();
+        window.removeEventListener("online",this.retryOnOnline);for(const url of this.previewUrls||[])URL.revokeObjectURL(url);
+        cancelAnimationFrame(this.frame); this.observer.disconnect();
+        this.pendingBlobs=null;this.before = this.after = null; this.canvas.width = this.canvas.height = 0; this.root.remove();
     }
 }
