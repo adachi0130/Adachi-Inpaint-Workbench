@@ -7,3 +7,5 @@ const api={fetchApi:async(p,o)=>{seen.push(p);if(p==='/adachi-inpaint/workspace/
 assert.equal((await workspaceRequest(api,'validate',{})).valid,true);assert.equal(seen.at(-1),'/api/adachi-inpaint/workspace/validate');
 await assert.rejects(workspaceRequest({fetchApi:async(p)=>p.endsWith('/capabilities')?reply(200,{api_version:1,can_validate:true}):reply(400,{valid:false,error:{message:'bad model'}})},'submit',{}),/bad model/);
 console.log('Workspace transport: missing backend blocks submission, /api proxy fallback and validation errors pass');
+const missing={fetchApi:async p=>p.endsWith('/capabilities')?reply(200,{api_version:1,can_validate:true}):reply(200,{valid:false,node_errors:{'357':{errors:[{type:'value_not_in_list',message:'Value not in list',details:'long technical inventory',extra_info:{input_name:'clip_name',received_value:'qwen_3_06b_base.safetensors'}}]}}})};
+await assert.rejects(workspaceRequest(missing,'validate',{}),e=>e.message==='未找到文本编码器：qwen_3_06b_base.safetensors' && !!e.nodeErrors['357']);

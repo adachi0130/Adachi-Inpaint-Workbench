@@ -22,7 +22,12 @@ export async function workspaceRequest(api, path, prepared) {
         try { data = await response.json(); } catch { throw new Error(`工作台服务响应无效（${response.status}），请检查代理配置或重启 ComfyUI`); }
         if (!response.ok || !data.valid) {
             const errors = Object.entries(data.node_errors || {}).flatMap(([id,node]) =>
-                (node.errors || []).map(e => `#${id} ${e.message || ''}: ${e.details || ''}`));
+                (node.errors || []).map(e => {
+                    const labels={ckpt_name:'主模型',unet_name:'主模型',clip_name:'文本编码器',vae_name:'VAE',lora_name:'LoRA'};
+                    const field=e.extra_info?.input_name,value=e.extra_info?.received_value;
+                    if(e.type==='value_not_in_list' && labels[field] && typeof value==='string')return `未找到${labels[field]}：${value}`;
+                    return `#${id} ${e.message || ''}: ${e.details || ''}`;
+                }));
             const error = new Error(errors.join('\n') || data.error?.message || '工作流检查未通过');
             error.nodeErrors = data.node_errors || {}; throw error;
         }

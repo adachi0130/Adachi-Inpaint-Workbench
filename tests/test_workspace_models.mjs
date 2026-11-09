@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import {WorkspaceBindings} from '../web/workspace_bindings.js';
+const n=(id,type,values={})=>({id,type,mode:0,properties:{},widgets:Object.entries(values).map(([name,value])=>({name,value})),inputs:[]});
+const sampler=n(501,'AdachiWebUIInpaint');
+const nodes=[sampler,n(359,'CheckpointLoaderSimple',{ckpt_name:'anima_baseV10.safetensors'}),n(357,'CLIPLoader',{clip_name:'qwen_3_06b_base.safetensors'}),n(358,'VAELoader',{vae_name:'qwen_image_vae.safetensors'}),n(547,'CLIPTextEncode',{text:''}),n(16,'CLIPTextEncode',{text:''}),n(518,'CheckpointLoaderSimple',{ckpt_name:'wai.safetensors'}),n(521,'CLIPTextEncode',{text:''}),n(520,'CLIPTextEncode',{text:''})];
+const controller=n(524,'AdachiGroupPresets');nodes.push(controller);
+controller.adachiGroupPresets={model:{node:controller,data:{activeId:'anima',presets:[{id:'anima',name:'anima修图'},{id:'wai',name:'wai生图'}]},apply(id){this.data.activeId=id;}}};
+const graph={_nodes:nodes,links:{},getNodeById:id=>nodes.find(n=>String(n.id)===String(id))};
+const b=new WorkspaceBindings({graph,sampler});assert.equal(b.missingDependencies().length,0,'not-yet-loaded lists cannot prove missing weights');
+const info=(type,name,values)=>({[type]:{input:{required:{[name]:[values]}}}});
+const sources={'/object_info/CheckpointLoaderSimple':info('CheckpointLoaderSimple','ckpt_name',['wai.safetensors']),'/object_info/UNETLoader':info('UNETLoader','unet_name',[]),'/object_info/CLIPLoader':info('CLIPLoader','clip_name',[]),'/object_info/VAELoader':info('VAELoader','vae_name',['pixel_space']),'/models/loras':[]};
+await b.loadCatalog(async path=>({ok:true,json:async()=>sources[path]}));
+assert.deepEqual(b.missingDependencies().map(d=>d.widget.value),['anima_baseV10.safetensors','qwen_3_06b_base.safetensors','qwen_image_vae.safetensors']);
+assert.deepEqual(b.missingDependencies().map(d=>d.folder),['checkpoints','text_encoders','vae']);
+b.selectProfile('wai');assert.equal(b.missingDependencies().length,0,'an available checkpoint supplies its own CLIP and VAE');assert.equal(b.modelDependencies().length,1);
+b.selectProfile('anima');b.catalog.checkpoints.push('anima_baseV10.safetensors');b.catalog.clips.push('qwen_3_06b_base.safetensors');b.catalog.vaes.push('qwen_image_vae.safetensors');assert.equal(b.missingDependencies().length,0);
+const failed=new WorkspaceBindings({graph,sampler});await failed.loadCatalog(async()=>{throw Error('network offline');});assert.equal(failed.missingDependencies().length,0,'a network failure must not be reported as missing models');assert.ok(failed.catalogError);
+console.log('Workspace model dependencies: separate model/CLIP/VAE, absent weights, built-in checkpoint components and unavailable catalogs pass');

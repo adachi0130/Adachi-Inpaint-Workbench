@@ -17,7 +17,8 @@ export class WorkspaceBindings {
         this.owner = this.controller?.node || sampler;
         this.owner.properties ??= {};
         this.owner.properties[stateKey] ??= {profiles:{}};
-        this.catalog = {checkpoints:[], loras:[]};
+        this.catalog = {checkpoints:[], unets:[], ggufs:[], clips:[], vaes:[], loras:[]};
+        this.catalogReady = new Set();
         this.profiles = this.controller?.data?.presets?.map(p => ({id:p.id, name:p.name, preset:p})) || [];
         if (!this.profiles.length) this.profiles = [{id:'current',name:'当前工作流'}];
         this.profileId = this.controller?.data?.activeId || this.profiles[0].id;
@@ -63,6 +64,21 @@ export class WorkspaceBindings {
         return profile;
     }
     changed() { this.markChanged(); this.onChange(this); }
+    modelDependencies() {
+        const specs={CheckpointLoaderSimple:['ckpt_name','checkpoints','主模型','checkpoints'],
+            UNETLoader:['unet_name','unets','主模型','diffusion_models'],
+            UNETLoaderGGUF:['unet_name','ggufs','主模型','diffusion_models'],
+            CLIPLoader:['clip_name','clips','文本编码器','text_encoders'],
+            VAELoader:['vae_name','vaes','VAE','vae']};
+        return [...new Set([this.model,this.clip,this.vae])].flatMap(node=>{
+            const spec=specs[node?.type];if(!spec)return [];
+            const [name,key,label,folder]=spec,w=widget(node,name);
+            return w?[{node,widget:w,key,label,folder}]:[];
+        });
+    }
+    missingDependencies() {
+        return this.modelDependencies().filter(d=>this.catalogReady.has(d.key) && d.widget.value && !this.catalog[d.key].includes(String(d.widget.value)));
+    }
     refreshProfiles() {
         this.nodes=nodeList(this.graph);
         const controller = this.nodes.find(n=>n.type==='AdachiGroupPresets' && n.mode===0)?.adachiGroupPresets?.model;
@@ -126,10 +142,16 @@ export class WorkspaceBindings {
     }
     async loadCatalog(fetchApi) {
         const get = async path => {const r=await fetchApi(path);if(!r.ok)throw Error(`模型列表加载失败（${r.status}）`);return r.json();};
-        const results=await Promise.allSettled([get('/object_info/CheckpointLoaderSimple'),get('/models/loras')]);
+        const sources=[['checkpoints','/object_info/CheckpointLoaderSimple','CheckpointLoaderSimple','ckpt_name'],
+            ['unets','/object_info/UNETLoader','UNETLoader','unet_name'],
+            ['clips','/object_info/CLIPLoader','CLIPLoader','clip_name'],
+            ['vaes','/object_info/VAELoader','VAELoader','vae_name'],['loras','/models/loras']];
+        const results=await Promise.allSettled(sources.map(([,path])=>get(path)));
         if(this.destroyed)return;
-        if(results[0].status==='fulfilled')this.catalog.checkpoints=results[0].value?.CheckpointLoaderSimple?.input?.required?.ckpt_name?.[0] || [];
-        if(results[1].status==='fulfilled')this.catalog.loras=Array.isArray(results[1].value)?results[1].value:[];
+        results.forEach((result,i)=>{if(result.status!=='fulfilled')return;const [key,,type,input]=sources[i];
+            const values=type?result.value?.[type]?.input?.required?.[input]?.[0]:result.value;
+            if(Array.isArray(values)){this.catalog[key]=values.map(String);this.catalogReady.add(key);}
+        });
         this.catalogError=results.some(r=>r.status==='rejected')?'部分模型列表不可用，可保留工作流中的现有选择':'';
         this.render();
     }
@@ -146,10 +168,14 @@ export class WorkspaceBindings {
         if (!controllerActive) {const warning=el('p','未启用组忽略预设节点，当前使用原工作流设置。');warning.className='aw-profile-warning';warning.setAttribute('role','status');this.root.append(warning);}
         for(const p of controllerActive ? this.profiles : []){const b=el('button',p.name);b.type='button';b.setAttribute('aria-pressed',String(p.id===this.profileId));b.onclick=()=>this.selectProfile(p.id);presets.append(b);}
         this.root.append(presets);
+        const missing=this.missingDependencies();
+        if(missing.length){const warning=el('details'),head=el('summary',`缺少 ${missing.length} 份模型文件`);warning.className='aw-model-warning';warning.title=missing.map(d=>`${d.label}：${d.widget.value}`).join('\n');warning.append(head);
+            const list=el('ul');for(const d of missing){const item=el('li',`${d.label}：${d.widget.value}`);item.append(el('small',`ComfyUI/models/${d.folder}/`));list.append(item);}warning.append(list);this.root.append(warning);}
         const details=el('details'),summary=el('summary','主模型与 LoRA');details.append(summary);details.open=!!this.detailsOpen;details.ontoggle=()=>{this.detailsOpen=details.open;};
-        const modelWidget=widget(this.model,'ckpt_name') || widget(this.model,'unet_name');
-        if(modelWidget){const current=String(modelWidget.value||'');const values=[...new Set([...valueList(modelWidget),...(this.model.type==='CheckpointLoaderSimple'?this.catalog.checkpoints:[]),current])].filter(Boolean);details.append(row('主模型',select(values.map(v=>[v,v]),current,v=>{modelWidget.value=v;modelWidget.callback?.(v);this.changed();})));}
-        else details.append(el('p','当前方案的模型由原工作流控制'));
+        const dependencies=this.modelDependencies();
+        for(const d of dependencies){const w=d.widget,current=String(w.value||'');const values=[...new Set([...valueList(w),...this.catalog[d.key],current])].filter(Boolean);
+            const field=row(d.label,select(values.map(v=>[v,v]),current,v=>{w.value=v;w.callback?.(v);this.render();this.changed();}));field.title=`ComfyUI/models/${d.folder}/`;details.append(field);}
+        if(!dependencies.some(d=>d.node===this.model))details.append(el('p','当前方案的模型由原工作流控制'));
         const loraTitle=el('div','LoRA');details.append(loraTitle);
         if(!this.settings.loras.length)details.append(el('small','不使用 LoRA'));
         this.settings.loras.forEach((l,index)=>{
