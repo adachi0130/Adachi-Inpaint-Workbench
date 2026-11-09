@@ -64,3 +64,6 @@ Local workbench UI / network preview (2026-11-09) baseline: `local-before-worksp
 
 
 The editable-generation / execution-stage update starts at `local-before-workspace-run-progress-20261109` (`8ec5281`). A copied-installation ZIP backup named `Adachi-Inpaint-Workbench-before-run-progress-20261109-*.zip` is in the same backup directory. This update changes frontend files only; hard-refresh after restoring them.
+
+
+Generic routing / resizable workspace baseline: `local-before-generic-workbench-20261109` (`02719c3`). The copied-installation backup starts with `Adachi-Inpaint-Workbench-before-generic-layout-20261109-` in `user/adachi-workbench-backups/`. This update changes frontend files; hard-refresh after restoring them.

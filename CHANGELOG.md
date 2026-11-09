@@ -2,6 +2,11 @@
 
 ## Unreleased · local workspace preview
 
+- Rename the page brand to Adachi Workbench and add a remembered, keyboard-accessible canvas/settings divider.
+- Remove personal-template node IDs and preset/model-name matching. Discover components from the native execution graph, including Use Everywhere and subgraphs.
+- Preserve intermediate model, conditioning, image and output processing. Add explicit pipeline/controller selection for ambiguous workflows.
+- Distinguish inherited LoRA chains from custom overrides; preserve split CLIP paths and allow execution-only custom LoRAs without a loader in the editable graph.
+
 - Keep the canvas and editing controls available during generation; submit an independent snapshot and defer automatic view switching while a pointer stroke is active.
 - Show actual execution stages and sampler steps above workflow settings, including queued, cached, reconnect and completion states.
 - Return to mask editing after adopting a crop, preserving its region, result layer and repaint mask.

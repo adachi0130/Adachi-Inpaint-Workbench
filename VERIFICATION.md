@@ -120,3 +120,12 @@ The plugin code is an independent implementation; see LICENSE for the release li
 - Both local Anima profiles compile their subgraph correctly and fail validation only for the three absent model components. The installed backend and model inventory confirm the missing checkpoint, text encoder and VAE. Model UI now lists filenames and target folders; missing-component checks never infer absent files from a network failure.
 
 - Legacy frontend scalar/null `executing` messages and a submit HTTP response deliberately delayed until after task completion are covered, so early completion cannot cause a false error or leave the workbench busy.
+
+
+## 2026-11-09 · generic workflow routing and resizable workspace
+
+- Real divider drag, keyboard resize, persisted width and reset pass; 768px/390px layouts keep stacked panels and the English brand without overflow.
+- All three existing example presets compile through Use Everywhere’s public native serialization API. MODEL and positive/negative CLIP branches retain their original LoRA routes in inherited mode. Bypassed routing is enabled only for the selected bypassed workbench group, and all editable modes are restored. Unique exclusive switches are resolved in the separate execution graph before backend metadata normalization.
+- A copy with every root node ID changed and all preset titles replaced with unrelated names still discovers and validates the correct components.
+- A newly built two-pipeline workflow validates with SD1.5, selects the connected editor/result instead of an unrelated first loader, and preserves ModelSamplingDiscrete, CLIPSetLastLayer, two-encoder conditioning, negative conditioning processing, image resizing and result postprocessing. A real WAI generation in that workflow confirms the final ImageInvert is executed by checking outside-mask pixels.
+- A custom execution-only LoRA validates without any editable LoRA nodes. Pure tests cover independent IDs/filenames, ControlNet positive/negative slots, SDXL text fields, inherited/custom split CLIP paths, untouched unrelated branches, Vue proxy JSON copying, explicit ambiguity, group activation safety and subgraph result recovery.

@@ -37,19 +37,21 @@ English and Simplified Chinese interfaces follow the ComfyUI language setting. T
 
 ## Features
 
-### Inpainting workspace · light and dark themes (local preview)
+### Adachi Workbench · light and dark themes
 
-Load the `gpt test` workflow and click **打开安达工作台** on the inpaint node. The editor opens immediately; background validation checks the selected branch without running inference, and Generate validates again before queueing. The panel reuses presets from an enabled Group Bypass Presets node; missing or bypassed controllers show a warning instead of placeholder presets. It shares the graph’s painting, sampling and comparison controls. Model and LoRA selectors are folded away, with no LoRA selected by default. WAI and Anima profiles bind their own model, CLIP, VAE and conditioning. Refiner routing is opt-in.
+Click **打开安达工作台** on an Adachi Inpaint Workbench node. Workflows need the plugin’s Inline Mask, inpaint and Image Compare nodes; their IDs, titles, preset names and model filenames can be different. The workspace follows the selected node’s actual connections to its editor and result. If several candidates are ambiguous, choose them under **工作流连接**. An enabled Group Bypass Presets node supplies its own preset buttons; missing or ambiguous controllers show a reminder.
 
-Generation opens sliding comparison without replacing the source. Use the single before/after icon to toggle images, the pencil icon to paint, and **采用** to adopt explicitly. Hover controls for help. The header theme icon switches between light and dark and remembers your preference. Undo adoption or choose a previous source with its mask and crop state from the source history. History lasts for the currently loaded browser session. Closing the workspace returns live controls to the graph; parameter edits remain part of the current workflow. The local preview has been exercised with WAI v160 and no LoRA; other graphs require identifiable inpainting nodes and compatible model routing.
+Models, VAE, text encoders and prompts are discovered from the native execution graph, including Get/Set, Use Everywhere broadcasts and subgraph execution IDs. Intermediate model patches, ControlNet, multiple conditioning encoders, image processing and result postprocessing remain connected. Recognizable components get editing controls; other custom processing remains under the workflow’s control. No personal template IDs or model-family name matching are used.
 
-Comparison nodes and the workspace recover missing execution notifications from the exact queued task’s history. Image loading shows actual received bytes, a percentage when the server provides the size, and a separate decoding state. Temporary network failures retry automatically, including after reconnecting or returning to the page; the reload icon remains available. Expired previews after a server restart or cache eviction require running again. No preview files are created by this recovery path.
+New profiles inherit the workflow’s LoRA chains, including different positive/negative CLIP paths. Clear **沿用工作流 LoRA** to use a custom list; an empty custom list disables recognized LoRAs. Custom LoRAs can also be applied when the editable graph has no LoRA loader. Refiner use is available in the model menu. Existing explicit workspace selections remain stored per preset.
 
-After updating backend files, fully restart ComfyUI. A missing workbench backend is detected before submission, with an explicit restart message instead of an HTTP 405 error.
+Drag the divider between the image and settings to resize them. The width is remembered; double-click resets it, and arrow keys make small adjustments. Narrow screens keep the stacked layout. The theme icon remembers the light/dark preference. Hover controls for help.
 
-While generation runs, painting, zoom/pan and editing controls remain available. A submitted task uses an immutable snapshot; later edits apply to the next run. The progress bar above workflow settings follows actual execution stages and sampler steps, with indeterminate progress for stages that do not report a total. Crop & Blend adoption returns to mask editing while keeping the selected region and repaint mask.
+Generation shows actual workflow stages and sampler steps above settings. You can keep painting, zooming and changing parameters; the queued task uses its submitted snapshot. Generated results open sliding comparison without replacing the source. Use the single before/after icon to toggle images, the pencil to edit, and **采用** to adopt. Crop adoption returns to editing with its region and mask intact. Source history can restore previous images, masks and crop state for the loaded browser session.
 
-For profiles with separate model components, the model menu also exposes text encoder and VAE selectors. Missing weights are listed with their target model folders; a failed model-list request is reported as a connection issue rather than a missing file.
+The comparison node and workspace recover lost execution notifications by queued task ID. Image loading reports actual received bytes, a percentage when size is known, then decoding; transient failures retry and can resume after reconnecting. Expired server-side previews require another run. Recovery does not create preview files. Updating backend code requires a full ComfyUI restart; frontend-only updates need a hard refresh.
+
+The retained `gpt test` workflow is an example, not a required template. Validation also covers a newly built multi-pipeline workflow, changed node IDs and renamed presets.
 
 ### Paint directly on the graph
 
