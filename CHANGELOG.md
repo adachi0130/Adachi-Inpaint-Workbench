@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased · local workspace preview
+
+- Detect missing backend routes before submitting and support API-prefixed proxy paths.
+- Add remembered light/dark themes, compact edit and before/after icons, hover help and default sliding comparison after generation.
+- Follow sampler conditioning through Get/Set and exclusive routes; derive preset buttons from the enabled controller and warn when unavailable.
+- Keep crop and result controls above the measured source-history dock on narrow screens.
+- Recover lost result notifications by queued task ID in both node and workspace; add streamed image progress, inactivity timeouts, cancellation, automatic retries and reconnect recovery.
+
 ## 1.0.1
 
 - Retry comparison image loading after network errors or timeouts and add a manual reload button. Expired preview references still require a new generation.

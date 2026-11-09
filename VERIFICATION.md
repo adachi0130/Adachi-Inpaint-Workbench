@@ -99,3 +99,14 @@ References used during implementation:
 - [rgthree image comparison interaction reference](https://github.com/rgthree/rgthree-comfy/blob/main/py/image_comparer.py)
 
 The plugin code is an independent implementation; see LICENSE for the release licence. No source from the projects above is bundled.
+
+
+## 2026-11-09 · local workspace UI and cloud recovery
+
+- 58 Python tests and all JavaScript test files pass, including new protocol, conditioning-route, preview stream and result-recovery cases.
+- Real `gpt test` WAI profile without LoRA validates against ComfyUI: positive #521, negative #520, model #518. The original graph modes and links are restored after compilation. Missing models are blocked before queueing.
+- Real CPU image processing verifies manual adoption, unchanged mask pixels, undo/original restoration and result-count reset. Generation defaults to sliding comparison without adopting.
+- Chrome interaction checks verify remembered light/dark themes, icon tooltips, one before/after toggle, enabled/missing controllers and dynamically added presets.
+- Classic and Nodes 2.0 crop controls pass at 1440, 768 and 390px in both themes, including wrapped history labels, custom dimensions, painting and dimension synchronization.
+- Cloud failure simulation drops `executed` alone, then all execution notifications. Exact-task history recovery succeeds in both the node and workspace. Three image-load attempts are exhausted before restoring connectivity; byte progress is visible and preview recovery succeeds. Replayed output does not increase the result count.
+- Existing source workflows and images are not modified. Runtime files are compared with the preceding Git checkpoint before installation; the installed package is backed up before copying changes.

@@ -37,11 +37,15 @@ English and Simplified Chinese interfaces follow the ComfyUI language setting. T
 
 ## Features
 
-### White inpainting workspace (local preview)
+### Inpainting workspace · light and dark themes (local preview)
 
-Load the `gpt test` workflow and click **打开安达工作台** on the inpaint node. The editor opens immediately; background validation checks the selected branch without running inference, and Generate validates again before queueing. The panel reuses group presets, painting, sampling and comparison controls. Model and LoRA selectors are folded away, with no LoRA selected by default. WAI and Anima profiles bind their own model, CLIP, VAE and conditioning. Refiner routing is opt-in.
+Load the `gpt test` workflow and click **打开安达工作台** on the inpaint node. The editor opens immediately; background validation checks the selected branch without running inference, and Generate validates again before queueing. The panel reuses presets from an enabled Group Bypass Presets node; missing or bypassed controllers show a warning instead of placeholder presets. It shares the graph’s painting, sampling and comparison controls. Model and LoRA selectors are folded away, with no LoRA selected by default. WAI and Anima profiles bind their own model, CLIP, VAE and conditioning. Refiner routing is opt-in.
 
-Generation never replaces the source automatically. Compare before/after or hover the divider, then adopt explicitly. Undo adoption or choose a previous source with its mask and crop state from the source history. History lasts for the currently loaded browser session. Closing the workspace returns live controls to the graph; parameter edits remain part of the current workflow. The local preview has been exercised with WAI v160 and no LoRA; other graphs require identifiable inpainting nodes and compatible model routing.
+Generation opens sliding comparison without replacing the source. Use the single before/after icon to toggle images, the pencil icon to paint, and **采用** to adopt explicitly. Hover controls for help. The header theme icon switches between light and dark and remembers your preference. Undo adoption or choose a previous source with its mask and crop state from the source history. History lasts for the currently loaded browser session. Closing the workspace returns live controls to the graph; parameter edits remain part of the current workflow. The local preview has been exercised with WAI v160 and no LoRA; other graphs require identifiable inpainting nodes and compatible model routing.
+
+Comparison nodes and the workspace recover missing execution notifications from the exact queued task’s history. Image loading shows actual received bytes, a percentage when the server provides the size, and a separate decoding state. Temporary network failures retry automatically, including after reconnecting or returning to the page; the reload icon remains available. Expired previews after a server restart or cache eviction require running again. No preview files are created by this recovery path.
+
+After updating backend files, fully restart ComfyUI. A missing workbench backend is detected before submission, with an explicit restart message instead of an HTTP 405 error.
 
 ### Paint directly on the graph
 
