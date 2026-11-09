@@ -1,10 +1,11 @@
+import {T} from './i18n.js';
 const stageNames={
-    CheckpointLoaderSimple:'加载主模型',UNETLoader:'加载主模型',UNETLoaderGGUF:'加载主模型',
-    CLIPLoader:'加载文本编码器',DualCLIPLoader:'加载文本编码器',VAELoader:'加载 VAE',
-    CLIPTextEncode:'编码提示词',LoraLoader:'加载 LoRA','Power Lora Loader (rgthree)':'加载 LoRA',
-    AdachiInlineMask:'读取原图与蒙版',AdachiWebUIInpaint:'重绘采样准备',
-    KSampler:'K 采样器',KSamplerAdvanced:'K 采样器',SamplerCustom:'采样器',
-    VAEDecode:'VAE 解码',VAEEncode:'VAE 编码',AdachiImageCompare:'准备对比图片',
+    CheckpointLoaderSimple:"Loading main model",UNETLoader:"Loading main model",UNETLoaderGGUF:"Loading main model",
+    CLIPLoader:"Loading text encoder",DualCLIPLoader:"Loading text encoder",VAELoader:"Loading VAE",
+    CLIPTextEncode:"Encoding prompts",LoraLoader:"Loading LoRA",'Power Lora Loader (rgthree)':"Loading LoRA",
+    AdachiInlineMask:"Reading source image and mask",AdachiWebUIInpaint:"Preparing inpaint sampling",
+    KSampler:"KSampler",KSamplerAdvanced:"KSampler",SamplerCustom:"Sampler",
+    VAEDecode:"VAE decode",VAEEncode:"VAE encode",AdachiImageCompare:"Preparing comparison images",
 };
 
 // Percentages describe the current node's reported steps, not invented overall
@@ -12,7 +13,7 @@ const stageNames={
 export class WorkspaceProgress {
     constructor(onChange=()=>{}) {this.onChange=onChange;this.state='idle';this.buffer=[];}
     begin(nodes={},promptId=null) {
-        this.nodes=nodes;this.promptId=promptId;this.state='queued';this.label='排队中…';
+        this.nodes=nodes;this.promptId=promptId;this.state='queued';this.label=T("Queued…");
         this.nodeId=null;this.value=null;this.max=null;this.buffer=[];this.emit();
     }
     attach(promptId) {
@@ -22,15 +23,15 @@ export class WorkspaceProgress {
     emit(){this.onChange(this);}
     stage(id) {
         const node=this.nodes?.[String(id)],type=node?.class_type;
-        return stageNames[type]||node?._meta?.title||type||'正在执行工作流';
+        return stageNames[type]?T(stageNames[type]):node?._meta?.title||type||T("Executing workflow");
     }
     finish(success,message) {
-        this.state=success?'complete':'error';this.label=message||(success?'生成完成':'生成已停止');
+        this.state=success?'complete':'error';this.label=message||(success?T("Generation complete"):T("Generation stopped"));
         this.value=success?1:null;this.max=success?1:null;this.emit();
     }
     connection(connected) {
         if(!['queued','running'].includes(this.state))return;
-        this.label=connected?'已重连，等待执行进度…':'连接中断，正在恢复进度…';this.value=this.max=null;this.emit();
+        this.label=connected?T("Reconnected; waiting for execution progress…"):T("Connection lost; recovering execution progress…");this.value=this.max=null;this.emit();
     }
     handle(name,data={}) {
         // Older frontends reduce executing payloads to a scalar node ID and
@@ -42,10 +43,10 @@ export class WorkspaceProgress {
         if(!this.promptId){this.buffer.push([name,data]);if(this.buffer.length>64)this.buffer.shift();return false;}
         if(data.prompt_id && data.prompt_id!==this.promptId)return false;
         if(name==='execution_success'){this.finish(true);return true;}
-        if(['execution_error','execution_interrupted'].includes(name)){this.finish(false,data.exception_message||'生成已停止');return true;}
-        if(name==='execution_start'){this.state='running';this.label='开始执行…';this.emit();return true;}
+        if(['execution_error','execution_interrupted'].includes(name)){this.finish(false,data.exception_message||T("Generation stopped"));return true;}
+        if(name==='execution_start'){this.state='running';this.label=T("Starting execution…");this.emit();return true;}
         if(name==='execution_cached'){
-            if(this.state==='queued'){this.label=`读取缓存 · ${data.nodes?.length||0} 个节点`;this.emit();}return true;
+            if(this.state==='queued'){this.label=T("Reading cache · {count} nodes",{count:data.nodes?.length||0});this.emit();}return true;
         }
         if(name==='progress_state') {
             const running=Object.entries(data.nodes||{}).filter(([,n])=>n.state==='running');
@@ -63,7 +64,7 @@ export class WorkspaceProgress {
         if(name==='progress' && Number.isFinite(max) && max>0 && Number.isFinite(value)){
             this.max=max;this.value=Math.max(0,Math.min(max,value));
             const type=this.nodes[this.nodeId]?.class_type;
-            this.label=`${type==='AdachiWebUIInpaint'?'重绘采样（K 采样器）':this.stage(id)} · ${this.value} / ${this.max}`;
+            this.label=`${type==='AdachiWebUIInpaint'?T("Inpaint sampling (KSampler)"):this.stage(id)} · ${this.value} / ${this.max}`;
         } else this.label=this.stage(id);
         this.emit();return true;
     }

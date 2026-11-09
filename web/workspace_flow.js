@@ -1,3 +1,4 @@
+import {T} from './i18n.js';
 const link=value=>Array.isArray(value) && value.length===2 && ['string','number'].includes(typeof value[0]) && Number.isInteger(value[1]);
 const asRef=value=>link(value)?[String(value[0]),value[1]]:null;
 const loraTypes=new Set(['LoraLoader','LoraLoaderModelOnly','Power Lora Loader (rgthree)']);
@@ -87,10 +88,10 @@ export function applyExecutionBinding(original,samplerId,binding={}) {
     // Native widget values can be Vue proxies (for example rgthree LoRA
     // rows). Copy using the same JSON boundary as ComfyUI's queue request.
     const prompt=JSON.parse(JSON.stringify(original)),id=String(samplerId),sampler=prompt[id];
-    if(!sampler)throw Error('所选重绘节点未出现在执行图中');
+    if(!sampler)throw Error(T("The selected inpaint node is missing from the execution graph"));
     Object.assign(sampler.inputs,binding.samplerInputs||{});
     for(const [key,inputs] of Object.entries(binding.inputOverrides||{})){
-        if(!prompt[key])throw Error(`所选参数节点未出现在执行图中 #${key}`);Object.assign(prompt[key].inputs,inputs);
+        if(!prompt[key])throw Error(T("The selected parameter node is missing from the execution graph #{id}",{id:key}));Object.assign(prompt[key].inputs,inputs);
     }
     for(const [key,names] of Object.entries(binding.removeInputs||{}))for(const name of names)if(prompt[key])delete prompt[key].inputs[name];
     const scope=()=>new Set([id,...ancestors(prompt,Object.values(sampler.inputs))]);
@@ -111,7 +112,7 @@ export function applyExecutionBinding(original,samplerId,binding={}) {
         collapse(loras,(api,slot)=>slot===0?api.inputs.model:slot===1?api.inputs.clip:null);
         const selected=(binding.loras||[]).filter(l=>l.name && l.on!==false);
         if(selected.length){
-            const baseModel=asRef(sampler.inputs.model);if(!baseModel)throw Error('请连接主模型后再添加 LoRA');
+            const baseModel=asRef(sampler.inputs.model);if(!baseModel)throw Error(T("Connect a main model before adding LoRAs"));
             let nextId=-1000000;
             const fresh=()=>{while(prompt[String(nextId)])nextId--;return String(nextId--);};
             const consumers=(binding.clipConsumers||[]).filter(c=>asRef(prompt[c.id]?.inputs?.[c.input]));

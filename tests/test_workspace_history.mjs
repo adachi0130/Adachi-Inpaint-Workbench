@@ -43,7 +43,7 @@ function node() {
  const n=node(),before=captureSourceState(n),old=n.adachiEditor.image;
  await assert.rejects(restoreSourceState(n,before,{decode:async()=>{throw Error("broken PNG")}}),/broken PNG/);
  assert.equal(n.adachiEditor.image,old);
- await assert.rejects(restoreSourceState(n,before,{decode:async data=>{n.adachiEditor.loadVersion++;return decode(data)}}),/发生变化/);
+ await assert.rejects(restoreSourceState(n,before,{decode:async data=>{n.adachiEditor.loadVersion++;return decode(data)}}),/image changed/);
  assert.equal(n.adachiEditor.image,old);
 }
 {
@@ -53,6 +53,6 @@ function node() {
  const count=h.entries.length;await assert.rejects(h.transact("failed",async()=>{throw Error("upload failed")}),/upload failed/);assert.equal(h.entries.length,count);assert.equal(h.busy,false);
  for(let i=0;i<6;i++){n.adachiEditor.image=source("next"+i);n.widgets[0].value="next"+i;h.checkpoint("next"+i);}
  assert.equal(h.entries.length,3);assert.equal(h.entries[0].label,"original");assert.equal(h.current.label,"next5");
- n.adachiEditor.stroke={};assert.throws(()=>h.checkpoint("stroke"),/结束当前编辑/);
+ n.adachiEditor.stroke={};assert.throws(()=>h.checkpoint("stroke"),/Finish the current edit/);
 }
 console.log("Workspace source history: repaint/blend pixels, crop state, layer, commands, failure atomicity and retention passed");

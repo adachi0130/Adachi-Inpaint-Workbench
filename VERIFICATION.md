@@ -1,5 +1,13 @@
 # Verification record
 
+## 2.0.0 · 2026-11-09
+
+- All 63 Python regression tests and 19 JavaScript test files pass. Frontend modules pass syntax checks; locale JSON, release metadata and local links in both READMEs validate.
+- The single official template imports into a real ComfyUI frontend. Both presets compile through the native graph serializer and pass backend validation with no missing links. Text-to-image excludes the uploaded-image branch; inpainting excludes the latent-generation branch. The three exclusive selectors consistently select the only enabled input.
+- Both template presets complete actual 512×512, two-step WAI generation without LoRA, using newly authored neutral prompts and a synthetic input. Inpainting changes the nonempty masked region while pixels outside the protected region remain exact. The distributed template keeps its checkpoint placeholder and contains no model names, local paths, source images or personal prompts.
+- Real frontend settings expose the locale at `comfyAPI.app.app.ui.settings`. The translation reader supports that path, older frontend shapes and the English fallback; tests cover interpolation, context keys and current execution messages.
+- GitHub publication, Registry upload and Registry approval are checked separately. See the Registry review notes for public scan findings; local testing does not constitute Registry security approval.
+
 - Local white workspace preview: real `gpt test` WAI v160 generation with no LoRA, 512×512, two sampler steps and a nonempty mask succeeds. Protected pixels remain exact. The UI run is also verified: immediate opening, background backend validation, invalid-model rejection without queueing, result preview without adopting, before/after, explicit adoption, mask-preserving rollback and source selection. Classic and Nodes 2.0 browser tests cover actual mouse painting, comparison, clean close and reopen; 768/390 layouts have no horizontal overflow. Source history tests include crop/layer/fusion-mask restoration. No remote cloud or Anima model inference is claimed by these checks.
 
 - 1.0.0: all 54 CPU backend tests and all seven JavaScript regression suites pass; every frontend module passes syntax checking and all bundled examples parse as JSON. The release updates documentation and metadata on top of 0.9.0; no full model generation was run for this release.

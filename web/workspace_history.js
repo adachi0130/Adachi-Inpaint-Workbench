@@ -1,3 +1,4 @@
+import {T} from './i18n.js';
 // Session-only source checkpoints for the full-screen workspace. Capturing and
 // restoring never uploads a new image or serializes the rest of the workflow.
 const WIDGETS = ["image", "mask_data", "source_data", "edit_mode", "crop_state", "blend_data", "layer_image"];
@@ -25,8 +26,8 @@ async function decodeCanvas(data) {
 
 export function captureSourceState(node) {
     const editor = node.adachiEditor, crop = node.adachiCrop;
-    if (!editor?.ready || !editor.image || editor.destroyed) throw Error("请先载入原图");
-    if (editor.stroke || editor.pointerId != null || crop?.busy) throw Error("请先结束当前编辑");
+    if (!editor?.ready || !editor.image || editor.destroyed) throw Error(T("Load a source image first"));
+    if (editor.stroke || editor.pointerId != null || crop?.busy) throw Error(T("Finish the current edit first"));
     editor.flush();
     const target = crop?.target || "mask", contexts = {};
     for (const [name, context] of Object.entries(crop?.contexts || {})) {
@@ -54,8 +55,8 @@ function releaseContexts(contexts, active) {
 
 export async function restoreSourceState(node, state, {decode = decodeCanvas, onRestore} = {}) {
     const editor = node.adachiEditor, crop = node.adachiCrop;
-    if (!editor || editor.destroyed || !node.graph) throw Error("原图节点已移除");
-    if (editor.stroke || editor.pointerId != null || crop?.busy) throw Error("请先结束当前编辑");
+    if (!editor || editor.destroyed || !node.graph) throw Error(T("The source image node was removed"));
+    if (editor.stroke || editor.pointerId != null || crop?.busy) throw Error(T("Finish the current edit first"));
     const loadVersion = editor.loadVersion;
     const contexts = {};
     try {
@@ -66,11 +67,11 @@ export async function restoreSourceState(node, state, {decode = decodeCanvas, on
             contexts[name] = {...context, mask, baseMask, history:copyCommands(context.history), future:copyCommands(context.future)};
         }
         if (editor.destroyed || editor.loadVersion !== loadVersion || editor.stroke || editor.pointerId != null || crop?.busy) {
-            throw Error("图片在恢复过程中发生变化，请重试");
+            throw Error(T("The image changed during restoration; try again"));
         }
     } catch (error) { releaseContexts(contexts); throw error; }
     const active = contexts[state.target];
-    if (!active) { releaseContexts(contexts); throw Error("历史蒙版状态无效"); }
+    if (!active) { releaseContexts(contexts); throw Error(T("The saved mask state is invalid")); }
     const oldContexts = {...(crop?.contexts || {}), live: {mask:editor.mask, baseMask:editor.baseMask}};
     crop?.stopOriginalPreview?.();
     for (const [name, value] of Object.entries(state.widgets)) {
@@ -121,7 +122,7 @@ export class WorkspaceHistory {
     }
     get current() { return this.entries[this.index] || null; }
     get canUndo() { return this.index > 0 && !this.busy; }
-    checkpoint(label = "原图") {
+    checkpoint(label = T("Source image")) {
         const state = captureSourceState(this.node);
         if (this.current?.state.key === state.key) return this.current;
         this.entries.splice(this.index + 1);
@@ -135,18 +136,18 @@ export class WorkspaceHistory {
         this.onChange?.(this); return entry;
     }
     async transact(label, operation) {
-        if (this.busy) throw Error("正在处理原图，请稍候");
+        if (this.busy) throw Error(T("Processing the source image; please wait"));
         this.busy = true; this.onChange?.(this);
         try {
-            this.checkpoint(this.entries.length ? "编辑中的原图" : "初始原图");
+            this.checkpoint(this.entries.length ? T("Edited source") : T("Initial source"));
             const result = await operation();
             this.checkpoint(label);
             return result;
         } finally { this.busy = false; this.onChange?.(this); }
     }
     async restore(index) {
-        if (this.busy) throw Error("正在处理原图，请稍候");
-        if (!Number.isInteger(index) || !this.entries[index]) throw Error("原图历史不存在");
+        if (this.busy) throw Error(T("Processing the source image; please wait"));
+        if (!Number.isInteger(index) || !this.entries[index]) throw Error(T("The source image history entry no longer exists"));
         this.busy = true; this.onChange?.(this);
         try {
             await restoreSourceState(this.node, this.entries[index].state, {onRestore:this.onRestore});

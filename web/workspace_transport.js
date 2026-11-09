@@ -1,6 +1,7 @@
+import {T} from './i18n.js';
 // Check protocol support before POSTing: old ComfyUI processes may serve the
 // updated JavaScript while still running the previous Python node package.
-const unavailable = () => new Error('工作台后端尚未加载：请在 ComfyUI 启动器中停止后重新启动服务，再点击检查连接（仅刷新网页不够）');
+const unavailable = () => new Error(T("The workbench backend is not loaded. Stop and restart ComfyUI, then check connections again; refreshing the browser is not enough."));
 export async function workspaceRequest(api, path, prepared) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), path === 'submit' ? 60000 : 20000);
@@ -19,21 +20,21 @@ export async function workspaceRequest(api, path, prepared) {
         });
         if ([404,405].includes(response.status)) throw unavailable();
         let data;
-        try { data = await response.json(); } catch { throw new Error(`工作台服务响应无效（${response.status}），请检查代理配置或重启 ComfyUI`); }
+        try { data = await response.json(); } catch { throw new Error(T("Invalid workbench response ({status}); check your proxy settings or restart ComfyUI",{status:response.status})); }
         if (!response.ok || !data.valid) {
             const errors = Object.entries(data.node_errors || {}).flatMap(([id,node]) =>
                 (node.errors || []).map(e => {
-                    const labels={ckpt_name:'主模型',unet_name:'主模型',clip_name:'文本编码器',vae_name:'VAE',lora_name:'LoRA'};
+                    const labels={ckpt_name:T("Main model"),unet_name:T("Main model"),clip_name:T("Text encoder"),vae_name:'VAE',lora_name:'LoRA'};
                     const field=e.extra_info?.input_name,value=e.extra_info?.received_value;
-                    if(e.type==='value_not_in_list' && labels[field] && typeof value==='string')return `未找到${labels[field]}：${value}`;
+                    if(e.type==='value_not_in_list' && labels[field] && typeof value==='string')return T("{label} not found: {value}",{label:labels[field],value});
                     return `#${id} ${e.message || ''}: ${e.details || ''}`;
                 }));
-            const error = new Error(errors.join('\n') || data.error?.message || '工作流检查未通过');
+            const error = new Error(errors.join('\n') || data.error?.message || T("Workflow validation failed"));
             error.nodeErrors = data.node_errors || {}; throw error;
         }
         return data;
     } catch (error) {
-        if (error.name === 'AbortError') throw new Error(path === 'submit' ? '提交超时，请先检查任务队列，避免重复生成' : '连接检查超时，请检查网络后重试');
+        if (error.name === 'AbortError') throw new Error(path === 'submit' ? T("Submission timed out. Check the task queue before retrying to avoid duplicate generations.") : T("Connection check timed out; check your network and retry"));
         throw error;
     } finally { clearTimeout(timer); }
 }

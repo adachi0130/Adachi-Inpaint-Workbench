@@ -39,19 +39,19 @@ English and Simplified Chinese interfaces follow the ComfyUI language setting. T
 
 ### Adachi Workbench · light and dark themes
 
-Click **打开安达工作台** on an Adachi Inpaint Workbench node. Workflows need the plugin’s Inline Mask, inpaint and Image Compare nodes; their IDs, titles, preset names and model filenames can be different. The workspace follows the selected node’s actual connections to its editor and result. If several candidates are ambiguous, choose them under **工作流连接**. An enabled Group Bypass Presets node supplies its own preset buttons; missing or ambiguous controllers show a reminder.
+Click **Open Adachi Workbench** on an Adachi Inpaint Workbench node. Workflows need the plugin’s Inline Mask, inpaint and Image Compare nodes; their IDs, titles, preset names and model filenames can be different. The workspace follows the selected node’s actual connections to its editor and result. If several candidates are ambiguous, choose them under **Workflow connections**. An enabled Group Bypass Presets node supplies its own preset buttons; missing or ambiguous controllers show a reminder.
 
 Models, VAE, text encoders and prompts are discovered from the native execution graph, including Get/Set, Use Everywhere broadcasts and subgraph execution IDs. Intermediate model patches, ControlNet, multiple conditioning encoders, image processing and result postprocessing remain connected. Recognizable components get editing controls; other custom processing remains under the workflow’s control. No personal template IDs or model-family name matching are used.
 
-New profiles inherit the workflow’s LoRA chains, including different positive/negative CLIP paths. Clear **沿用工作流 LoRA** to use a custom list; an empty custom list disables recognized LoRAs. Custom LoRAs can also be applied when the editable graph has no LoRA loader. Refiner use is available in the model menu. Existing explicit workspace selections remain stored per preset.
+New profiles inherit the workflow’s LoRA chains, including different positive/negative CLIP paths. Clear **Inherit workflow LoRAs** to use a custom list; an empty custom list disables recognized LoRAs. Custom LoRAs can also be applied when the editable graph has no LoRA loader. Refiner use is available in the model menu. Existing explicit workspace selections remain stored per preset.
 
 Drag the divider between the image and settings to resize them. The width is remembered; double-click resets it, and arrow keys make small adjustments. Narrow screens keep the stacked layout. The theme icon remembers the light/dark preference. Hover controls for help.
 
-Generation shows actual workflow stages and sampler steps above settings. You can keep painting, zooming and changing parameters; the queued task uses its submitted snapshot. Generated results open sliding comparison without replacing the source. Use the single before/after icon to toggle images, the pencil to edit, and **采用** to adopt. Crop adoption returns to editing with its region and mask intact. Source history can restore previous images, masks and crop state for the loaded browser session.
+Generation shows actual workflow stages and sampler steps above settings. You can keep painting, zooming and changing parameters; the queued task uses its submitted snapshot. Generated results open sliding comparison without replacing the source. Use the single before/after icon to toggle images, the pencil to edit, and **Adopt** to adopt. Crop adoption returns to editing with its region and mask intact. Source history can restore previous images, masks and crop state for the loaded browser session.
 
 The comparison node and workspace recover lost execution notifications by queued task ID. Image loading reports actual received bytes, a percentage when size is known, then decoding; transient failures retry and can resume after reconnecting. Expired server-side previews require another run. Recovery does not create preview files. Updating backend code requires a full ComfyUI restart; frontend-only updates need a hard refresh.
 
-The retained `gpt test` workflow is an example, not a required template. Validation also covers a newly built multi-pipeline workflow, changed node IDs and renamed presets.
+The [official workflow](examples/Adachi-Workbench.json) is a starting point, not a required template. Validation also covers independently built multi-pipeline workflows, changed node IDs and renamed presets. Labels default to English; choose Simplified Chinese in ComfyUI settings for the Chinese interface. Other locales use the English fallback.
 
 ### Paint directly on the graph
 
@@ -88,7 +88,7 @@ In Crop & Blend mode, choose one of six 64-aligned presets spanning 512–2048 p
 | `Inline Mask.image` → `Image Compare.original`; `Adachi Inpaint Workbench.image` → `Image Compare.result` | Compare the crop before adopting it. |
 | `Inline Mask.full_image` → `Save Image.images` | Save the current full image with the **adopted** layer stitched in. |
 
-Generate, inspect the result in **Image Compare**, then click **Adopt this result** to return it. There is no feedback wire and generation does not automatically replace the editor image. Use the inpaint node's **image** output for comparison; its `crop` output is the sampling canvas and can have a different size. [Open the ready-wired example](examples/05-inline-crop-blend.json).
+Generate, inspect the result in **Image Compare**, then click **Adopt this result** to return it. There is no feedback wire and generation does not automatically replace the editor image. Use the inpaint node's **image** output for comparison; its `crop` output is the sampling canvas and can have a different size. In the [official workflow](examples/Adachi-Workbench.json), select **Inpaint**, then switch Inline Mask to **Crop & Blend**.
 
 After adoption, the result appears in the selected area and the editor returns to the repaint mask, ready for another pass. Select **◐ blend layers** to paint the layer mask: brush keeps new pixels, **Alt** restores original pixels, and soft edges blend seams. The blend mask is independent of the repaint mask. While editing the blend mask, **hold the right mouse button** to preview the original and release it to return to the workspace. To select a new region, switch to **◌ repaint mask** and right-click (or press Escape); the visible result is merged before the selection is released. Left-click places the next region. The **↶ Undo** button undoes strokes in the active mask. Hover the bottom controls for instructions. For a generated batch, select the desired result in Image Compare before adopting it. A result tagged with an older crop is rejected after selecting another region.
 
@@ -161,10 +161,11 @@ For a Git installation, update with `git pull` inside the plugin folder, then re
 
 ## Quick start
 
-1. Drag [01-inline-inpaint.json](examples/01-inline-inpaint.json) into ComfyUI and select a compatible checkpoint, or connect your existing model, VAE and conditioning nodes.
-2. In **Inline Mask**, upload a picture and paint the region to change. **White repaints; black preserves.** Orange is only the on-screen overlay.
-3. Edit the upstream positive/negative prompts. Set the sampling area, width, height and denoise in **Adachi Inpaint Workbench**, then queue the workflow.
-4. Compare the output. Adopt a result when you want it to become the next source, and continue editing with the mask intact.
+1. Drag [Adachi-Workbench.json](examples/Adachi-Workbench.json) into ComfyUI. Replace **YOUR_CHECKPOINT.safetensors** with your own compatible checkpoint; the template does not download models or require a LoRA.
+2. Click **Text to image** in Group Bypass Presets, edit the neutral example prompts, and queue to create an image.
+3. Click **Inpaint**. In **Inline Mask**, upload or drop a source image and paint the region to change. **White repaints; black preserves.** Orange is only the on-screen overlay.
+4. Set the sampling area, dimensions and denoise in **Adachi Inpaint Workbench**. Queue on the graph, or click **Open Adachi Workbench** to edit in the separate workspace.
+5. Compare the output. Adopt a result when you want it to become the next source, and continue editing with the mask intact.
 
 ```mermaid
 flowchart LR
@@ -201,7 +202,7 @@ All nodes live under **Adachi-Inpaint-Workbench**. The group preset controller i
 | **Inpaint Prepare** | Crop/resize pixels and mask for a custom sampler workflow | `pixels`, `mask`, `context` |
 | **Inpaint Composite** | Return a decoded local result to source coordinates | `image` |
 
-For modular sampling: `Prepare.pixels → VAE Encode → Set Latent Noise Mask → sampler → VAE Decode → Composite`. Connect `Prepare.mask` to the latent mask node and **always connect `Prepare.context` to `Composite.context`**. See the [modular example](examples/02-modular-inpaint.json).
+For modular sampling: `Prepare.pixels → VAE Encode → Set Latent Noise Mask → sampler → VAE Decode → Composite`. Connect `Prepare.mask` to the latent mask node and **always connect `Prepare.context` to `Composite.context`**.
 
 ## Canvas shortcuts
 
@@ -222,15 +223,9 @@ The painting panel also provides invert, fill, clear, PNG mask import/export, im
 
 ## Example workflows
 
-Drag a JSON file into ComfyUI:
+Use the single [official template: Adachi-Workbench.json](examples/Adachi-Workbench.json). It includes text-to-image and inpainting branches, a shared checkpoint, Group Bypass Presets, automatic exclusive conditioning/image selection, comparison and saving. The preset controller stays outside the groups it controls. Select one preset at a time; enabling both branches intentionally fails exclusive selection.
 
-| Example | What to try |
-| --- | --- |
-| [01 · Inline inpainting](examples/01-inline-inpaint.json) | The complete painting and inpainting loop; select your own compatible checkpoint. |
-| [02 · Modular inpainting](examples/02-modular-inpaint.json) | Use standard encode/sample/decode nodes with Prepare and Composite. |
-| [03 · Group presets](examples/03-group-presets.json) | Model-free preset switching with image branches. |
-| [04 · Exclusive switch](examples/04-exclusive-switch.json) | Model-free A/B selection controlled by group presets. |
-| [05 · Inline crop and blend](examples/05-inline-crop-blend.json) | One editor, crop presets, comparison adoption and accepted full-image output; select your checkpoint and upload a source. |
+All example labels are English. Prompts are newly written neutral examples; the checkpoint is a placeholder for your own model. Inpaint requires uploading a source first. Crop & Blend uses the same connected editor, so no second workflow is needed. For model families with separate model, text encoder and VAE loaders, replace the checkpoint block with compatible loaders and connect the matching outputs.
 
 ## Compatibility and important behaviour
 

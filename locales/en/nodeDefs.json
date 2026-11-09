@@ -14,6 +14,18 @@
       "source_data": {
         "name": "source_data",
         "tooltip": "Embedded source image for portable workflows."
+      },
+      "edit_mode": {
+        "name": "edit_mode"
+      },
+      "crop_state": {
+        "name": "crop_state"
+      },
+      "blend_data": {
+        "name": "blend_data"
+      },
+      "layer_image": {
+        "name": "layer_image"
       }
     },
     "outputs": {
@@ -22,6 +34,9 @@
       },
       "1": {
         "name": "mask"
+      },
+      "2": {
+        "name": "full_image"
       }
     }
   },
@@ -184,6 +199,10 @@
       "soft_edge": {
         "name": "soft_edge",
         "tooltip": "Extra feathering, not A1111 Soft Inpainting."
+      },
+      "soft_strength": {
+        "name": "soft_strength",
+        "tooltip": "Adds 0–16 pixels of Gaussian feathering."
       },
       "refiner_model": {
         "name": "refiner_model",

@@ -33,8 +33,9 @@ body.adachi-workspace-open > :not(.adachi-workspace):not(script):not(style):not(
 .adachi-workspace .aw-icon {display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;padding:5px;flex-shrink:0}
 .adachi-workspace header {position:absolute;z-index:6;top:8px;left:20px;right:20px;height:36px;display:flex;align-items:center;gap:8px;pointer-events:none}
 .adachi-workspace header>* {pointer-events:auto}
-.adachi-workspace h1 {font-size:18px;font-weight:650;margin:0 auto 0 0;padding:3px 8px;border-radius:4px;background:var(--aw-panel);white-space:nowrap}
-.adachi-workspace .aw-status {font-size:12px;max-width:42vw;padding:4px 8px;border-radius:4px;background:var(--aw-panel);color:var(--aw-muted);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.adachi-workspace h1 {font-size:18px;font-weight:650;margin:0 auto 0 0;padding:3px 0;background:transparent;color:rgba(0,0,0,.62);white-space:nowrap}
+.adachi-workspace[data-theme=dark] h1 {text-shadow:0 0 1px rgba(255,255,255,.9),0 0 3px rgba(255,255,255,.65)}
+.adachi-workspace .aw-status {font-size:12px;min-width:0;max-width:42vw;flex:0 1 auto;padding:4px 8px;border-radius:4px;background:var(--aw-panel);color:var(--aw-muted);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .adachi-workspace .aw-status[data-state=ok] {color:var(--aw-ok)}
 .adachi-workspace .aw-status[data-state=error] {color:var(--aw-error)}
 .adachi-workspace main {display:grid;grid-template-columns:minmax(0,1fr) 10px var(--aw-sidebar-width,360px);gap:0;padding:6px;flex:1;min-height:0}

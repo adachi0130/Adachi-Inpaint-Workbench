@@ -12,7 +12,7 @@ export function installInpaintWorkbench(nodeType) {
         const root = document.createElement("div"); root.className = "dd-inpaint dd-workbench";
         if (node.comfyClass === "AdachiWebUIInpaint" || node.type === "AdachiWebUIInpaint") {
             const launch = document.createElement("button");
-            launch.type = "button"; launch.textContent = "打开安达工作台";
+            launch.type = "button"; launch.textContent = T("Open Adachi Workbench");
             launch.className = "adachi-workspace-launch";
             launch.onclick = event => { event.preventDefault(); event.stopPropagation(); document.dispatchEvent(new CustomEvent("adachi-open-workspace", {detail:{sampler:node}})); };
             root.append(launch);

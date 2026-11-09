@@ -1,7 +1,7 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
 import { InlineMaskEditor } from "./editor.js?v=0.9.0";
-import { installInpaintWorkbench } from "./inpaint_node.js?v=workspace-entry2";
+import { installInpaintWorkbench } from "./inpaint_node.js?v=2.0.0";
 import { bindWidgetToNodeWidth } from "./widget_layout.js?v=0.5.5";
 import { routeWheelOutsideImage } from "./wheel_routing.js";
 import { InlineCropController } from "./inline_crop.js?v=0.8.2";

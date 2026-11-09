@@ -1,3 +1,4 @@
+import {T} from './i18n.js';
 export function installWorkspaceSplitter(root,main,divider) {
     const key='adachi-workspace-sidebar-width',minimum=280,canvasMinimum=320;
     let requested=360,drag=null;
@@ -12,14 +13,14 @@ export function installWorkspaceSplitter(root,main,divider) {
         divider.setAttribute('aria-valuemin',String(Math.min(canvasMinimum,width-minimum-10)));
         divider.setAttribute('aria-valuemax',String(Math.max(0,width-minimum-10)));
         divider.setAttribute('aria-valuenow',String(Math.max(0,width-actual-10)));
-        divider.setAttribute('aria-valuetext',`右侧配置 ${Math.round(actual)} 像素`);
+        divider.setAttribute('aria-valuetext',T("Settings panel {width} pixels wide",{width:Math.round(actual)}));
         return actual;
     };
     const save=()=>{try{localStorage.setItem(key,String(requested));}catch{}};
     const change=value=>{requested=Math.min(bounds().max,Math.max(minimum,value));render();};
     divider.setAttribute('role','separator');divider.setAttribute('aria-orientation','vertical');
-    divider.setAttribute('aria-label','调整画布与配置宽度');divider.tabIndex=0;
-    divider.title='拖动调整画布与配置宽度；双击恢复，方向键微调';
+    divider.setAttribute('aria-label',T("Resize canvas and settings"));divider.tabIndex=0;
+    divider.title=T("Drag to resize the canvas and settings; double-click to reset, or use arrow keys for fine adjustments");
     divider.onpointerdown=e=>{
         if(e.button!==0)return;e.preventDefault();e.stopPropagation();
         drag={id:e.pointerId,x:e.clientX,width:render()};divider.setPointerCapture(e.pointerId);

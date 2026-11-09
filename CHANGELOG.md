@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased · local workspace preview
+## 2.0.0 · 2026-11-09
+
+- Ship the standalone Adachi Workbench with English default labels and Simplified Chinese translations following ComfyUI's language setting.
+- Add one official text-to-image / inpainting workflow with group bypass presets and automatic exclusive routing, using neutral prompts and a user-selected checkpoint.
+- Use a transparent title treatment with semi-transparent black lettering instead of a white title background.
 
 - Rename the page brand to Adachi Workbench and add a remembered, keyboard-accessible canvas/settings divider.
 - Remove personal-template node IDs and preset/model-name matching. Discover components from the native execution graph, including Use Everywhere and subgraphs.

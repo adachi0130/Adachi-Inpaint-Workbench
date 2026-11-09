@@ -1,3 +1,4 @@
+import {T} from './i18n.js';
 // Execution notifications are an optimization, not the sole delivery channel.
 // Poll only IDs queued by this browser; never guess from another workflow's
 // latest history entry or from a coincidentally matching node ID.
@@ -52,7 +53,7 @@ const installed=new WeakMap();
 export function installComparisonRecovery(api,getGraph) {
     if(installed.has(api))return installed.get(api);
     const recovery=new ResultRecovery({fetchApi:api.fetchApi.bind(api),getGraph,
-        onPending:node=>{const view=node.adachiCompare;if(view){view.pendingOutputs=(view.pendingOutputs||0)+1;view.updateButton();view.loading(view.options.waitingText||'Waiting for the generated image…');}},
+        onPending:node=>{const view=node.adachiCompare;if(view){view.pendingOutputs=(view.pendingOutputs||0)+1;view.updateButton();view.loading(view.options.waitingText||T("Waiting for the generated image…"));}},
         onOutput(node,output,promptId,entry){
             if(node.adachiCompare)node.adachiCompare.pendingOutputs=Math.max(0,(node.adachiCompare.pendingOutputs||0)-1);
             const known=new Set((node.properties.adachi_compare?.results||[]).map(ref=>JSON.stringify([ref.type,ref.subfolder,ref.filename])));
@@ -62,7 +63,7 @@ export function installComparisonRecovery(api,getGraph) {
             document.dispatchEvent(new CustomEvent('adachi-result-recovered',{detail:{node,promptId,entry}}));
         },
         onTerminal(node,entry,promptId){
-            const view=node.adachiCompare;if(view){view.pendingOutputs=Math.max(0,(view.pendingOutputs||0)-1);view.updateButton();view.progressBox.hidden=!(view.pendingOutputs>0);view.status(view.options.failedText||'Generation failed; check the ComfyUI task history',true);}
+            const view=node.adachiCompare;if(view){view.pendingOutputs=Math.max(0,(view.pendingOutputs||0)-1);view.updateButton();view.progressBox.hidden=!(view.pendingOutputs>0);view.status(view.options.failedText||T("Generation failed; check the ComfyUI task history"),true);}
             document.dispatchEvent(new CustomEvent('adachi-result-recovered',{detail:{node,promptId,entry}}));
         },
     });

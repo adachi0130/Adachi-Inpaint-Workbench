@@ -1,3 +1,4 @@
+import {T} from './i18n.js';
 import {app} from '../../scripts/app.js';
 import {api} from '../../scripts/api.js';
 import {workspaceRequest} from './workspace_transport.js';
@@ -15,9 +16,9 @@ export function prepareWorkspacePrompt(options) {
  const task=previous.catch(()=>{}).then(()=>prepareSnapshot(graph,options));graphTasks.set(graph,task);return task;
 }
 async function prepareSnapshot(graph,{editorNode,samplerNode,compareNode,binding={},getBinding,allowEmpty=false,controller}) {
- if(!editorNode?.adachiEditor?.ready && !allowEmpty)throw Error('请先上传原图');
+ if(!editorNode?.adachiEditor?.ready && !allowEmpty)throw Error(T("Upload a source image first"));
  const entries=graphNodeEntries(graph),roots=[editorNode,samplerNode,compareNode];
- if(graph!==(app.rootGraph||app.graph)||roots.some(n=>!entries.some(e=>e.node===n)))throw Error('工作流已切换，请重新打开工作台');
+ if(graph!==(app.rootGraph||app.graph)||roots.some(n=>!entries.some(e=>e.node===n)))throw Error(T("The workflow changed; reopen the workbench"));
  const ids=roots.map(n=>executionId(graph,n)),[editorId,samplerId,compareId]=ids;
  const parents=roots.flatMap(node=>{const path=executionId(graph,node).split(':');return path.slice(0,-1).map((_,i)=>executionNode(graph,path.slice(0,i+1).join(':'))).filter(Boolean);});
  const routers=workspaceRoutingNodes(roots,controller),modes=new Map([...parents,...roots,...routers].map(n=>[n,n.mode]));
@@ -25,11 +26,11 @@ async function prepareSnapshot(graph,{editorNode,samplerNode,compareNode,binding
  try {
   for(const node of modes.keys())node.mode=0;
   prepared=typeof app.ue_modified_prompt==='function'?await app.ue_modified_prompt():await app.graphToPrompt();
-  if(!prepared?.output)throw Error('工作流连线无法解析，请检查忽略状态、Get/Set 或广播连线');
+  if(!prepared?.output)throw Error(T("Workflow connections could not be resolved; check bypass states, Get/Set and broadcast connections"));
  } finally {for(const [node,mode]of modes)node.mode=mode;}
- if(graph!==(app.rootGraph||app.graph))throw Error('工作流已切换，请重新检查');
+ if(graph!==(app.rootGraph||app.graph))throw Error(T("The workflow changed; check connections again"));
  const output=prepared.output,sampler=output[samplerId],compare=output[compareId];
- if(!sampler||!compare||!output[editorId])throw Error('选中的图像、重绘或对比节点未出现在执行图中');
+ if(!sampler||!compare||!output[editorId])throw Error(T("The selected image, inpaint or comparison node is missing from the execution graph"));
  // Existing image processors and result postprocessing remain connected. An
  // unconnected workbench can use its explicitly selected inline source/output.
  if(!depends(output,sampler.inputs.image,editorId)){sampler.inputs.image=[editorId,0];sampler.inputs.mask=[editorId,1];}

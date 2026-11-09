@@ -6,6 +6,137 @@
 // buttons are drawn by this plugin, so they translate here by reading Comfy.Locale.
 
 const ZH = {
+  "Load a source image first": "请先载入原图",
+  "Finish the current edit first": "请先结束当前编辑",
+  "The source image node was removed": "原图节点已移除",
+  "The image changed during restoration; try again": "图片在恢复过程中发生变化，请重试",
+  "The saved mask state is invalid": "历史蒙版状态无效",
+  "Source image": "原图",
+  "Edited source": "编辑中的原图",
+  "Processing the source image; please wait": "正在处理原图，请稍候",
+  "The source image history entry no longer exists": "原图历史不存在",
+  // Workbench panels, execution status and accessibility labels.
+  "Reading the current workflow…": "正在读取当前工作流…",
+  "Switch theme": "切换主题",
+  "Check connections": "检查连接",
+  "Return to workflow": "返回工作流",
+  "Edit mask": "编辑蒙版",
+  "Slide to compare": "滑动对比",
+  "Show before": "查看前图",
+  "Show after": "查看后图",
+  "Adopt": "采用",
+  "Use this result as the next source image and keep the mask; restore earlier images below": "采用当前结果作为下一轮原图，保留蒙版；下方可回退或选择之前的原图",
+  "Selected source image or generated result": "当前选择的前图或重绘结果",
+  "↶ Undo": "↶ 回退",
+  "Initial source": "初始原图",
+  "Choose an adopted source image": "选择已采用原图",
+  "Restore the previous source image, mask and crop": "回退到之前的原图，同时恢复蒙版和裁切状态",
+  "Restore the initial source image of this session": "恢复本次工作流会话中的初始原图",
+  "Choose an earlier adopted or uploaded source image": "选择之前采用或上传的原图",
+  "Current stage progress": "当前执行阶段进度",
+  "Actual progress from the current node; stages without step counts show an indeterminate bar": "显示当前节点的真实进度；没有步数的阶段显示等待动画",
+  "Workflow settings": "工作流设置",
+  "Generate": "生成",
+  "Generating": "生成中",
+  "Generation complete": "生成完成",
+  "Controls are not ready; reopen the workbench shortly": "控件尚未初始化，请稍后重新打开",
+  "This workflow needs Inline Mask, Adachi Inpaint Workbench and Image Compare nodes": "当前工作流需要内联蒙版、安达重绘工作台和图像对比节点",
+  "Source when opened": "打开时原图",
+  "Adopted result": "采用重绘结果",
+  "Uploaded source": "上传原图",
+  "Generation stopped": "生成已停止",
+  "Generating…": "生成中…",
+  "Workflow connections": "工作流连接",
+  "Multiple candidates found; select the nodes to use": "存在多个候选，请选择本次使用的节点",
+  "Inpaint node": "重绘节点",
+  "Image editor": "图像编辑",
+  "Image comparison": "图像对比",
+  "No preset controller": "不使用预设",
+  "Use these connections": "使用此连接",
+  "Select nodes from this workflow; this inpaint node remembers your choices": "选择当前工作流中的节点；同一重绘节点会记住本次选择",
+  "The workflow changed": "工作流已切换",
+  "Select the nodes to use in Workflow connections first": "请先在工作流连接中选择本次使用的节点",
+  "Upload a source image first": "请先上传原图",
+  "Checking in the background…": "后台检查中…",
+  "Workflow validation failed": "工作流检查未通过",
+  "Ready to generate": "检查通过 · 可以生成",
+  "Checking…": "检查中…",
+  "Queued for generation": "已进入生成队列",
+  "Generation failed; check the ComfyUI error log": "生成失败，请查看 ComfyUI 错误信息",
+  "Switch to light theme": "切换为白色主题",
+  "Switch to dark theme": "切换为黑色主题",
+  "Current workflow": "当前工作流",
+  "Reading workflow connections": "正在读取工作流连接",
+  "Actual sampler connections": "实际采样器连线",
+  "Main model": "主模型",
+  "Text encoder": "文本编码器",
+  "The group preset no longer exists": "分组预设不存在",
+  "Reading workflow connections; please wait": "正在读取工作流连接，请稍候",
+  "Some model lists are unavailable; existing workflow selections remain usable": "部分模型列表不可用，可保留工作流中的现有选择",
+  "Multiple group preset controllers found; choose one in Workflow connections.": "存在多个分组预设控制器，请在工作流连接中选择。",
+  "No enabled Group Bypass Presets node; using the current workflow settings.": "未启用组忽略预设节点，当前使用原工作流设置。",
+  "Main model and LoRA": "主模型与 LoRA",
+  "This profile uses the model from the workflow": "当前方案的模型由原工作流控制",
+  "Inherit workflow LoRAs": "沿用工作流 LoRA",
+  "Keep existing LoRA nodes and both CLIP branches; uncheck to use the custom list below. An empty custom list disables recognized LoRAs.": "保留原有 LoRA 节点及正负 CLIP 分支；取消后使用下方自定义列表，空列表即禁用已识别的 LoRA",
+  "No active LoRAs in the original workflow": "原工作流没有启用的 LoRA",
+  "No LoRA": "不使用 LoRA",
+  "None": "不使用",
+  "Remove this LoRA": "移除此 LoRA",
+  "＋ Add LoRA": "＋ 添加 LoRA",
+  "Use the workflow Refiner (must be compatible with the main model)": "使用工作流中的 Refiner（需与主模型兼容）",
+  "Positive prompt": "正面提示词",
+  "Negative prompt": "负面提示词",
+  "Controlled by the original workflow": "由原工作流控制",
+  "Reading connections…": "正在读取连接…",
+  "Encoders are identified from the execution graph; unrecognized conditioning stays controlled by the original workflow": "通过实际执行图查找编码器；无法明确识别的条件保留原工作流",
+  "Inherit upstream dynamic text; type to override": "沿用上游动态文本；输入后覆盖",
+  "Text comes from upstream; typing creates an override.": "文本来自上游；主动输入才覆盖。",
+  "Changes affect only this encoder; downstream conditioning is preserved.": "修改仅影响所选编码器，保留下游条件处理。",
+  "Loading main model": "加载主模型",
+  "Loading text encoder": "加载文本编码器",
+  "Loading VAE": "加载 VAE",
+  "Encoding prompts": "编码提示词",
+  "Loading LoRA": "加载 LoRA",
+  "Reading source image and mask": "读取原图与蒙版",
+  "Preparing inpaint sampling": "重绘采样准备",
+  "KSampler": "K 采样器",
+  "VAE decode": "VAE 解码",
+  "VAE encode": "VAE 编码",
+  "Preparing comparison images": "准备对比图片",
+  "Queued…": "排队中…",
+  "Executing workflow": "正在执行工作流",
+  "Reconnected; waiting for execution progress…": "已重连，等待执行进度…",
+  "Connection lost; recovering execution progress…": "连接中断，正在恢复进度…",
+  "Starting execution…": "开始执行…",
+  "Inpaint sampling (KSampler)": "重绘采样（K 采样器）",
+  "Resize canvas and settings": "调整画布与配置宽度",
+  "Drag to resize the canvas and settings; double-click to reset, or use arrow keys for fine adjustments": "拖动调整画布与配置宽度；双击恢复，方向键微调",
+  "The workbench backend is not loaded. Stop and restart ComfyUI, then check connections again; refreshing the browser is not enough.": "工作台后端尚未加载：请在 ComfyUI 启动器中停止后重新启动服务，再点击检查连接（仅刷新网页不够）",
+  "Submission timed out. Check the task queue before retrying to avoid duplicate generations.": "提交超时，请先检查任务队列，避免重复生成",
+  "Connection check timed out; check your network and retry": "连接检查超时，请检查网络后重试",
+  "The workflow changed; reopen the workbench": "工作流已切换，请重新打开工作台",
+  "Workflow connections could not be resolved; check bypass states, Get/Set and broadcast connections": "工作流连线无法解析，请检查忽略状态、Get/Set 或广播连线",
+  "The workflow changed; check connections again": "工作流已切换，请重新检查",
+  "The selected image, inpaint or comparison node is missing from the execution graph": "选中的图像、重绘或对比节点未出现在执行图中",
+  "The selected inpaint node is missing from the execution graph": "所选重绘节点未出现在执行图中",
+  "Connect a main model before adding LoRAs": "请连接主模型后再添加 LoRA",
+  "Open Adachi Workbench": "打开安达工作台",
+  "Text encoder {index}": "文本编码器 {index}",
+  "Model list request failed ({status})": "模型列表加载失败（{status}）",
+  "Missing {count} model files": "缺少 {count} 份模型文件",
+  "{label}: {value}": "{label}：{value}",
+  "LoRA {index} strength": "LoRA {index} 强度",
+  "LoRA {index}": "LoRA {index}",
+  "{label} · {count} encoders": "{label} · {count} 个编码器",
+  "Actual sampler connections · {node} #{id} · {field}. {description}": "实际采样器连线 · {node} #{id} · {field}。{description}",
+  "Restore {label} from the workflow": "恢复工作流中的{label}",
+  "Reading cache · {count} nodes": "读取缓存 · {count} 个节点",
+  "Settings panel {width} pixels wide": "右侧配置 {width} 像素",
+  "Invalid workbench response ({status}); check your proxy settings or restart ComfyUI": "工作台服务响应无效（{status}），请检查代理配置或重启 ComfyUI",
+  "{label} not found: {value}": "未找到{label}：{value}",
+  "The selected parameter node is missing from the execution graph #{id}": "所选参数节点未出现在执行图中 #{id}",
+
   "Comparison image loading progress": "对比图片加载进度",
   "Waiting for the generated image…": "等待生成结果，完成后自动找回…",
   "Generation failed; check the ComfyUI task history": "生成失败，请查看 ComfyUI 任务历史",
@@ -214,28 +345,33 @@ const ZH = {
 const DICTS = { zh: ZH };
 
 function readLocale() {
-  try {
-    const api = globalThis.comfyAPI;
-    const value = api?.app?.ui?.settings?.getSettingValue?.("Comfy.Locale");
-    if (value) return String(value);
-  } catch (_) { /* settings unavailable before the app boots */ }
-  try {
-    const value = globalThis.app?.ui?.settings?.getSettingValue?.("Comfy.Locale");
-    if (value) return String(value);
-  } catch (_) { /* ignore */ }
+  // Modern frontends expose an ES-module namespace at comfyAPI.app, while
+  // earlier builds exposed the app directly. Never infer the UI language from
+  // the browser: ComfyUI's selected locale is the user's explicit preference.
+  const api = globalThis.comfyAPI;
+  for (const app of [api?.app?.app, api?.app, globalThis.app]) {
+    try {
+      const value = app?.ui?.settings?.getSettingValue?.("Comfy.Locale");
+      if (value) return String(value);
+    } catch (_) { /* settings may be unavailable before the app boots */ }
+  }
   return "en";
 }
 
 export function localeDict() {
-  const base = readLocale().split("-")[0].toLowerCase();
-  return DICTS[base] || null;
+  const base = readLocale().split(/[-_]/)[0].toLowerCase();
+  return Object.hasOwn(DICTS, base) ? DICTS[base] : null;
 }
 
-// Translate a user-facing string. `context` disambiguates identical English strings
-// that need different translations (for example the Fill button and the Fill enum).
-export function T(text, context) {
+// English is the fallback for every locale. The optional string context retains
+// enum disambiguation; an object supplies named values without concatenating
+// translated fragments. Values remain text and are never interpreted as HTML.
+export function T(text, contextOrParams, params = {}) {
+  const context = typeof contextOrParams === "string" ? contextOrParams : null;
+  const values = contextOrParams && typeof contextOrParams === "object" ? contextOrParams : params;
   const dict = localeDict();
-  if (!dict) return text;
   const key = context ? `${context}:${text}` : text;
-  return dict[key] ?? text;
+  const translated = dict && Object.hasOwn(dict, key) ? dict[key] : text;
+  return translated.replace(/\{([A-Za-z][A-Za-z0-9_]*)\}/g, (placeholder, name) =>
+    Object.hasOwn(values, name) ? String(values[name]) : placeholder);
 }
