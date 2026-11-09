@@ -1,17 +1,122 @@
-.adachi-workspace{position:fixed;inset:0;z-index:12000;background:#eef1f4;color:#273340;font:14px/1.5 'Segoe UI','Microsoft YaHei',sans-serif;display:flex;flex-direction:column;color-scheme:light}
-.adachi-workspace *{box-sizing:border-box}.adachi-workspace [hidden]{display:none!important}
-.adachi-workspace header{height:64px;flex-shrink:0;background:#fff;border-bottom:1px solid #d9dfe6;display:flex;align-items:center;gap:16px;padding:0 24px}.adachi-workspace h1{font-size:19px;font-weight:650;margin:0 auto 0 0;letter-spacing:.2px}.adachi-workspace h1 small{display:block;font-size:10px;letter-spacing:1.8px;color:#7d8c9d;font-weight:500}
-.adachi-workspace button,.adachi-workspace select,.adachi-workspace input,.adachi-workspace textarea{font:inherit;color:#263747;background:#fff;border:1px solid #ced7e1;border-radius:5px;padding:7px 10px}.adachi-workspace button{cursor:pointer;white-space:nowrap}.adachi-workspace button:hover{border-color:#6685aa;background:#f3f7fb}.adachi-workspace button:disabled{opacity:.4;cursor:not-allowed}.adachi-workspace button:focus-visible{outline:2px solid #3475b9;outline-offset:2px}.adachi-workspace button.active{border-color:#457fb3;background:#edf5fb;color:#1c629a}.adachi-workspace .primary{background:#276da7;color:#fff;border-color:#276da7}.adachi-workspace .primary:hover{background:#1a598a;color:white}
-.adachi-workspace main{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:14px;padding:14px;flex:1;min-height:0}.adachi-workspace .aw-canvas{background:white;border:1px solid #dce2e9;border-radius:8px;display:flex;flex-direction:column;min-height:0;overflow:hidden}.adachi-workspace .aw-toolbar{display:flex;flex-wrap:wrap;gap:6px;padding:10px 12px;align-items:center;border-bottom:1px solid #e3e8ed}.adachi-workspace .aw-toolbar .spacer{flex:1}.adachi-workspace .aw-surface{flex:1;min-height:200px;position:relative;background:#e9edf1}.adachi-workspace aside{overflow:auto;background:#fff;border:1px solid #dce2e9;border-radius:8px;padding:16px}.adachi-workspace aside h2{font-size:12px;letter-spacing:1px;color:#708096;margin:0 0 12px}.adachi-workspace aside label{margin-top:10px}.adachi-workspace aside select,.adachi-workspace aside textarea{max-width:100%}.adachi-workspace aside textarea{width:100%;min-height:85px;resize:vertical}.adachi-workspace details{margin:8px 0}.adachi-workspace summary{cursor:pointer}
-.adachi-workspace .aw-status{font-size:12px;color:#6c7d8d;max-width:50vw}.adachi-workspace .aw-status[data-state=ok]{color:#277f61}.adachi-workspace .aw-status[data-state=error]{color:#ac443c}.adachi-workspace .aw-footer{display:flex;align-items:center;gap:8px;padding:8px 12px;border-top:1px solid #e1e6eb;font-size:12px;color:#738393}.adachi-workspace .aw-footer select{max-width:260px;padding:4px 7px}.adachi-workspace .aw-note{padding:8px 12px;border-top:1px solid #e1e6eb;color:#6c7d8d;font-size:12px}.adachi-workspace .aw-result-image{width:100%;height:100%;position:absolute;object-fit:contain;background:#e9edf1}
-.adachi-workspace .aw-embedded{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;max-height:none!important;transform:none!important;visibility:visible!important}.adachi-workspace .dd-inpaint{--dd-bg:#fff;--dd-panel:#f3f5f8;--dd-line:#d3dce6;--dd-text:#263747;--dd-muted:#718195;--dd-accent:#327aad;color:#263747;color-scheme:light;background:#fff}.adachi-workspace .dd-inpaint button{background:#f3f6f9;color:#263747}.adachi-workspace .dd-inpaint .dd-stage{background-color:#e9edf1;background-image:linear-gradient(45deg,#e0e5eb 25%,transparent 25%),linear-gradient(-45deg,#e0e5eb 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#e0e5eb 75%),linear-gradient(-45deg,transparent 75%,#e0e5eb 75%)}.adachi-workspace .dd-inpaint input,.adachi-workspace .dd-inpaint select{background:#f7f9fb;color:#273747}.adachi-workspace .dd-inline-minimal{background:transparent}.adachi-workspace .dd-crop-bar{background:#ffffffed}.adachi-workspace .dd-inpaint .dd-upload-progress{background:#ffffffed;color:#273747}.adachi-workspace .aw-parameters{position:relative;min-height:100px}.adachi-workspace .aw-parameters>.dd-inpaint{position:relative!important;transform:none!important;inset:auto!important;height:auto!important;max-height:none!important;overflow:visible!important;width:100%!important}.adachi-workspace .dd-param-advanced-body{padding:8px 0}.adachi-workspace .dd-workbench{border:0}.adachi-workspace .dd-editor-controls{background:#fff}.adachi-workspace .dd-inpaint .dd-actions{padding:8px 0}.adachi-workspace .dd-inpaint .dd-settings{gap:6px;padding:6px 0}.adachi-workspace .dd-inpaint .dd-tools{padding:5px 0}.adachi-workspace .dd-inpaint .dd-tools button{padding:4px;font-size:11px}.adachi-workspace .dd-inpaint .dd-stage canvas{outline:none}
-@media(max-width:850px){.adachi-workspace main{grid-template-columns:1fr;overflow:auto}.adachi-workspace .aw-canvas{min-height:65vh}.adachi-workspace aside{overflow:visible}.adachi-workspace header{padding:8px 12px;height:auto;min-height:60px;flex-wrap:wrap}.adachi-workspace .aw-status{max-width:55vw}.adachi-workspace .aw-toolbar button{padding:6px}}
-.adachi-workspace .aw-presets{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}.adachi-workspace .aw-presets button{flex:1;padding:7px 5px;font-size:12px}.adachi-workspace .aw-presets button[aria-pressed=true]{background:#eaf3fb;border-color:#5185b2;color:#205b8b}.adachi-workspace .aw-bindings label{display:block;font-size:12px;color:#51667b}.adachi-workspace .aw-bindings label select{width:100%;display:block;margin:5px 0 10px}.adachi-workspace .aw-bindings textarea{display:block;margin-top:5px;line-height:1.5}.adachi-workspace .aw-bindings details{border-bottom:1px solid #e1e7ed;padding:5px 0 10px}.adachi-workspace .aw-bindings summary{font-size:12px;color:#44647e}.adachi-workspace .aw-lora-row{display:grid;grid-template-columns:minmax(0,1fr) 65px 30px;gap:4px;margin:6px 0}.adachi-workspace .aw-lora-row input{min-width:0;width:100%;padding:5px}.adachi-workspace .aw-lora-row button{padding:3px}.adachi-workspace .dd-inline-minimal>.dd-status:not([hidden]){background:#ffffffec;color:#963b36}.adachi-workspace .dd-inpaint .dd-param-grid{gap:8px}
-/* Keep the image surface tall; controls float above it rather than taking rows. */
-body.adachi-workspace-open > :not(.adachi-workspace):not(script):not(style):not(link){opacity:0!important;pointer-events:none!important}
-.adachi-workspace header{position:absolute;z-index:6;top:8px;left:20px;right:20px;height:36px;min-height:0;padding:0;border:0;background:transparent;pointer-events:none}
-.adachi-workspace header>*{pointer-events:auto}.adachi-workspace h1{font-size:18px;background:#fffffff2;border-radius:4px;padding:3px 8px}.adachi-workspace header .aw-status{background:#fffffff2;padding:4px 8px;border-radius:4px}
-.adachi-workspace main{padding:6px;gap:8px}.adachi-workspace .aw-canvas{position:relative}.adachi-workspace .aw-surface{position:absolute;inset:0;min-height:0}
-.adachi-workspace .aw-toolbar{position:absolute;top:48px;left:8px;right:8px;z-index:5;padding:0;border:0;background:transparent;pointer-events:none}.adachi-workspace .aw-toolbar button{pointer-events:auto;background:#fffffff2;padding:5px 9px}.adachi-workspace .aw-footer{position:absolute;bottom:8px;left:8px;z-index:5;padding:4px;border:0;border-radius:5px;background:#ffffffeb;max-width:calc(100% - 16px)}.adachi-workspace .aw-footer button{padding:4px 8px}.adachi-workspace .aw-note{display:none}.adachi-workspace aside{padding-top:48px}.adachi-workspace .aw-canvas .dd-files,.adachi-workspace .aw-canvas .dd-mode-select{top:88px}.adachi-workspace .aw-canvas .dd-crop-bar{bottom:52px}
-@media(max-width:850px){.adachi-workspace header{left:12px;right:12px;flex-wrap:nowrap;height:36px}.adachi-workspace header h1{font-size:14px}.adachi-workspace header button{padding:4px 6px;font-size:11px}.adachi-workspace header .aw-status{max-width:28vw;font-size:10px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.adachi-workspace .aw-canvas{min-height:78vh}.adachi-workspace aside{padding-top:14px}}
-.adachi-workspace .aw-toolbar button.primary{background:#276da7;border-color:#276da7;color:#fff}.adachi-workspace .adachi-workspace-launch{display:none}
+.adachi-workspace {
+  --aw-bg:#eef1f4; --aw-panel:#fff; --aw-input:#f6f8fa; --aw-text:#273747;
+  --aw-muted:#61758a; --aw-line:#ced7e1; --aw-hover:#edf3f9;
+  --aw-accent:#276da7; --aw-selected:#eaf3fb; --aw-selected-text:#205b8b;
+  --aw-stage:#e9edf1; --aw-checker:#e0e5eb; --aw-error:#a93e34; --aw-ok:#237459;
+  position:fixed; inset:0; z-index:12000; display:flex; flex-direction:column;
+  background:var(--aw-bg); color:var(--aw-text); color-scheme:light;
+  font:14px/1.5 'Segoe UI','Microsoft YaHei',sans-serif;
+}
+.adachi-workspace[data-theme=dark] {
+  --aw-bg:#171a1e; --aw-panel:#24282e; --aw-input:#2d333b; --aw-text:#e3e8ef;
+  --aw-muted:#a2b1c2; --aw-line:#46515e; --aw-hover:#343e49;
+  --aw-accent:#357fb8; --aw-selected:#263f55; --aw-selected-text:#b4dcff;
+  --aw-stage:#191d22; --aw-checker:#232931; --aw-error:#ffa69a; --aw-ok:#83d5b5;
+  color-scheme:dark;
+}
+.adachi-workspace * {box-sizing:border-box}
+.adachi-workspace [hidden] {display:none!important}
+body.adachi-workspace-open > :not(.adachi-workspace):not(script):not(style):not(link) {opacity:0!important;pointer-events:none!important}
+.adachi-workspace button,.adachi-workspace select,.adachi-workspace input,.adachi-workspace textarea {
+  font:inherit; color:var(--aw-text); background:var(--aw-panel); border:1px solid var(--aw-line);
+  border-radius:5px; padding:7px 10px;
+}
+.adachi-workspace button {cursor:pointer;white-space:nowrap}
+.adachi-workspace button:hover {border-color:var(--aw-accent);background:var(--aw-hover)}
+.adachi-workspace button:disabled {opacity:.4;cursor:not-allowed}
+.adachi-workspace button:focus-visible,.adachi-workspace select:focus-visible {outline:2px solid var(--aw-accent);outline-offset:2px}
+.adachi-workspace button.active,.adachi-workspace button[aria-pressed=true],.adachi-workspace .dd-inpaint button.dd-active {
+  background:var(--aw-selected);color:var(--aw-selected-text);border-color:var(--aw-accent);
+}
+.adachi-workspace button.primary {background:var(--aw-accent);border-color:var(--aw-accent);color:#fff}
+.adachi-workspace button.primary:hover {filter:brightness(1.1)}
+.adachi-workspace .aw-icon {display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;padding:5px;flex-shrink:0}
+.adachi-workspace header {position:absolute;z-index:6;top:8px;left:20px;right:20px;height:36px;display:flex;align-items:center;gap:8px;pointer-events:none}
+.adachi-workspace header>* {pointer-events:auto}
+.adachi-workspace h1 {font-size:18px;font-weight:650;margin:0 auto 0 0;padding:3px 8px;border-radius:4px;background:var(--aw-panel);white-space:nowrap}
+.adachi-workspace .aw-status {font-size:12px;max-width:42vw;padding:4px 8px;border-radius:4px;background:var(--aw-panel);color:var(--aw-muted);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.adachi-workspace .aw-status[data-state=ok] {color:var(--aw-ok)}
+.adachi-workspace .aw-status[data-state=error] {color:var(--aw-error)}
+.adachi-workspace main {display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:8px;padding:6px;flex:1;min-height:0}
+.adachi-workspace .aw-canvas {position:relative;min-height:0;overflow:hidden;border:1px solid var(--aw-line);border-radius:8px;background:var(--aw-panel)}
+.adachi-workspace .aw-surface {position:absolute;inset:0;min-height:0;background:var(--aw-stage)}
+.adachi-workspace .aw-toolbar {position:absolute;top:48px;left:8px;right:8px;z-index:5;display:flex;gap:6px;align-items:center;pointer-events:none}
+.adachi-workspace .aw-toolbar button {pointer-events:auto;padding:5px 9px}
+.adachi-workspace .aw-toolbar .aw-icon {padding:5px}
+.adachi-workspace .aw-toolbar .spacer {flex:1}
+.adachi-workspace .aw-footer {position:absolute;bottom:8px;left:8px;z-index:5;display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:5px;border:1px solid var(--aw-line);border-radius:5px;background:var(--aw-panel);max-width:calc(100% - 16px);font-size:12px;color:var(--aw-muted)}
+.adachi-workspace .aw-footer button {padding:4px 8px}
+.adachi-workspace .aw-footer select {max-width:260px;min-width:0;padding:4px 7px}
+.adachi-workspace .aw-note {display:none}
+.adachi-workspace .aw-result-image {width:100%;height:100%;position:absolute;object-fit:contain;background:var(--aw-stage)}
+.adachi-workspace aside {overflow:auto;background:var(--aw-panel);border:1px solid var(--aw-line);border-radius:8px;padding:48px 16px 16px}
+.adachi-workspace aside h2 {font-size:12px;letter-spacing:1px;color:var(--aw-muted);margin:0 0 12px}
+.adachi-workspace aside label {margin-top:10px}
+.adachi-workspace aside select,.adachi-workspace aside textarea {max-width:100%}
+.adachi-workspace aside textarea {width:100%;min-height:85px;resize:vertical}
+.adachi-workspace details {margin:8px 0}
+.adachi-workspace summary {cursor:pointer}
+.adachi-workspace .aw-presets {display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.adachi-workspace .aw-presets button {flex:1;padding:7px 5px;font-size:12px}
+.adachi-workspace .aw-profile-warning {border:1px solid var(--aw-line);border-left:3px solid var(--aw-accent);padding:8px;margin:0 0 12px;font-size:12px;color:var(--aw-muted)}
+.adachi-workspace .aw-bindings label {display:block;font-size:12px;color:var(--aw-muted)}
+.adachi-workspace .aw-bindings label select {width:100%;display:block;margin:5px 0 10px}
+.adachi-workspace .aw-bindings textarea {display:block;margin-top:5px;line-height:1.5}
+.adachi-workspace .aw-bindings label>button {font-size:12px;padding:1px 6px;margin-top:3px}
+.adachi-workspace .aw-bindings details {border-bottom:1px solid var(--aw-line);padding:5px 0 10px}
+.adachi-workspace .aw-bindings summary {font-size:12px;color:var(--aw-muted)}
+.adachi-workspace .aw-lora-row {display:grid;grid-template-columns:minmax(0,1fr) 65px 30px;gap:4px;margin:6px 0}
+.adachi-workspace .aw-lora-row input {min-width:0;width:100%;padding:5px}
+.adachi-workspace .aw-lora-row button {padding:3px}
+.adachi-workspace .aw-embedded {position:absolute!important;inset:0!important;width:100%!important;height:100%!important;max-height:none!important;transform:none!important;visibility:visible!important}
+.adachi-workspace .dd-inpaint {--dd-bg:var(--aw-panel);--dd-panel:var(--aw-input);--dd-line:var(--aw-line);--dd-text:var(--aw-text);--dd-muted:var(--aw-muted);--dd-accent:var(--aw-accent);color:var(--aw-text);color-scheme:inherit;background:var(--aw-panel)}
+.adachi-workspace .dd-inpaint button {background:var(--aw-input);color:var(--aw-text)}
+.adachi-workspace .dd-inpaint .dd-stage {background-color:var(--aw-stage);background-image:linear-gradient(45deg,var(--aw-checker) 25%,transparent 25%),linear-gradient(-45deg,var(--aw-checker) 25%,transparent 25%),linear-gradient(45deg,transparent 75%,var(--aw-checker) 75%),linear-gradient(-45deg,transparent 75%,var(--aw-checker) 75%)}
+.adachi-workspace .dd-inpaint input,.adachi-workspace .dd-inpaint select {background:var(--aw-input);color:var(--aw-text)}
+.adachi-workspace .dd-inline-minimal {background:transparent}
+.adachi-workspace .dd-crop-bar {background:var(--aw-panel)}
+.adachi-workspace .dd-inpaint .dd-upload-progress {background:var(--aw-panel);color:var(--aw-text)}
+.adachi-workspace .aw-parameters {position:relative;min-height:100px}
+.adachi-workspace .aw-parameters>.dd-inpaint {position:relative!important;transform:none!important;inset:auto!important;height:auto!important;max-height:none!important;overflow:visible!important;width:100%!important}
+.adachi-workspace .dd-param-advanced-body {padding:8px 0}
+.adachi-workspace .dd-workbench {border:0}
+.adachi-workspace .dd-editor-controls {background:var(--aw-panel)}
+.adachi-workspace .dd-inpaint .dd-actions {padding:8px 0}
+.adachi-workspace .dd-inpaint .dd-settings {gap:6px;padding:6px 0}
+.adachi-workspace .dd-inpaint .dd-tools {padding:5px 0}
+.adachi-workspace .dd-inpaint .dd-tools button {padding:4px;font-size:11px}
+.adachi-workspace .dd-inpaint .dd-stage canvas {outline:none}
+.adachi-workspace .dd-inline-minimal>.dd-status:not([hidden]) {background:var(--aw-panel);color:var(--aw-error)}
+.adachi-workspace .dd-inpaint .dd-param-grid {gap:8px}
+.adachi-workspace .aw-canvas .dd-files,.adachi-workspace .aw-canvas .dd-mode-select {top:88px}
+.adachi-workspace .aw-canvas .dd-crop-bar {
+  bottom:calc(var(--aw-history-height,40px) + 16px);left:8px;right:8px;
+  background:var(--aw-panel);border:1px solid var(--aw-line);padding:5px;gap:5px;
+  box-shadow:0 2px 8px #0002;
+}
+.adachi-workspace .aw-canvas .dd-crop-bar button,.adachi-workspace .aw-canvas .dd-crop-bar select,.adachi-workspace .aw-canvas .dd-crop-bar input {
+  height:28px;min-height:28px;font-size:12px;color:var(--aw-text);
+}
+.adachi-workspace .aw-canvas .dd-files button {opacity:1}
+.adachi-workspace .aw-canvas .dd-adoption {display:none}
+.adachi-workspace .aw-canvas .dd-compare-stage {position:absolute;inset:0;min-height:0}
+.adachi-workspace .aw-canvas .dd-compare-toolbar {
+  position:absolute;left:8px;right:8px;bottom:calc(var(--aw-history-height,40px) + 16px);z-index:4;
+  padding:5px;border:1px solid var(--aw-line);border-radius:5px;background:var(--aw-panel);width:fit-content;max-width:calc(100% - 16px);
+}
+.adachi-workspace .aw-canvas .dd-status:not([hidden]) {
+  position:absolute;left:8px;right:8px;z-index:5;bottom:calc(var(--aw-history-height,40px) + var(--aw-crop-height,32px) + 24px);
+  padding:7px;border-radius:5px;background:var(--aw-panel);color:var(--aw-error);
+}
+.adachi-workspace .adachi-workspace-launch {display:none}
+@media(max-width:850px) {
+  .adachi-workspace main {grid-template-columns:1fr;overflow:auto}
+  .adachi-workspace .aw-canvas {min-height:78vh}
+  .adachi-workspace aside {overflow:visible;padding-top:14px}
+  .adachi-workspace header {left:12px;right:12px;height:36px;gap:5px}
+  .adachi-workspace header h1 {font-size:14px}
+  .adachi-workspace header button {padding:4px 6px;font-size:11px}
+  .adachi-workspace header .aw-status {max-width:25vw;font-size:10px}
+}
+
+.adachi-workspace .aw-canvas .dd-preview-progress {top:100px;bottom:auto;background:var(--aw-panel);color:var(--aw-text);border-color:var(--aw-line);}
