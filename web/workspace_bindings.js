@@ -1,3 +1,4 @@
+import { conditioningSource } from './workspace_routes.js';
 // Bind the workbench to existing graph widgets; no model or LoRA is loaded here.
 const widget = (node, name) => node?.widgets?.find(w => w.name === name);
 const nodeList = graph => Array.from(graph?._nodes || []);
@@ -12,14 +13,14 @@ export class WorkspaceBindings {
     constructor({graph, sampler, onChange = () => {}, markChanged = () => {}}) {
         Object.assign(this, {graph, sampler, onChange, markChanged});
         this.nodes = nodeList(graph);
-        this.controller = this.nodes.find(n => n.type === 'AdachiGroupPresets')?.adachiGroupPresets?.model;
+        this.controller = this.nodes.find(n => n.type === 'AdachiGroupPresets' && n.mode === 0)?.adachiGroupPresets?.model;
         this.owner = this.controller?.node || sampler;
         this.owner.properties ??= {};
         this.owner.properties[stateKey] ??= {profiles:{}};
         this.catalog = {checkpoints:[], loras:[]};
         this.profiles = this.controller?.data?.presets?.map(p => ({id:p.id, name:p.name, preset:p})) || [];
         if (!this.profiles.length) this.profiles = [{id:'current',name:'当前工作流'}];
-        this.profileId = this.profiles.find(p => /wai/i.test(p.name))?.id || this.controller?.data?.activeId || this.profiles[0].id;
+        this.profileId = this.controller?.data?.activeId || this.profiles[0].id;
         this.resolve();
     }
     resolve() {
@@ -47,6 +48,14 @@ export class WorkspaceBindings {
             this.vae=this.model?.type==='CheckpointLoaderSimple'?this.model:null;this.vaeSlot=2;
             this.lora=this.nodes.find(n=>n.type==='Power Lora Loader (rgthree)' && n.mode===0) || this.nodes.find(n=>n.type==='LoraLoader' && n.mode===0);
         }
+        const planned = this.controller?.planStates && profile.preset ? this.controller.planStates(profile.preset).plan : new Map();
+        this.promptSources = {};
+        for (const kind of ['positive','negative']) {
+            const traced = conditioningSource(this.graph,this.sampler,kind,planned);
+            if (traced) { this[kind] = traced; this.promptSources[kind] = '实际采样器连线'; }
+            else if (this.isTemplate && profile.preset) this.promptSources[kind] = '当前模板方案';
+            else { this[kind] = null; this.promptSources[kind] = '由原工作流控制'; }
+        }
         const all=this.owner.properties[stateKey].profiles;
         all[this.profileId] ??= {loras:[]};
         this.settings=all[this.profileId];
@@ -54,19 +63,40 @@ export class WorkspaceBindings {
         return profile;
     }
     changed() { this.markChanged(); this.onChange(this); }
+    refreshProfiles() {
+        this.nodes=nodeList(this.graph);
+        const controller = this.nodes.find(n=>n.type==='AdachiGroupPresets' && n.mode===0)?.adachiGroupPresets?.model;
+        const signature = JSON.stringify([controller?.node?.id, controller?.data?.activeId, controller?.data?.presets?.map(p=>[p.id,p.name])]);
+        if(signature===this.presetSignature)return;
+        this.presetSignature=signature;
+        this.controller=controller;
+        this.owner=controller?.node || this.sampler;
+        this.owner.properties ??= {};
+        this.owner.properties[stateKey] ??= {profiles:{}};
+        this.profiles=controller?.data?.presets?.map(p=>({id:p.id,name:p.name,preset:p})) || [];
+        if(!this.profiles.length)this.profiles=[{id:'current',name:'当前工作流'}];
+        this.profileId=controller?.data?.activeId || (this.profiles.some(p=>p.id===this.profileId)?this.profileId:this.profiles[0].id);
+        this.resolve();this.render();this.onChange(this);
+    }
     selectProfile(id) {
         if (!this.profiles.some(p=>p.id===id)) throw Error('分组预设不存在');
         this.profileId=id;
         this.controller?.apply(id);
         this.resolve(); this.render(); this.changed();
     }
-    getExecutionBinding(id=this.profileId) {
-        if (id!==this.profileId) { this.profileId=id; this.resolve(); }
+    getExecutionBinding(id) {
+        this.refreshProfiles();
+        if (id!==undefined && id!==this.profileId) { this.profileId=id; this.resolve(); }
         const binding={enableNodes:[],samplerInputs:{},inputOverrides:{},removeInputs:{}};
         const add=node=>{if(node && !binding.enableNodes.includes(node))binding.enableNodes.push(node);};
         // Generic graphs keep their original routing unless complete core
         // model/conditioning nodes can be identified.
-        if (!this.model || !this.clip || !this.vae || this.positive?.type!=='CLIPTextEncode' || this.negative?.type!=='CLIPTextEncode') return binding;
+        if (!this.model || !this.clip || !this.vae || this.positive?.type!=='CLIPTextEncode' || this.negative?.type!=='CLIPTextEncode') {
+            for (const kind of ['positive','negative']) if(this[kind] && Object.hasOwn(this.settings,kind)) {
+                add(this[kind]); binding.inputOverrides[String(this[kind].id)] = {text:this.settings[kind]};
+            }
+            return binding;
+        }
         for(const n of [this.model,this.clip,this.vae,this.positive,this.negative])add(n);
         let model=ref(this.model),clip=ref(this.clip,this.clipSlot);
         const selected=this.settings.loras.filter(l=>l.name && l.on!==false);
@@ -112,7 +142,9 @@ export class WorkspaceBindings {
         const select=(values,current,change)=>{const s=el('select');for(const [value,label] of values){const o=el('option',label);o.value=value;s.append(o);}s.value=current;s.onchange=()=>change(s.value);return s;};
         this.root.replaceChildren();
         const presets=el('div');presets.className='aw-presets';
-        for(const p of this.profiles){const b=el('button',p.name);b.type='button';b.setAttribute('aria-pressed',String(p.id===this.profileId));b.onclick=()=>this.selectProfile(p.id);presets.append(b);}
+        const controllerActive = this.controller && this.controller.node.mode === 0;
+        if (!controllerActive) {const warning=el('p','未启用组忽略预设节点，当前使用原工作流设置。');warning.className='aw-profile-warning';warning.setAttribute('role','status');this.root.append(warning);}
+        for(const p of controllerActive ? this.profiles : []){const b=el('button',p.name);b.type='button';b.setAttribute('aria-pressed',String(p.id===this.profileId));b.onclick=()=>this.selectProfile(p.id);presets.append(b);}
         this.root.append(presets);
         const details=el('details'),summary=el('summary','主模型与 LoRA');details.append(summary);details.open=!!this.detailsOpen;details.ontoggle=()=>{this.detailsOpen=details.open;};
         const modelWidget=widget(this.model,'ckpt_name') || widget(this.model,'unet_name');
@@ -135,12 +167,17 @@ export class WorkspaceBindings {
         if(this.catalogError)details.append(el('small',this.catalogError));
         this.root.append(details);
         for(const [kind,node,label] of [['positive',this.positive,'正面提示词'],['negative',this.negative,'负面提示词']]) {
-            const w=widget(node,'text');if(!w)continue;
+            const w=widget(node,'text');
+            if(!w){const source=el('p',label+'：由原工作流控制');source.title='未找到唯一的 CLIP 编码节点，请在原工作流调整该条件';this.root.append(source);continue;}
+            const linked=node.inputs?.some(i=>i.name==='text' && i.link!=null);
             const text=el('textarea');text.rows=kind==='positive'?6:3;
-            text.value=this.settings[kind] ?? w.value ?? '';
+            text.value=this.settings[kind] ?? (linked ? '' : w.value) ?? '';
             text.placeholder=node.inputs?.some(i=>i.name==='text' && i.link!=null)?'保持原工作流提示词；输入后以这里为准':'';
             text.oninput=()=>{this.settings[kind]=text.value;this.changed();};
-            this.root.append(row(label,text));
+            text.setAttribute('aria-label',label);
+            const field=row(label,text);field.title=`${this.promptSources[kind]} · ${node.title || node.type} #${node.id}。${linked ? '文本来自上游节点；留空且未编辑时沿用上游，输入后覆盖。' : '编辑后作为本方案的提示词。'}`;
+            const reset=el('button','↶');reset.type='button';reset.title='恢复工作流中的'+label;reset.onclick=()=>{delete this.settings[kind];this.render();this.changed();};field.append(reset);
+            this.root.append(field);
         }
     }
     destroy() {this.destroyed=true;this.root?.remove();}

@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';import {conditioningSource} from '../web/workspace_routes.js';
+const nodes=[];const add=(id,type,inputs=[],value)=>{const n={id,type,mode:0,inputs,widgets:[{value}]};nodes.push(n);return n};
+const a=add(1,'CLIPTextEncode'),b=add(2,'CLIPTextEncode');const sa=add(3,'SetNode',[{name:'x',link:1}],'p');const ga=add(4,'GetNode',[],'p');const sb=add(5,'SetNode',[{name:'x',link:2}],'p2');const gb=add(6,'GetNode',[],'p2');const sw=add(7,'AdachiExclusiveSwitch',[{name:'input_a',link:3},{name:'input_b',link:4}]);const sampler=add(8,'AdachiWebUIInpaint',[{name:'positive',link:5},{name:'negative',link:6}]);
+const links={1:{origin_id:1,origin_slot:0},2:{origin_id:2,origin_slot:0},3:{origin_id:4,origin_slot:0},4:{origin_id:6,origin_slot:0},5:{origin_id:7,origin_slot:0},6:{origin_id:2,origin_slot:0}};
+const g={_nodes:nodes,links,getNodeById:id=>nodes.find(n=>n.id==id)};nodes.forEach(n=>n.graph=g);
+assert.equal(conditioningSource(g,sampler,'positive'),null,'ambiguous branches must not be guessed');
+assert.equal(conditioningSource(g,sampler,'positive',new Map([[sb,4]])),a);
+assert.equal(conditioningSource(g,sampler,'negative'),b);
+sa.inputs[0].link=3;assert.equal(conditioningSource(g,sampler,'positive',new Map([[sb,4]])),null,'cycle must stop');
+console.log('Conditioning discovery: actual sampler route, Get/Set, preset state, ambiguity and cycles pass');
