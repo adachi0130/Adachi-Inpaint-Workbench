@@ -2,6 +2,11 @@
 
 ## Unreleased · local workspace preview
 
+- Keep the canvas and editing controls available during generation; submit an independent snapshot and defer automatic view switching while a pointer stroke is active.
+- Show actual execution stages and sampler steps above workflow settings, including queued, cached, reconnect and completion states.
+- Return to mask editing after adopting a crop, preserving its region, result layer and repaint mask.
+- List missing model components and their model folders, and expose separate text encoder / VAE choices for Anima-style profiles.
+
 - Detect missing backend routes before submitting and support API-prefixed proxy paths.
 - Add remembered light/dark themes, compact edit and before/after icons, hover help and default sliding comparison after generation.
 - Follow sampler conditioning through Get/Set and exclusive routes; derive preset buttons from the enabled controller and warn when unavailable.

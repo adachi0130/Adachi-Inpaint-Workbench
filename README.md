@@ -47,6 +47,10 @@ Comparison nodes and the workspace recover missing execution notifications from 
 
 After updating backend files, fully restart ComfyUI. A missing workbench backend is detected before submission, with an explicit restart message instead of an HTTP 405 error.
 
+While generation runs, painting, zoom/pan and editing controls remain available. A submitted task uses an immutable snapshot; later edits apply to the next run. The progress bar above workflow settings follows actual execution stages and sampler steps, with indeterminate progress for stages that do not report a total. Crop & Blend adoption returns to mask editing while keeping the selected region and repaint mask.
+
+For profiles with separate model components, the model menu also exposes text encoder and VAE selectors. Missing weights are listed with their target model folders; a failed model-list request is reported as a connection issue rather than a missing file.
+
 ### Paint directly on the graph
 
 Upload, drop or paste a source image and paint on **Inline Mask** itself. In Mask mode, uploading an image automatically fills the connected inpaint dimensions; a replacement of the same size keeps the mask, while a different-sized image starts with a fresh mask. Mask strokes stay in the browser and are saved with the workflow; painting does not require a disk save/load round-trip for every stroke.

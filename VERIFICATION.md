@@ -110,3 +110,13 @@ The plugin code is an independent implementation; see LICENSE for the release li
 - Classic and Nodes 2.0 crop controls pass at 1440, 768 and 390px in both themes, including wrapped history labels, custom dimensions, painting and dimension synchronization.
 - Cloud failure simulation drops `executed` alone, then all execution notifications. Exact-task history recovery succeeds in both the node and workspace. Three image-load attempts are exhausted before restoring connectivity; byte progress is visible and preview recovery succeeds. Replayed output does not increase the result count.
 - Existing source workflows and images are not modified. Runtime files are compared with the preceding Git checkpoint before installation; the installed package is backed up before copying changes.
+
+
+## 2026-11-09 · editable generation and execution stages
+
+- An actual WAI 512px / six-step generation reports node stages and sampler fractions. A real mouse stroke was added during sampling; the queued mask remained byte-identical to its submitted snapshot, and both the source and new mask edits survived result delivery.
+- Crop adoption was checked independently with a real processed image and crop-origin metadata. It returns to the editor with the locked region, result layer and repaint mask intact.
+- Progress rendering fits above workflow settings at 1440, 768 and 390px in both themes. Unit checks cover prompt isolation, early events before the HTTP response, cached nodes, reconnects and late progress packets after completion.
+- Both local Anima profiles compile their subgraph correctly and fail validation only for the three absent model components. The installed backend and model inventory confirm the missing checkpoint, text encoder and VAE. Model UI now lists filenames and target folders; missing-component checks never infer absent files from a network failure.
+
+- Legacy frontend scalar/null `executing` messages and a submit HTTP response deliberately delayed until after task completion are covered, so early completion cannot cause a false error or leave the workbench busy.

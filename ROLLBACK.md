@@ -61,3 +61,6 @@ Commit or back up any local modifications before switching. A release ZIP does n
 
 
 Local workbench UI / network preview (2026-11-09) baseline: `local-before-workspace-ui-network-20261109` (`392149f`). To undo this local work on a clean checkout, use `git switch --detach local-before-workspace-ui-network-20261109`, reinstall those files, restart ComfyUI and hard-refresh. The installed directory also has a full ZIP backup in `user/adachi-workbench-backups/` whose name starts with `Adachi-Inpaint-Workbench-before-workspace-ui-network-20261109-`.
+
+
+The editable-generation / execution-stage update starts at `local-before-workspace-run-progress-20261109` (`8ec5281`). A copied-installation ZIP backup named `Adachi-Inpaint-Workbench-before-run-progress-20261109-*.zip` is in the same backup directory. This update changes frontend files only; hard-refresh after restoring them.
