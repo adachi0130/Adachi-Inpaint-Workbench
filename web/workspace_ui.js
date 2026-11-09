@@ -3,6 +3,7 @@ import { api } from '../../scripts/api.js';
 import { inspectWorkbench } from './workbench_analysis.js';
 import { WorkspaceBindings } from './workspace_bindings.js';
 import { WorkspaceHistory } from './workspace_history.js';
+import { WorkspaceProgress } from './workspace_progress.js';
 import { prepareWorkspacePrompt, validateWorkspace, submitWorkspace } from './workspace_execution.js';
 import { syncCurrentDimensions } from './parameter_bridge.js?v=0.8.2';
 const el=(tag,text,cls)=>{const e=document.createElement(tag);if(text)e.textContent=text;if(cls)e.className=cls;return e;};
@@ -24,7 +25,7 @@ export class Workspace {
   this.surface=el('div','','aw-surface');this.still=el('img','','aw-result-image');this.still.alt='当前选择的前图或重绘结果';this.still.hidden=true;this.surface.append(this.still);
   const foot=el('div','','aw-footer');this.undoButton=btn('↶ 回退',()=>this.restoreHistory('undo'));this.originalButton=btn('初始原图',()=>this.restoreHistory('original'));this.historySelect=el('select');this.historySelect.setAttribute('aria-label','选择已采用原图');this.historySelect.onchange=()=>this.restoreHistory(Number(this.historySelect.value));foot.append(this.undoButton,this.originalButton,this.historySelect);
   this.footer=foot;this.undoButton.title='回退到之前的原图，同时恢复蒙版和裁切状态';this.originalButton.title='恢复本次工作流会话中的初始原图';this.historySelect.title='选择之前采用或上传的原图';this.note=el('div','','aw-note');canvas.append(toolbar,this.surface,foot,this.note);
-  this.side=el('aside');this.side.append(el('h2','工作流设置'));this.settings=el('div');this.params=el('div','','aw-parameters');this.runButton=btn('生成',()=>this.run());this.runButton.className='primary';this.runButton.style.width='100%';this.side.append(this.settings,this.runButton,this.params);main.append(canvas,this.side);this.root.append(main);
+  this.side=el('aside');this.generationPanel=el('div','','aw-generation-progress');this.generationPanel.hidden=true;this.generationLabel=el('span');this.generationBar=el('progress');this.generationBar.max=1;this.generationBar.setAttribute('aria-label','当前执行阶段进度');this.generationPanel.title='显示当前节点的真实进度；没有步数的阶段显示等待动画';this.generationPanel.append(this.generationLabel,this.generationBar);this.side.append(this.generationPanel,el('h2','工作流设置'));this.settings=el('div');this.params=el('div','','aw-parameters');this.runButton=btn('生成',()=>this.run());this.runButton.className='primary';this.runButton.style.width='100%';this.side.append(this.settings,this.runButton,this.params);main.append(canvas,this.side);this.root.append(main);
   this.root.addEventListener('keydown',e=>{if(e.key==='Escape'&&e.target===this.root)this.close();});
   this.root.addEventListener('pointerdown',e=>e.stopPropagation());document.body.append(this.root);document.body.classList.add('adachi-workspace-open');
   // Render first. Discovery/catalog and actual server validation run afterward.
@@ -34,6 +35,16 @@ export class Workspace {
  setTheme(theme){this.root.dataset.theme=theme==='dark'?'dark':'light';const label=this.root.dataset.theme==='dark'?'切换为白色主题':'切换为黑色主题';this.themeButton.title=label;this.themeButton.setAttribute('aria-label',label);try{localStorage.setItem('adachi-workspace-theme',this.root.dataset.theme);}catch{}}
  toggleTheme(){this.setTheme(this.root.dataset.theme==='dark'?'light':'dark');}
  setStatus(text,state='pending'){if(this.closed)return;this.status.textContent=text;this.status.title=text;this.status.dataset.state=state;}
+ renderTaskProgress(){
+  const p=this.taskProgress;if(!p || this.closed)return;
+  this.generationPanel.hidden=p.state==='idle';this.generationPanel.dataset.state=p.state;
+  const known=p.max>0 && p.value!=null;
+  this.generationLabel.textContent=p.label+(known && p.max>1?` · ${Math.round(p.value/p.max*100)}%`:'');
+  this.generationBar.setAttribute('aria-valuetext',this.generationLabel.textContent);
+  if(known)this.generationBar.value=p.value/p.max;else this.generationBar.removeAttribute('value');
+  if(this.running && p.state!=='idle')this.setStatus(p.state==='complete'?'生成完成':p.state==='error'?p.label:'生成中',p.state==='error'?'error':p.state==='complete'?'ok':'pending');
+ }
+ showGeneratedResult(){if(this.editor?.stroke || this.editor?.drag || this.editor?.pointerId!=null){this.pendingResultView=true;return;}this.pendingResultView=false;this.show('compare');}
  mount(element,target,canvas=false){
   if(!element?.parentNode)throw Error('控件尚未初始化，请稍后重新打开');
   const marker=document.createComment('workspace');element.before(marker);this.mounts.push({element,marker,style:element.getAttribute('style')});target.append(element);if(canvas)element.classList.add('aw-embedded');
@@ -43,6 +54,7 @@ export class Workspace {
   this.editorNode=this.nodes.editors.find(n=>n.mode===0)||this.nodes.editors[0];this.sampler=this.preferredSampler||this.nodes.samplers.find(n=>n.mode===0)||this.nodes.samplers[0];this.compareNode=this.nodes.comparisons.find(n=>n.mode===0)||this.nodes.comparisons[0];
   this.editor=this.editorNode?.adachiEditor;this.compare=this.compareNode?.adachiCompare;
   if(!this.editor||!this.sampler?.adachiWorkbench||!this.compare)throw Error('当前工作流需要内联蒙版、安达重绘工作台和图像对比节点');
+  this.taskProgress=this.sampler.adachiWorkspaceProgress ||= new WorkspaceProgress();this.taskProgress.onChange=()=>this.renderTaskProgress();this.renderTaskProgress();
   this.history=this.editorNode.adachiWorkspaceHistory ||= new WorkspaceHistory(this.editorNode);
   this.history.onChange=()=>this.syncHistory();
   this.history.onRestore=()=>{syncCurrentDimensions(this.editorNode);app.canvas?.emitBeforeChange?.();app.canvas?.emitAfterChange?.();this.show('edit');this.scheduleCheck();};
@@ -64,7 +76,7 @@ export class Workspace {
   this.settings.append(this.bindings.createPanel());
   this.bindings.loadCatalog(api.fetchApi.bind(api)).then(()=>this.scheduleCheck()).catch(e=>this.setStatus(e.message,'error'));
   const oldAdopt=this.compare.options.onAdopt;
-  this.compare.options.onAdopt=(...args)=>this.history.transact('采用重绘结果',()=>oldAdopt(...args));
+  this.compare.options.onAdopt=async(...args)=>{const result=await this.history.transact('采用重绘结果',()=>oldAdopt(...args));if(!this.closed && this.editorNode.adachiCrop?.mode==='crop')this.show('edit');return result;};
   this.disposers.push(()=>{this.compare.options.onAdopt=oldAdopt;});
   const oldLoad=this.compare.loadSelected;
   this.compare.loadSelected=async(...args)=>{const result=await oldLoad.apply(this.compare,args);if(!this.closed){this.show(this.view||'edit');this.updateButtons();}return result;};
@@ -73,22 +85,23 @@ export class Workspace {
   this.editor.upload=async(...args)=>{await oldUpload(...args);if(this.editor.ready&&!this.closed){await this.history.checkpoint('上传原图');this.syncHistory();this.scheduleCheck();}};
   this.disposers.push(()=>{this.editor.upload=oldUpload;});
   const onExecuted=this.compareNode.onExecuted;
-  this.compareNode.onExecuted=(output)=>{const ret=onExecuted?.call(this.compareNode,output);if(output?.adachi_results?.length){this.show('compare');this.note.textContent='';this.updateButtons();}return ret;};
+  this.compareNode.onExecuted=(output)=>{const ret=onExecuted?.call(this.compareNode,output);if(output?.adachi_results?.length){this.showGeneratedResult();this.note.textContent='';this.updateButtons();}return ret;};
   this.disposers.push(()=>{this.compareNode.onExecuted=onExecuted;});
   const event=(name,fn)=>{api.addEventListener(name,fn);this.disposers.push(()=>api.removeEventListener(name,fn));};
-  event('progress',e=>{if(this.running&&(!e.detail.prompt_id||e.detail.prompt_id===this.promptId))this.setStatus(`正在生成 ${e.detail.value} / ${e.detail.max}`);});
-  const recovered=e=>{if(e.detail.node!==this.compareNode || e.detail.promptId!==this.promptId)return;this.running=false;this.sampler.adachiWorkspaceTask=null;this.runButton.disabled=false;this.runButton.textContent='生成';this.setStatus(e.detail.entry.status?.status_str==='success'?'生成完成':'生成失败，请查看 ComfyUI 任务历史',e.detail.entry.status?.status_str==='success'?'ok':'error');this.updateButtons();};
+  for(const name of ['execution_start','executing','execution_cached','progress','progress_state','execution_success','execution_error','execution_interrupted'])event(name,e=>this.taskProgress.handle(name,e.detail));
+  event('reconnecting',()=>this.taskProgress.connection(false));event('reconnected',()=>this.taskProgress.connection(true));
+  const recovered=e=>{if(e.detail.node!==this.compareNode || e.detail.promptId!==this.promptId)return;this.taskProgress.finish(e.detail.entry.status?.status_str==='success');this.running=false;this.sampler.adachiWorkspaceTask=null;this.runButton.disabled=false;this.runButton.textContent='生成';this.setStatus(e.detail.entry.status?.status_str==='success'?'生成完成':'生成失败，请查看 ComfyUI 任务历史',e.detail.entry.status?.status_str==='success'?'ok':'error');this.updateButtons();};
   document.addEventListener('adachi-result-recovered',recovered);this.disposers.push(()=>document.removeEventListener('adachi-result-recovered',recovered));
   for(const name of ['execution_success','execution_error','execution_interrupted'])event(name,e=>{if(e.detail.prompt_id===this.promptId){this.running=false;this.sampler.adachiWorkspaceTask=null;this.runButton.disabled=false;this.runButton.textContent='生成';this.setStatus(name==='execution_success'?'生成完成':e.detail.exception_message||'生成已停止',name==='execution_success'?'ok':'error');}});
-  this.timer=setInterval(()=>{if(app.graph!==this.graph||this.editor.destroyed)this.close();else this.updateButtons();},500);
+  this.timer=setInterval(()=>{if(app.graph!==this.graph||this.editor.destroyed)this.close();else{this.updateButtons();if(this.pendingResultView)this.showGeneratedResult();}},500);
   this.pollTimer=setInterval(()=>this.pollResult(),2500);
-  this.promptId=this.sampler.adachiWorkspaceTask;this.running=!!this.promptId;if(this.running){this.compareNode.adachiTrackPrompt?.(this.promptId);this.runButton.disabled=true;this.runButton.textContent='生成中…';}this.show('edit');this.syncHistory();this.scheduleCheck();
+  this.promptId=this.sampler.adachiWorkspaceTask;this.running=!!this.promptId;if(this.running){if(this.taskProgress.state==='idle')this.taskProgress.begin({},this.promptId);this.compareNode.adachiTrackPrompt?.(this.promptId);this.runButton.disabled=true;this.runButton.textContent='生成中…';}this.show('edit');this.syncHistory();this.scheduleCheck();
  }
  syncHistory(){if(!this.history)return;this.historySelect.replaceChildren();this.history.entries.forEach((item,i)=>{const o=el('option',`${i+1} · ${item.label}`);o.value=i;this.historySelect.append(o);});this.historySelect.value=String(this.history.index);this.undoButton.disabled=!this.history.canUndo;this.originalButton.disabled=this.history.index===0;}
- updateButtons(){const busy=this.running||this.preparing;this.adoptButton.disabled=!this.compare?.ready||!!this.compare?.busy||this.compare?.pendingOutputs>0||busy;this.tabs.compare.disabled=!this.compare?.ready;this.sideButton.disabled=!this.compare?.ready;if(!this.preparing)this.bindings?.refreshProfiles();if(this.editor)this.editor.root.inert=!!busy;this.settings.inert=!!busy;this.params.inert=!!busy;this.historySelect.disabled=busy||!!this.history?.busy;this.undoButton.disabled=busy||!this.history?.canUndo;this.originalButton.disabled=busy||this.history?.index<=0;if(this.compare?.adoptButton)this.compare.adoptButton.disabled=this.adoptButton.disabled;}
+ updateButtons(){const busy=this.running||this.preparing;this.adoptButton.disabled=!this.compare?.ready||!!this.compare?.busy||this.compare?.pendingOutputs>0||busy;this.tabs.compare.disabled=!this.compare?.ready;this.sideButton.disabled=!this.compare?.ready;if(!this.preparing)this.bindings?.refreshProfiles();if(this.editor)this.editor.root.inert=!!this.preparing;this.settings.inert=!!this.preparing;this.params.inert=!!this.preparing;this.historySelect.disabled=this.preparing||!!this.history?.busy;this.undoButton.disabled=this.preparing||!this.history?.canUndo;this.originalButton.disabled=this.preparing||this.history?.index<=0;if(this.compare?.adoptButton)this.compare.adoptButton.disabled=this.adoptButton.disabled;}
  show(which){this.view=which;if(this.editor)this.editor.root.hidden=which!=='edit';if(this.compare)this.compare.root.hidden=which!=='compare';this.still.hidden=!['before','after'].includes(which);if(!this.still.hidden){const image=which==='before'?this.compare?.before:this.compare?.after;if(image)this.still.src=image.src;}for(const [id,b]of Object.entries(this.tabs)){b.classList.toggle('active',id===which);b.setAttribute('aria-pressed',String(id===which));}this.sideButton.classList.toggle('active',['before','after'].includes(which));this.sideButton.setAttribute('aria-pressed',String(which==='before'));this.sideButton.title=which==='before'?'查看后图':'查看前图';this.sideButton.setAttribute('aria-label',this.sideButton.title);this.editor?.schedule();this.compare?.schedule();}
- async adopt(){if(!this.compare?.ready||this.running)return;await this.compare.adopt();this.syncHistory();this.updateButtons();if(!this.compare.message.classList.contains('dd-error')){this.show('compare');this.note.textContent='';this.scheduleCheck();}}
- async restoreHistory(which){try{if(this.running||this.history?.busy)return;if(which==='undo')await this.history.undo();else if(which==='original')await this.history.original();else await this.history.restore(which);this.syncHistory();}catch(e){this.setStatus(e.message,'error');}}
+ async adopt(){if(!this.compare?.ready||this.running)return;await this.compare.adopt();this.syncHistory();this.updateButtons();if(!this.compare.message.classList.contains('dd-error')){this.show(this.editorNode.adachiCrop?.mode==='crop'?'edit':'compare');this.note.textContent='';this.scheduleCheck();}}
+ async restoreHistory(which){try{if(this.preparing||this.history?.busy)return;if(which==='undo')await this.history.undo();else if(which==='original')await this.history.original();else await this.history.restore(which);this.syncHistory();}catch(e){this.setStatus(e.message,'error');}}
  scheduleCheck(){clearTimeout(this.checkTimer);this.checkTimer=setTimeout(()=>this.check(),200);}
  prepare(){
   const task=(this.prepareTask||Promise.resolve()).catch(()=>{}).then(async()=>{
@@ -101,27 +114,33 @@ export class Workspace {
   });
   this.prepareTask=task;return task;
  }
- async check(){const version=++this.checkVersion;if(this.closed||this.running)return false;this.setStatus('后台检查中…');try{const prepared=await this.prepare();const result=await validateWorkspace(prepared);if(this.closed||version!==this.checkVersion)return false;if(result.valid===false||result.ok===false)throw Error(result.error?.message||result.error||'工作流检查未通过');this.setStatus('检查通过 · 可以生成','ok');return true;}catch(e){if(version===this.checkVersion)this.setStatus(e.message||String(e),'error');return false;}}
+ async check(){const version=++this.checkVersion;if(this.closed||this.running)return false;this.setStatus('后台检查中…');try{const prepared=await this.prepare();const result=await validateWorkspace(prepared);if(this.closed||this.running||version!==this.checkVersion)return false;if(result.valid===false||result.ok===false)throw Error(result.error?.message||result.error||'工作流检查未通过');this.setStatus('检查通过 · 可以生成','ok');return true;}catch(e){if(version===this.checkVersion && !this.running)this.setStatus(e.message||String(e),'error');return false;}}
  async run() {
   if(this.running)return;
+  ++this.checkVersion;clearTimeout(this.checkTimer);
   this.runButton.disabled=true; this.runButton.textContent='检查中…';
   const seed=this.sampler?.widgets?.find(w=>w.name==='seed'), oldSeed=seed?.value;
+  let queuedSeed=oldSeed;
   try {
    for(const widget of this.sampler.widgets || []) widget.beforeQueued?.();
-   const prepared=await this.prepare();
+   queuedSeed=seed?.value;
+   const prepared=structuredClone(await this.prepare());
    await validateWorkspace(prepared);
    if(this.closed)return;
-   this.running=true; this.updateButtons();
+   this.running=true;this.taskProgress.begin(prepared.prompt);this.promptId=null; this.updateButtons();
    const queued=await submitWorkspace(prepared);
-   this.promptId=queued.prompt_id;
+   this.promptId=queued.prompt_id;this.taskProgress.attach(this.promptId);
    this.compareNode.adachiTrackPrompt?.(this.promptId);
-   this.sampler.adachiWorkspaceTask=this.promptId;
    for(const widget of this.sampler.widgets || []) widget.afterQueued?.();
    this.sampler.adachiParameters.refresh();
-   this.runButton.textContent='生成中…'; this.setStatus('已进入生成队列');
+   this.running=!['complete','error'].includes(this.taskProgress.state);
+   this.sampler.adachiWorkspaceTask=this.running?this.promptId:null;
+   this.runButton.textContent=this.running?'生成中…':'生成';
+   this.setStatus(this.running?'已进入生成队列':this.taskProgress.label,this.running?'pending':this.taskProgress.state==='error'?'error':'ok');
   } catch(e) {
    this.running=false;
-   if(seed)seed.value=oldSeed;
+   if(['queued','running'].includes(this.taskProgress.state))this.taskProgress.finish(false,e.message||String(e));
+   if(seed && seed.value===queuedSeed)seed.value=oldSeed;
    this.setStatus(e.message||String(e),'error');
   } finally {
    if(!this.running){this.runButton.disabled=false;this.runButton.textContent='生成';}
@@ -129,10 +148,10 @@ export class Workspace {
   }
  }
 
- async pollResult(){if(!this.running||!this.promptId||this.polling||this.closed)return;this.polling=true;try{const r=await api.fetchApi(`/history/${encodeURIComponent(this.promptId)}`);if(!r.ok)return;const all=await r.json(),entry=all[this.promptId];if(!entry?.status?.completed)return;const output=entry.outputs?.[String(this.compareNode.id)];if(output)this.compareNode.onExecuted(output);this.running=false;this.sampler.adachiWorkspaceTask=null;this.runButton.disabled=false;this.runButton.textContent='生成';this.setStatus(entry.status.status_str==='success'?'生成完成':'生成失败，请查看 ComfyUI 错误信息',entry.status.status_str==='success'?'ok':'error');}catch{}finally{this.polling=false;}}
- close(){if(this.closed)return;this.closed=true;++this.checkVersion;clearInterval(this.timer);clearInterval(this.pollTimer);clearTimeout(this.checkTimer);for(const dispose of this.disposers.reverse())dispose();if(this.history){this.history.onChange=null;this.history.onRestore=null;}this.bindings?.destroy();for(const {element,marker,style}of this.mounts.reverse()){element.classList.remove('aw-embedded');element.hidden=false;element.inert=false;if(marker.parentNode)marker.replaceWith(element);if(style===null)element.removeAttribute('style');else element.setAttribute('style',style);}this.root.remove();document.body.classList.remove('adachi-workspace-open');this.editor?.schedule();this.compare?.schedule();this.compare?.updateButton();currentWorkspace=null;}
+ async pollResult(){if(!this.running||!this.promptId||this.polling||this.closed)return;this.polling=true;try{const r=await api.fetchApi(`/history/${encodeURIComponent(this.promptId)}`);if(!r.ok)return;const all=await r.json(),entry=all[this.promptId];if(!entry?.status?.completed)return;const output=entry.outputs?.[String(this.compareNode.id)];if(output)this.compareNode.onExecuted(output);this.taskProgress.finish(entry.status.status_str==='success');this.running=false;this.sampler.adachiWorkspaceTask=null;this.runButton.disabled=false;this.runButton.textContent='生成';this.setStatus(entry.status.status_str==='success'?'生成完成':'生成失败，请查看 ComfyUI 错误信息',entry.status.status_str==='success'?'ok':'error');}catch{}finally{this.polling=false;}}
+ close(){if(this.closed)return;this.closed=true;++this.checkVersion;clearInterval(this.timer);clearInterval(this.pollTimer);clearTimeout(this.checkTimer);for(const dispose of this.disposers.reverse())dispose();if(this.history){this.history.onChange=null;this.history.onRestore=null;}if(this.taskProgress)this.taskProgress.onChange=()=>{};this.bindings?.destroy();for(const {element,marker,style}of this.mounts.reverse()){element.classList.remove('aw-embedded');element.hidden=false;element.inert=false;if(marker.parentNode)marker.replaceWith(element);if(style===null)element.removeAttribute('style');else element.setAttribute('style',style);}this.root.remove();document.body.classList.remove('adachi-workspace-open');this.editor?.schedule();this.compare?.schedule();this.compare?.updateButton();currentWorkspace=null;}
 }
 app.registerExtension({name:'Adachi.InpaintWorkspace',setup(){
- const css=document.createElement('link');css.rel='stylesheet';css.href=new URL('./workspace.css?v=theme3',import.meta.url).href;document.head.append(css);
+ const css=document.createElement('link');css.rel='stylesheet';css.href=new URL('./workspace.css?v=run-progress1',import.meta.url).href;document.head.append(css);
  document.addEventListener('adachi-open-workspace',event=>{if(!currentWorkspace)currentWorkspace=new Workspace(event.detail?.sampler||null);});
 }});

@@ -120,3 +120,22 @@ body.adachi-workspace-open > :not(.adachi-workspace):not(script):not(style):not(
 }
 
 .adachi-workspace .aw-canvas .dd-preview-progress {top:100px;bottom:auto;background:var(--aw-panel);color:var(--aw-text);border-color:var(--aw-line);}
+
+.adachi-workspace .aw-generation-progress {padding:9px 10px;margin:0 0 14px;border:1px solid var(--aw-line);border-radius:5px;background:var(--aw-input);color:var(--aw-text);font-size:12px;overflow-wrap:anywhere;}
+.adachi-workspace .aw-generation-progress progress {display:block;width:100%;height:7px;margin:6px 0 0;accent-color:var(--aw-accent);}
+.adachi-workspace .aw-generation-progress[data-state=error] {color:var(--aw-error);}
+.adachi-workspace .aw-generation-progress[data-state=complete] {color:var(--aw-ok);}
+
+.adachi-workspace .aw-generation-progress progress {appearance:none;border:0;border-radius:4px;overflow:hidden;background:var(--aw-line);}
+.adachi-workspace .aw-generation-progress progress::-webkit-progress-bar {background:var(--aw-line);border-radius:4px;}
+.adachi-workspace .aw-generation-progress progress::-webkit-progress-value {background:var(--aw-accent);border-radius:4px;}
+.adachi-workspace .aw-generation-progress progress::-moz-progress-bar {background:var(--aw-accent);border-radius:4px;}
+.adachi-workspace .aw-model-warning {padding:7px 9px;border:1px solid var(--aw-line);border-left:3px solid var(--aw-error);border-radius:4px;color:var(--aw-error);font-size:12px;}
+.adachi-workspace .aw-model-warning ul {margin:7px 0;padding-left:17px;overflow-wrap:anywhere;}
+.adachi-workspace .aw-model-warning li {margin:5px 0;}
+.adachi-workspace .aw-model-warning small {display:block;color:var(--aw-muted);}
+
+@keyframes aw-progress-wait {from{background-position:100% 0}to{background-position:-100% 0}}
+.adachi-workspace .aw-generation-progress progress:not([value]) {background:linear-gradient(90deg,var(--aw-line) 20%,var(--aw-accent) 50%,var(--aw-line) 80%);background-size:200% 100%;animation:aw-progress-wait 1.5s linear infinite;}
+.adachi-workspace .aw-generation-progress progress:not([value])::-webkit-progress-bar,.adachi-workspace .aw-generation-progress progress:not([value])::-webkit-progress-value {background:transparent;}
+@media(prefers-reduced-motion:reduce){.adachi-workspace .aw-generation-progress progress:not([value]){animation:none}}
