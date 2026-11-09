@@ -6,6 +6,8 @@
 // buttons are drawn by this plugin, so they translate here by reading Comfy.Locale.
 
 const ZH = {
+  "Show group details": "展开分组详情",
+  "Hide group details": "收起分组详情",
   "Reload comparison images": "重新加载对比图片",
   "Image upload progress": "图片上传进度",
   "Uploading image": "正在上传图片",

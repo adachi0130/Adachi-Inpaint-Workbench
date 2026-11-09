@@ -19,7 +19,15 @@ class GroupPresetsPanel {
             this.refresh(true);
         });
         const toolbar = el("div", "dd-gp-toolbar"); toolbar.append(el("strong", "", T("Group presets")));
-        this.add = this.button(toolbar, T("+ New preset"), () => this.showForm("add"));
+        const tools = el("div", "dd-gp-toolbar-actions"); toolbar.append(tools);
+        this.toggleDetail = this.button(tools, "", () => {
+            app.canvas?.emitBeforeChange?.();
+            this.node.properties.adachi_group_detail_hidden = !this.node.properties.adachi_group_detail_hidden;
+            this.updateDetail();
+            app.canvas?.emitAfterChange?.();
+            this.node.graph?.setDirtyCanvas(true, true);
+        });
+        this.add = this.button(tools, T("+ New preset"), () => this.showForm("add"));
         this.form = el("form", "dd-gp-form"); this.form.hidden = true;
         this.nameInput = el("input"); this.nameInput.type = "text"; this.nameInput.maxLength = 120;
         this.nameInput.setAttribute("aria-label", T("Preset name"));
@@ -28,9 +36,9 @@ class GroupPresetsPanel {
         this.button(this.form, T("Cancel"), () => { this.form.hidden = true; });
         this.form.onsubmit = event => { event.preventDefault(); this.submitName(); };
         this.nameInput.onkeydown = event => { event.stopPropagation(); if (event.key === "Escape") { event.preventDefault(); this.form.hidden = true; } };
-        const body = el("div", "dd-gp-body");
+        const body = this.body = el("div", "dd-gp-body");
         this.presets = el("nav", "dd-gp-presets dd-gp-scroll"); this.presets.setAttribute("aria-label", T("Presets"));
-        const detail = el("section", "dd-gp-detail");
+        const detail = this.detail = el("section", "dd-gp-detail");
         const head = el("div", "dd-gp-detail-head"); this.title = el("strong"); head.append(this.title);
         this.rename = this.button(head, T("Rename"), () => this.showForm("rename"));
         this.groups = el("div", "dd-gp-groups dd-gp-scroll"); this.groups.setAttribute("aria-label", T("Group states"));
@@ -50,7 +58,16 @@ class GroupPresetsPanel {
         };
         window.addEventListener("wheel", this.onWheel, { capture: true, passive: false });
         this.timer = setInterval(() => { if (this.root.isConnected && !document.hidden) this.refresh(); }, 500);
-        this.refresh(true);
+        this.updateDetail(); this.refresh(true);
+    }
+    updateDetail() {
+        const hidden = !!this.node.properties.adachi_group_detail_hidden;
+        this.detail.hidden = hidden;
+        this.body.classList.toggle("dd-gp-collapsed", hidden);
+        this.toggleDetail.textContent = hidden ? "▶" : "◀";
+        this.toggleDetail.title = T(hidden ? "Show group details" : "Hide group details");
+        this.toggleDetail.setAttribute("aria-label", this.toggleDetail.title);
+        this.toggleDetail.setAttribute("aria-expanded", String(!hidden));
     }
     button(parent, label, callback) { const button = el("button", "", label); button.type = "button"; button.onclick = event => { event.stopPropagation(); callback(); }; parent.append(button); return button; }
     showForm(mode) {
@@ -122,7 +139,7 @@ app.registerExtension({
                 widget.serialize = false; this.setSize([620, 410]);
             }
             onAdded() { this.adachiGroupPresets.refresh(true); }
-            onConfigure() { this.adachiGroupPresets.model.restore(); this.adachiGroupPresets.refresh(true); }
+            onConfigure() { this.adachiGroupPresets.model.restore(); this.adachiGroupPresets.updateDetail(); this.adachiGroupPresets.refresh(true); }
             onRemoved() { this.adachiGroupPresets.destroy(); }
             getExtraMenuOptions(_, options) {
                 const panel = this.adachiGroupPresets;
