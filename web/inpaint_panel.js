@@ -13,7 +13,7 @@ const choices = {
 export class InpaintParameterPanel {
     constructor(options) {
         this.options = options; this.bindings = []; this.root = el("section", "dd-parameters");
-        const header = el("div", "dd-param-header"); header.append(el("strong", "", T("WebUI Inpaint")));
+        const header = el("div", "dd-param-header"); header.append(el("strong", "", T("Adachi Inpaint Workbench")));
         this.targetSelect = el("select"); this.targetSelect.setAttribute("aria-label", T("Controlled WebUI inpaint node"));
         this.targetSelect.onchange = () => { this.preferred = this.targetSelect.value; this.options.onPreferred?.(this.preferred); this.refresh(); };
         header.append(this.targetSelect); this.root.append(header);
@@ -31,7 +31,7 @@ export class InpaintParameterPanel {
         const signature = targets.map(n => `${n.id}:${n.title}`).join("|");
         if (signature !== this.signature) {
             this.signature = signature; this.targetSelect.replaceChildren();
-            for (const n of targets) { const option = el("option", "", `${n.title || T("WebUI Inpaint")} #${n.id}`); option.value = String(n.id); this.targetSelect.append(option); }
+            for (const n of targets) { const option = el("option", "", `${n.title || T("Adachi Inpaint Workbench")} #${n.id}`); option.value = String(n.id); this.targetSelect.append(option); }
         }
         this.targetSelect.hidden = targets.length < 2;
         if (next) this.targetSelect.value = String(next.id);

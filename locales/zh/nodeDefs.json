@@ -129,7 +129,7 @@
     }
   },
   "AdachiWebUIInpaint": {
-    "display_name": "WebUI 局部重绘 / WebUI Inpaint",
+    "display_name": "安达重绘工作台",
     "description": "WebUI 式局部重绘：整图/蒙版区域、填充、采样与原尺寸回贴。",
     "inputs": {
       "image": {

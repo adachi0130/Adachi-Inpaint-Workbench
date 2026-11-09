@@ -527,7 +527,7 @@ class AdachiWebUIInpaint:
     FUNCTION = "sample"
     CATEGORY = CATEGORY
     DESCRIPTION = "WebUI-style inpainting, crop, latent fill, sampling and original-size compositing."
-    SEARCH_ALIASES = ["webui", "img2img", "inpaint", "局部重绘", "安达", "adachi"]
+    SEARCH_ALIASES = ["webui", "img2img", "inpaint", "局部重绘", "安达重绘工作台", "安达", "adachi"]
 
     def sample(self, model, positive, negative, vae, image, mask, seed=0, steps=20, cfg=7.0,
                sampler_name="euler", scheduler="normal", denoise=0.75, batch_size=1, inpaint_model=False,
@@ -1041,7 +1041,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "AdachiInlineMask": "Inline Mask",
     "AdachiInpaintPrepare": "Inpaint Prepare",
     "AdachiInpaintComposite": "Inpaint Composite",
-    "AdachiWebUIInpaint": "WebUI Inpaint",
+    "AdachiWebUIInpaint": "Adachi Inpaint Workbench",
     "AdachiImageCompare": "Image Compare",
     "AdachiExclusiveSwitch": "Auto Exclusive Switch",
     "AdachiLayerCommit": "Internal Layer Commit",

@@ -150,9 +150,9 @@ const ZH = {
   "The painting tools live in the other inpaint node connected to this image": "画笔工具位于连接此原图的另一个重绘节点",
 
   // inpaint_panel.js
-  "WebUI Inpaint": "WebUI 局部重绘",
+  "Adachi Inpaint Workbench": "安达重绘工作台",
   "Controlled WebUI inpaint node": "控制的局部重绘节点",
-  "Connect a WebUI inpaint node to edit its parameters here": "连接 WebUI 局部重绘节点后，在这里调整参数",
+  "Connect a WebUI inpaint node to edit its parameters here": "连接安达重绘工作台后，在这里调整参数",
   "Mask mode": "重绘区域",
   "Fill content": "重绘参考内容",
   "Sampling area": "重绘画布",

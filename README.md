@@ -28,7 +28,7 @@ Inpainting usually means moving between the workflow, a mask editor and the gene
 | Tool | What it adds |
 | --- | --- |
 | **Inline Mask** | Paint masks or crop, inpaint and blend two layers in the same node. |
-| **WebUI Inpaint** | Whole-image or masked-area sampling, familiar inpainting controls and compositing back at the source resolution. |
+| **Adachi Inpaint Workbench** | Whole-image or masked-area sampling, familiar inpainting controls and compositing back at the source resolution. |
 | **Image Compare** | Hover comparison, result history and one-click adoption for another editing round. |
 | **Group Bypass Presets** | Save combinations of enabled/bypassed groups and apply them with one click. |
 | **Auto Exclusive Switch** | Route the only enabled branch to a shared output, without a manual switch widget. |
@@ -52,7 +52,7 @@ While a source image uploads, a progress bar reports the bytes actually sent and
 - Brush, soft edges, hardness, opacity, pen pressure, temporary erasing and shape tools.
 - A compact **↑ upload / ⛶ fit / pin** toolbar, with a mode selector at the upper right. Enable the pin (**Keep**) to keep the image fitted and centered; plain wheel then navigates the workflow, while `Ctrl` + wheel still changes brush size and `Shift` + wheel changes hardness.
 - Resize the editor horizontally or vertically. The pin state and node dimensions survive workflow reload.
-- The connected **WebUI Inpaint** node hosts the painting controls and sampling parameters, leaving more space for the picture. Its painting tools, mask mode and fill content fold behind an arrow; **Undo / Redo / Invert / Fill / Clear / Import / Export** remain visible. Fold state is saved with the workflow.
+- The connected **Adachi Inpaint Workbench** node hosts the painting controls and sampling parameters, leaving more space for the picture. Its painting tools, mask mode and fill content fold behind an arrow; **Undo / Redo / Invert / Fill / Clear / Import / Export** remain visible. Fold state is saved with the workflow.
 - Bounded display buffers and cached image/mask compositing reduce redraw cost at large graph zoom; the saved mask retains its source resolution.
 
 <details>
@@ -74,8 +74,8 @@ In Crop & Blend mode, choose one of six 64-aligned presets spanning 512–2048 p
 
 | Connection | Purpose |
 | --- | --- |
-| `Inline Mask.image` + `mask` → `WebUI Inpaint.image` + `mask` | Send the selected crop and its repaint mask. |
-| `Inline Mask.image` → `Image Compare.original`; `WebUI Inpaint.image` → `Image Compare.result` | Compare the crop before adopting it. |
+| `Inline Mask.image` + `mask` → `Adachi Inpaint Workbench.image` + `mask` | Send the selected crop and its repaint mask. |
+| `Inline Mask.image` → `Image Compare.original`; `Adachi Inpaint Workbench.image` → `Image Compare.result` | Compare the crop before adopting it. |
 | `Inline Mask.full_image` → `Save Image.images` | Save the current full image with the **adopted** layer stitched in. |
 
 Generate, inspect the result in **Image Compare**, then click **Adopt this result** to return it. There is no feedback wire and generation does not automatically replace the editor image. Use the inpaint node's **image** output for comparison; its `crop` output is the sampling canvas and can have a different size. [Open the ready-wired example](examples/05-inline-crop-blend.json).
@@ -117,7 +117,7 @@ Choose a preset on the left, configure **Enabled / Bypassed / Keep current** on 
 
 Connect two alternatives to **Auto Exclusive Switch** and bypass one. The remaining enabled branch flows to the shared output, with no `switch` toggle to maintain.
 
-![Two Auto Exclusive Switch nodes routing positive and negative conditioning into WebUI Inpaint](preview/auto-exclusive-switch.png)
+![Two Auto Exclusive Switch nodes routing positive and negative conditioning into Adachi Inpaint Workbench](preview/auto-exclusive-switch.png)
 
 Use it for conditioning, strings, images, masks, models or latents; the two alternatives must use the same data type. Both enabled, or neither available, is an error rather than a silent preference for A.
 
@@ -133,7 +133,7 @@ Run from your `ComfyUI/custom_nodes` directory:
 git clone https://github.com/adachi0130/Adachi-Inpaint-Workbench.git
 ```
 
-**Restart ComfyUI completely, then hard-refresh the browser with `Ctrl+F5`** (`Cmd+Shift+R` on macOS). Search for `Inline Mask`, `WebUI Inpaint` or `Adachi` in the node menu.
+**Restart ComfyUI completely, then hard-refresh the browser with `Ctrl+F5`** (`Cmd+Shift+R` on macOS). Search for `Inline Mask`, `Adachi Inpaint Workbench` or `Adachi` in the node menu.
 
 ### Other installation options
 
@@ -153,12 +153,12 @@ For a Git installation, update with `git pull` inside the plugin folder, then re
 
 1. Drag [01-inline-inpaint.json](examples/01-inline-inpaint.json) into ComfyUI and select a compatible checkpoint, or connect your existing model, VAE and conditioning nodes.
 2. In **Inline Mask**, upload a picture and paint the region to change. **White repaints; black preserves.** Orange is only the on-screen overlay.
-3. Edit the upstream positive/negative prompts. Set the sampling area, width, height and denoise in **WebUI Inpaint**, then queue the workflow.
+3. Edit the upstream positive/negative prompts. Set the sampling area, width, height and denoise in **Adachi Inpaint Workbench**, then queue the workflow.
 4. Compare the output. Adopt a result when you want it to become the next source, and continue editing with the mask intact.
 
 ```mermaid
 flowchart LR
-    Source[Inline Mask] -->|image + mask| Inpaint[WebUI Inpaint]
+    Source[Inline Mask] -->|image + mask| Inpaint[Adachi Inpaint Workbench]
     Inputs[Model · VAE · Conditioning] --> Inpaint
     Source -->|original| Compare[Image Compare]
     Inpaint -->|result| Compare
@@ -170,10 +170,10 @@ flowchart LR
 
 | From | To |
 | --- | --- |
-| `Inline Mask.image` / `mask` | `WebUI Inpaint.image` / `mask` |
-| Your model / VAE / positive / negative conditioning | The matching inputs of `WebUI Inpaint` |
+| `Inline Mask.image` / `mask` | `Adachi Inpaint Workbench.image` / `mask` |
+| Your model / VAE / positive / negative conditioning | The matching inputs of `Adachi Inpaint Workbench` |
 | `Inline Mask.image` | `Image Compare.original` |
-| `WebUI Inpaint.image` | `Image Compare.result` and/or `Save Image.images` |
+| `Adachi Inpaint Workbench.image` | `Image Compare.result` and/or `Save Image.images` |
 
 The Refiner inputs are optional. Leave them disconnected unless you are using a compatible second-stage model.
 
@@ -184,7 +184,7 @@ All nodes live under **Adachi-Inpaint-Workbench**. The group preset controller i
 | Node | Purpose | Outputs |
 | --- | --- | --- |
 | **Inline Mask** | Mask painting or crop/inpaint/layer blending | `image`, `mask`, `full_image` |
-| **WebUI Inpaint** | Prepare, sample and composite in one node | `image` = full composite; `crop` = sampling canvas; `mask` = sampling mask |
+| **Adachi Inpaint Workbench** | Prepare, sample and composite in one node | `image` = full composite; `crop` = sampling canvas; `mask` = sampling mask |
 | **Image Compare** | Preview, compare and adopt results | `image` = unchanged result batch |
 | **Group Bypass Presets** | Apply saved group states | No connections needed |
 | **Auto Exclusive Switch** | Forward exactly one enabled alternative | `output` of the selected type |
@@ -239,7 +239,7 @@ Drag a JSON file into ComfyUI:
 - Sampling dimensions use multiples of 8. Padding, blur and mask growth are measured in source pixels; effective mask edges can change after blur/growth, while pixels with zero effective mask remain unchanged.
 - `mask_mode=outside` inverts the painted region before mask processing.
 - `resize_mode` controls whole-image resizing. Masked-area mode uses an aspect-preserving transform that retains the full mask, including at source edges.
-- Fill modes: **original**, surrounding-colour **fill**, **latent noise**, and **zero latent**. The latent modes belong to WebUI Inpaint; the modular Prepare node handles pixels and masks.
+- Fill modes: **original**, surrounding-colour **fill**, **latent noise**, and **zero latent**. The latent modes belong to Adachi Inpaint Workbench; the modular Prepare node handles pixels and masks.
 - An empty mask or `denoise=0` skips VAE/sampling. `batch_size` is variants per input image, not ComfyUI queue count.
 - For modular multi-source batches, group variants per source (`A,A,B,B`), rather than interleaving them (`A,B,A,B`).
 - Optional Refiner uses `refiner_model` and `refiner_switch`; `0.8` runs the last 20% with the Refiner. Compatible Refiner conditioning is recommended. A switch of `1` uses only the base model; `0` uses only the Refiner.

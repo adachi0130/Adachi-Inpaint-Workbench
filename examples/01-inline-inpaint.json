@@ -583,7 +583,7 @@
       "outputs": [],
       "properties": {},
       "widgets_values": [
-        "Adachi-Inpaint-Workbench\n1. Pick your own checkpoint\n2. Load an image in the left node and paint directly on it\n3. Select the brush and adjust inpainting parameters in the WebUI Inpaint node\n4. width/height is the sampling resolution; the final image is composited back at the source size\nTick \"Embed source in workflow\" in the inpaint node before sharing"
+        "Adachi-Inpaint-Workbench\n1. Pick your own checkpoint\n2. Load an image in the left node and paint directly on it\n3. Select the brush and adjust inpainting parameters in the Adachi Inpaint Workbench node\n4. width/height is the sampling resolution; the final image is composited back at the source size\nTick \"Embed source in workflow\" in the inpaint node before sharing"
       ],
       "color": "#432",
       "bgcolor": "#653"

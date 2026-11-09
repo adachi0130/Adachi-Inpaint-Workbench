@@ -114,7 +114,7 @@
     }
   },
   "AdachiWebUIInpaint": {
-    "display_name": "WebUI Inpaint",
+    "display_name": "Adachi Inpaint Workbench",
     "description": "WebUI-style inpainting, crop, latent fill, sampling and original-size compositing.",
     "inputs": {
       "image": {

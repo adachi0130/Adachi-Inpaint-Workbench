@@ -28,7 +28,7 @@
 | 工具 | 用途 |
 | --- | --- |
 | **内联蒙版 · Inline Mask** | 同一节点内涂蒙版，或裁切、重绘、双图层融合。 |
-| **WebUI 局部重绘 · WebUI Inpaint** | 整图或蒙版区域采样，使用熟悉的重绘参数，按原图尺寸回贴结果。 |
+| **安达重绘工作台 · Adachi Inpaint Workbench** | 整图或蒙版区域采样，使用熟悉的重绘参数，按原图尺寸回贴结果。 |
 | **图像对比 · Image Compare** | 鼠标划线对比、查看结果历史，一键采用后继续重绘。 |
 | **组忽略预设 · Group Bypass Presets** | 保存各组的打开/忽略组合，一键切换工作流配置。 |
 | **自动二选一 · Auto Exclusive Switch** | 自动输出唯一启用的分支，不用手动设置 switch。 |
@@ -54,7 +54,7 @@
 - 支持画笔软边、硬度、不透明度、数位笔压感、临时擦除和形状工具。
 - 顶部使用**↑ 上传、⛶ 适应、图钉**，右上角切换模式。图钉的悬停提示为「保持」：开启后图片持续适应并居中，普通滚轮控制工作流背景，`Ctrl` + 滚轮调整笔径，`Shift` + 滚轮调整硬度。
 - 支持横向、纵向调整编辑区大小；图钉状态和节点尺寸都能随工作流保存。
-- 连到 **WebUI 局部重绘**后，画笔工具和采样参数显示在重绘节点内，让图片编辑区保持简洁。画笔工具、蒙版内外和填充内容收进箭头折叠区，**撤销、重做、反转、全选、清空、导入蒙版、导出**整行始终显示；折叠状态随工作流保存。
+- 连到 **安达重绘工作台**后，画笔工具和采样参数显示在重绘节点内，让图片编辑区保持简洁。画笔工具、蒙版内外和填充内容收进箭头折叠区，**撤销、重做、反转、全选、清空、导入蒙版、导出**整行始终显示；折叠状态随工作流保存。
 - 放大工作流时限制显示画布的分配尺寸，并缓存原图/蒙版合成，减少反复重绘；实际保存的蒙版仍保持原图分辨率。
 
 <details>
@@ -76,8 +76,8 @@
 
 | 连线 | 用途 |
 | --- | --- |
-| `内联蒙版.image`、`mask` → `WebUI 局部重绘.image`、`mask` | 把裁片和重绘蒙版送去生成。 |
-| `内联蒙版.image` → `图像对比.original`；`WebUI 局部重绘.image` → `图像对比.result` | 先对比裁片，再选择采用。 |
+| `内联蒙版.image`、`mask` → `安达重绘工作台.image`、`mask` | 把裁片和重绘蒙版送去生成。 |
+| `内联蒙版.image` → `图像对比.original`；`安达重绘工作台.image` → `图像对比.result` | 先对比裁片，再选择采用。 |
 | `内联蒙版.full_image` → `保存图像.images` | 保存包含**已采用图层**的完整图像。 |
 
 先生成，在**图像对比**中查看，满意后点击**采用此结果**，才会嵌回当前裁切位置；没有回接输入线，也不会生成后自动替换。比较结果使用重绘节点的 **image** 输出；`crop` 是采样画布，尺寸可能不同。[已连好的示例](examples/05-inline-crop-blend.json)。
@@ -119,7 +119,7 @@
 
 将两路备选输入连接到**自动二选一**，忽略其中一路后，另一条有效分支自动流向共同输出，无需手动切换 `switch`。
 
-![两个自动二选一节点分别把正面、负面条件连接到 WebUI 局部重绘](preview/auto-exclusive-switch.png)
+![两个自动二选一节点分别把正面、负面条件连接到 安达重绘工作台](preview/auto-exclusive-switch.png)
 
 可用于提示词条件、字符串、图像、蒙版、模型、潜空间等数据；两路输入应为同一类型。两路都启用或都不可用时会报错，不会擅自优先选择 A。
 
@@ -135,7 +135,7 @@
 git clone https://github.com/adachi0130/Adachi-Inpaint-Workbench.git
 ```
 
-**完整重启 ComfyUI，再按 `Ctrl+F5` 强制刷新网页**，macOS 可用 `Cmd+Shift+R`。在节点菜单搜索 `Inline Mask`、`WebUI Inpaint` 或 `Adachi`。
+**完整重启 ComfyUI，再按 `Ctrl+F5` 强制刷新网页**，macOS 可用 `Cmd+Shift+R`。在节点菜单搜索 `Inline Mask`、`Adachi Inpaint Workbench` 或 `Adachi`。
 
 ### 其他安装方式
 
@@ -155,12 +155,12 @@ Git 安装用户可在插件目录运行 `git pull` 更新，然后重启 ComfyU
 
 1. 将 [01-inline-inpaint.json](examples/01-inline-inpaint.json) 拖入 ComfyUI，选择兼容的 checkpoint；也可以连接现有工作流的模型、VAE 和文本条件。
 2. 在**内联蒙版**上传图片，涂出需要修改的部分。**白色重绘、黑色保留**，橙色只是界面叠加显示。
-3. 编辑上游节点的正面/负面提示词，在 **WebUI 局部重绘**里设置采样区域、宽高和重绘幅度，运行工作流。
+3. 编辑上游节点的正面/负面提示词，在 **安达重绘工作台**里设置采样区域、宽高和重绘幅度，运行工作流。
 4. 查看对比结果，满意时点击采用，将它作为新原图，保留蒙版继续修改。
 
 ```mermaid
 flowchart LR
-    Source[内联蒙版] -->|image + mask| Inpaint[WebUI 局部重绘]
+    Source[内联蒙版] -->|image + mask| Inpaint[安达重绘工作台]
     Inputs[模型 · VAE · 文本条件] --> Inpaint
     Source -->|original| Compare[图像对比]
     Inpaint -->|result| Compare
@@ -172,10 +172,10 @@ flowchart LR
 
 | 从哪里 | 连到哪里 |
 | --- | --- |
-| `内联蒙版.image` / `mask` | `WebUI 局部重绘.image` / `mask` |
-| 模型 / VAE / 正面条件 / 负面条件 | `WebUI 局部重绘`对应输入 |
+| `内联蒙版.image` / `mask` | `安达重绘工作台.image` / `mask` |
+| 模型 / VAE / 正面条件 / 负面条件 | `安达重绘工作台`对应输入 |
 | `内联蒙版.image` | `图像对比.original` |
-| `WebUI 局部重绘.image` | `图像对比.result`，以及需要时的 `保存图像.images` |
+| `安达重绘工作台.image` | `图像对比.result`，以及需要时的 `保存图像.images` |
 
 Refiner 输入是可选项。只有需要兼容的第二阶段模型时才连接，否则留空即可。
 
@@ -186,7 +186,7 @@ Refiner 输入是可选项。只有需要兼容的第二阶段模型时才连接
 | 节点 | 用途 | 输出 |
 | --- | --- | --- |
 | **内联蒙版 · Inline Mask** | 普通蒙版或裁切重绘、双图层融合 | `image`、`mask`、`full_image` |
-| **WebUI 局部重绘 · WebUI Inpaint** | 一体化准备、采样、合成 | `image`：完整合成图；`crop`：采样画布；`mask`：采样蒙版 |
+| **安达重绘工作台 · Adachi Inpaint Workbench** | 一体化准备、采样、合成 | `image`：完整合成图；`crop`：采样画布；`mask`：采样蒙版 |
 | **图像对比 · Image Compare** | 预览、对比、采用结果 | `image`：原样传递结果批次 |
 | **组忽略预设 · Group Bypass Presets** | 应用已保存的组状态 | 无需连线 |
 | **自动二选一 · Auto Exclusive Switch** | 传递唯一启用的输入 | `output`：被选中分支的数据类型 |

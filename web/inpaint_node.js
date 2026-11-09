@@ -1,5 +1,5 @@
 import { app } from "../../scripts/app.js";
-import { InpaintParameterPanel } from "./inpaint_panel.js?v=0.6.1";
+import { InpaintParameterPanel } from "./inpaint_panel.js?v=adachi-name";
 import { connectedEditor, connectedSamplers, relocateWidgets, syncCurrentDimensions } from "./parameter_bridge.js?v=0.8.2";
 import { routeWheelOutsideImage } from "./wheel_routing.js";
 import { T } from "./i18n.js";
@@ -81,7 +81,16 @@ export function installInpaintWorkbench(nodeType) {
         bindWidgetToNodeWidth(node, widget, root);
         const observer = new ResizeObserver(scheduleSize); observer.observe(tools); observer.observe(fold); observer.observe(actionHost);
         const configured = node.onConfigure;
-        node.onConfigure = function () { const result = configured?.apply(this, arguments); fold.open = !!node.properties.adachi_tools_open; queueMicrotask(() => { if (!removed) { panel.refresh(); scheduleSize(); } }); return result; };
+        node.onConfigure = function () {
+            const result = configured?.apply(this, arguments);
+            const legacyTitles = ["WebUI Inpaint", "WebUI 局部重绘", "WebUI 局部重绘 / WebUI Inpaint", "安达局部重绘工作台"];
+            if (node.type === "AdachiWebUIInpaint" && legacyTitles.includes(node.title)) {
+                node.title = T("Adachi Inpaint Workbench");
+            }
+            fold.open = !!node.properties.adachi_tools_open;
+            queueMicrotask(() => { if (!removed) { panel.refresh(); scheduleSize(); } });
+            return result;
+        };
         const connections = node.onConnectionsChange;
         node.onConnectionsChange = function (type, slot, connected) {
             const result = connections?.apply(this, arguments);

@@ -35,7 +35,7 @@ export class Workspace {
   if(this.closed)return;this.graph=app.graph;this.nodes=inspectWorkbench(this.graph);
   this.editorNode=this.nodes.editors.find(n=>n.mode===0)||this.nodes.editors[0];this.sampler=this.nodes.samplers.find(n=>n.mode===0)||this.nodes.samplers[0];this.compareNode=this.nodes.comparisons.find(n=>n.mode===0)||this.nodes.comparisons[0];
   this.editor=this.editorNode?.adachiEditor;this.compare=this.compareNode?.adachiCompare;
-  if(!this.editor||!this.sampler?.adachiWorkbench||!this.compare)throw Error('当前工作流需要内联蒙版、WebUI局部重绘和图像对比节点');
+  if(!this.editor||!this.sampler?.adachiWorkbench||!this.compare)throw Error('当前工作流需要内联蒙版、安达重绘工作台和图像对比节点');
   this.history=this.editorNode.adachiWorkspaceHistory ||= new WorkspaceHistory(this.editorNode);
   this.history.onChange=()=>this.syncHistory();
   this.history.onRestore=()=>{syncCurrentDimensions(this.editorNode);app.canvas?.emitBeforeChange?.();app.canvas?.emitAfterChange?.();this.show('edit');this.scheduleCheck();};
