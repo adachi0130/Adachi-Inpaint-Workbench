@@ -103,7 +103,7 @@ export class ImageCompareView {
     }
 
     updateButton() {
-        this.adoptButton.disabled = !this.ready || !this.targetSelect.value || !!this.busy;
+        this.adoptButton.disabled = !this.ready || !this.targetSelect.value || !!this.busy || this.pendingOutputs>0;
         this.adoptButton.textContent = this.busy ? T("Adopting…") : T("Adopt this result");
         this.downloadButton.disabled = !this.latestResult || !!this.downloading;
     }
@@ -204,7 +204,7 @@ export class ImageCompareView {
     async adopt() {
         this.refreshTargets();
         if (this.busy) return;
-        if (!this.ready) { this.status(T("The result preview is still loading"), true); return; }
+        if (!this.ready || this.pendingOutputs>0) { this.status(T("The result preview is still loading"), true); return; }
         if (!this.targetSelect.value) { this.status(T("Select an inline mask to adopt into"), true); return; }
         const target = this.targetSelect.value, result = this.results[this.index];
         this.busy = true; this.updateButton(); this.status(T("Setting the result as the new source image…"));

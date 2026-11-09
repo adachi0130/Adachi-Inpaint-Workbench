@@ -58,3 +58,6 @@ git switch --detach v1.0.0
 
 Restart ComfyUI and hard-refresh the browser (`Ctrl+F5`) after switching versions.
 Commit or back up any local modifications before switching. A release ZIP does not contain `.git`; use the installer backup for a copied installation.
+
+
+Local workbench UI / network preview (2026-11-09) baseline: `local-before-workspace-ui-network-20261109` (`392149f`). To undo this local work on a clean checkout, use `git switch --detach local-before-workspace-ui-network-20261109`, reinstall those files, restart ComfyUI and hard-refresh. The installed directory also has a full ZIP backup in `user/adachi-workbench-backups/` whose name starts with `Adachi-Inpaint-Workbench-before-workspace-ui-network-20261109-`.
