@@ -1,5 +1,6 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
+import { workspaceRequest } from "./workspace_transport.js";
 
 function apiNodeId(node) { return String(typeof node === "object" ? node.id : node); }
 const graphTasks = new WeakMap();
@@ -108,32 +109,5 @@ async function prepareSnapshot({editorNode, samplerNode, compareNode, binding = 
     };
 }
 
-function errorMessage(data) {
-    const nodes = Object.entries(data.node_errors || {}).flatMap(([id, node]) =>
-        (node.errors || []).map(e => `#${id} ${e.message || ""}: ${e.details || ""}`));
-    return nodes.join("\n") || data.error?.message || "工作流检查未通过";
-}
-
-async function request(path, prepared) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), path === "submit" ? 60000 : 20000);
-    let response;
-    try {
-        response = await api.fetchApi(`/adachi-inpaint/workspace/${path}`, {
-            method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(prepared), signal: controller.signal,
-        });
-    } catch (error) {
-        if (error.name === "AbortError") throw new Error(path === "submit" ? "提交超时，请先检查任务队列，避免重复生成" : "连接检查超时，请检查网络后重试");
-        throw error;
-    } finally { clearTimeout(timer); }
-    let data;
-    try { data = await response.json(); }
-    catch { throw new Error(`工作流服务不可用 (${response.status})，请确认已更新并重启 ComfyUI`); }
-    if (!response.ok || !data.valid) {
-        const error = new Error(errorMessage(data)); error.nodeErrors = data.node_errors || {}; throw error;
-    }
-    return data;
-}
-
-export const validateWorkspace = prepared => request("validate", prepared);
-export const submitWorkspace = prepared => request("submit", prepared);
+export const validateWorkspace = prepared => workspaceRequest(api, "validate", prepared);
+export const submitWorkspace = prepared => workspaceRequest(api, "submit", prepared);

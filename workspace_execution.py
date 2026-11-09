@@ -63,6 +63,10 @@ def register_workspace_routes(server):
     from aiohttp import web
     import execution
 
+    @server.routes.get("/adachi-inpaint/workspace/capabilities")
+    async def capabilities(request):
+        return web.json_response({"api_version": 1, "can_validate": True})
+
     async def handle(request, submit):
         try:
             payload = await request.json()
