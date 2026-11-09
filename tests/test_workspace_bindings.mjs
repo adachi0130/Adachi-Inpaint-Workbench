@@ -1,57 +1,37 @@
 import assert from 'node:assert/strict';
 import {WorkspaceBindings} from '../web/workspace_bindings.js';
-
-const nodes = [];
-const add = (id,type,widgets=[]) => {const node={id,type,widgets,properties:{},inputs:[],mode:4};nodes.push(node);return node;};
-const ckpt=add(518,'CheckpointLoaderSimple',[{name:'ckpt_name',value:'wai.safetensors'}]);
-add(359,'CheckpointLoaderSimple',[{name:'ckpt_name',value:'anima.safetensors'}]);
-add(357,'CLIPLoader');add(358,'VAELoader');
-const sampler=add(501,'AdachiWebUIInpaint',[{name:'refiner_switch',value:1}]);
-add(521,'CLIPTextEncode',[{name:'text',value:'positive'}]);
-add(520,'CLIPTextEncode',[{name:'text',value:'negative'}]);
-add(547,'CLIPTextEncode',[{name:'text',value:'anima positive'}]);
-add(16,'CLIPTextEncode',[{name:'text',value:'anima negative'}]);
-add(553,'Power Lora Loader (rgthree)',[
-    {name:'lora_1',value:{on:true,lora:'old1.safetensors',strength:1}},
-    {name:'lora_7',value:{on:true,lora:'old7.safetensors',strength:1}}
-]);
-add(360,'Power Lora Loader (rgthree)');
-const preset=add(524,'AdachiGroupPresets');preset.mode=0;
-const applied=[];
-preset.adachiGroupPresets={model:{node:preset,data:{activeId:'anima',presets:[{id:'txt',name:'anima文生图'},{id:'anima',name:'anima修图'},{id:'wai',name:'wai修图'}]},apply:id=>{applied.push(id);preset.adachiGroupPresets.model.data.activeId=id;}}};
+const nodes=[];
+const add=(id,type,values={},inputs=[],outputs=[])=>{const n={id,type,mode:0,properties:{},widgets:Object.entries(values).map(([name,value])=>({name,value})),inputs,outputs:outputs.map(type=>({type,name:type}))};nodes.push(n);return n;};
+const unrelated=add('old-unrelated','CheckpointLoaderSimple',{ckpt_name:'do-not-pick.safetensors'});
+const a=add('base-a','CheckpointLoaderSimple',{ckpt_name:'custom-A.safetensors'});
+const b=add('base-b','UNETLoader',{unet_name:'anything-B.safetensors'});
+const clip=add('separate-encoder','CLIPLoader',{clip_name:'language.safetensors'});
+const vae=add('separate-vae','VAELoader',{vae_name:'image.safetensors'});
+const posA=add('encode-a','CLIPTextEncode',{text:'original A'},[{name:'clip',type:'CLIP'}],['CONDITIONING']);
+const negA=add('negative-a','CLIPTextEncode',{text:'negative A'},[{name:'clip',type:'CLIP'}],['CONDITIONING']);
+const posB=add('encode-b','CLIPTextEncode',{text:'original B'},[{name:'clip',type:'CLIP'}],['CONDITIONING']);
+const negB=add('negative-b','CLIPTextEncode',{text:'negative B'},[{name:'clip',type:'CLIP'}],['CONDITIONING']);
+add('model-patch','ModelSamplingSD3',{},[{name:'model',type:'MODEL'}],['MODEL']);
+const sampler=add('workbench','AdachiWebUIInpaint',{refiner_switch:.8},[{name:'model',type:'MODEL'},{name:'positive',type:'CONDITIONING'},{name:'negative',type:'CONDITIONING'},{name:'vae',type:'VAE'}]);
+const controller=add('preset-owner','AdachiGroupPresets');const applied=[];
+controller.adachiGroupPresets={model:{node:controller,data:{activeId:'one',presets:[{id:'one',name:'Portrait'},{id:'two',name:'Studio'}]},apply(id){this.data.activeId=id;applied.push(id);}}};
 const graph={_nodes:nodes,getNodeById:id=>nodes.find(n=>String(n.id)===String(id)),links:{}};
-const bindings=new WorkspaceBindings({graph,sampler});
-assert.equal(bindings.profiles.length,3);
-assert.equal(bindings.profileId,'anima');bindings.selectProfile('wai');
-let result=bindings.getExecutionBinding();
-assert.deepEqual(result.samplerInputs,{model:['518',0],vae:['518',2],positive:['521',0],negative:['520',0]});
-assert.deepEqual(result.inputOverrides['521'],{clip:['518',1]});
-assert.equal(result.enableNodes.some(n=>n.id===553),false,'no LoRA must bypass the loader');
-assert.deepEqual(result.removeInputs['501'],['refiner_model','refiner_positive','refiner_negative']);
-bindings.settings.loras=[{name:'new.safetensors',strength:.7}];
-result=bindings.getExecutionBinding();
-assert.deepEqual(result.samplerInputs.model,['553',0]);
-assert.equal(result.inputOverrides['553'].lora_1.lora,'new.safetensors');
-assert.equal(result.inputOverrides['553'].lora_1.strength,.7);
-assert.equal(result.inputOverrides['553'].lora_7.on,false,'old enabled LoRA rows must not leak into the workspace choice');
-bindings.settings.positive='new prompt';
-assert.equal(bindings.getExecutionBinding().inputOverrides['521'].text,'new prompt');
-bindings.selectProfile('anima');
-assert.deepEqual(applied,['wai','anima']);
-assert.deepEqual(bindings.getExecutionBinding().samplerInputs.model,['359',0]);
-assert.deepEqual(bindings.getExecutionBinding().inputOverrides['547'].clip,['357',0]);
-bindings.selectProfile('wai');
-assert.equal(bindings.settings.positive,'new prompt');
-assert.equal(ckpt.widgets[0].value,'wai.safetensors','read-only discovery must not change a model widget');
-console.log('Workspace bindings: existing presets, WAI/Anima mapping, no LoRA, LoRA strengths, prompt edits and profile isolation passed');
-
-preset.mode=4;
-const ignored=new WorkspaceBindings({graph,sampler});
-assert.equal(ignored.controller,undefined,'ignored group controller must not create preset buttons');
-assert.deepEqual(ignored.profiles.map(p=>p.id),['current']);
-preset.mode=0;
-preset.adachiGroupPresets.model.data.presets.push({id:'fourth',name:'custom branch'});
-ignored.refreshProfiles();assert.equal(ignored.profiles.length,4,'preset count comes from active controller');
-console.log('Group controller: ignored/missing fallback and dynamic preset count pass');
-
-preset.adachiGroupPresets.model.data.activeId='anima';bindings.refreshProfiles();assert.equal(bindings.profileId,'anima','external preset switching is reflected');
+const p=(kind)=>{
+ const root=kind==='one'?'base-a':'base-b',positive=kind==='one'?'encode-a':'encode-b',negative=kind==='one'?'negative-a':'negative-b';
+ return {[root]:{class_type:graph.getNodeById(root).type,inputs:{}},'separate-encoder':{class_type:'CLIPLoader',inputs:{}},'separate-vae':{class_type:'VAELoader',inputs:{}},
+  'model-patch':{class_type:'ModelSamplingSD3',inputs:{model:[root,0]}},
+  [positive]:{class_type:'CLIPTextEncode',inputs:{clip:kind==='one'?[root,1]:['separate-encoder',0],text:'base text'}},
+  [negative]:{class_type:'CLIPTextEncode',inputs:{clip:kind==='one'?[root,1]:['separate-encoder',0],text:'negative text'}},
+  workbench:{class_type:'AdachiWebUIInpaint',inputs:{model:['model-patch',0],positive:[positive,0],negative:[negative,0],vae:kind==='one'?[root,2]:['separate-vae',0]}}};
+};
+const x=new WorkspaceBindings({graph,sampler});assert.equal(x.profileId,'one');assert.equal(x.model,null,'discovery cannot guess from filenames or active loader order');
+x.updateExecutionGraph(p('one'),'workbench');assert.equal(x.model,a);assert.notEqual(x.model,unrelated);assert.equal(x.positive,posA);assert.equal(x.getExecutionBinding().loraMode,'inherit');
+assert.deepEqual(x.getExecutionBinding().samplerInputs,{},'final model-processing references are preserved');
+x.settings.positive='custom A';assert.deepEqual(x.getExecutionBinding().inputOverrides['encode-a'],{text:'custom A'});
+x.settings.loraMode='override';x.settings.loras=[{name:'style.safetensors',strength:.7}];assert.equal(x.getExecutionBinding().loras[0].name,'style.safetensors');
+x.selectProfile('two');x.updateExecutionGraph(p('two'),'workbench');assert.equal(x.model,b);assert.equal(x.clip,clip);assert.equal(x.vae,vae);assert.equal(x.positive,posB);assert.equal(x.getExecutionBinding().loraMode,'inherit');assert.equal(x.getExecutionBinding().inputOverrides['encode-b'],undefined);
+x.selectProfile('one');x.updateExecutionGraph(p('one'),'workbench');assert.equal(x.settings.positive,'custom A');assert.deepEqual(applied,['two','one']);
+controller.mode=4;const ignored=new WorkspaceBindings({graph,sampler});assert.equal(ignored.controller,undefined);assert.deepEqual(ignored.profiles.map(p=>p.id),['current']);
+controller.mode=0;controller.adachiGroupPresets.model.data.presets.push({id:'new',name:'Any other title'});ignored.refreshProfiles();assert.equal(ignored.profiles.length,3);
+controller.adachiGroupPresets.model.data.activeId='two';ignored.refreshProfiles();assert.equal(ignored.profileId,'two');
+console.log('Workspace bindings: arbitrary IDs and titles, actual loader/CLIP/VAE routes, preserved model patches, inherited/custom LoRAs, per-profile edits and dynamic controllers pass');

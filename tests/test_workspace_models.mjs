@@ -6,13 +6,18 @@ const nodes=[sampler,n(359,'CheckpointLoaderSimple',{ckpt_name:'anima_baseV10.sa
 const controller=n(524,'AdachiGroupPresets');nodes.push(controller);
 controller.adachiGroupPresets={model:{node:controller,data:{activeId:'anima',presets:[{id:'anima',name:'anima修图'},{id:'wai',name:'wai生图'}]},apply(id){this.data.activeId=id;}}};
 const graph={_nodes:nodes,links:{},getNodeById:id=>nodes.find(n=>String(n.id)===String(id))};
-const b=new WorkspaceBindings({graph,sampler});assert.equal(b.missingDependencies().length,0,'not-yet-loaded lists cannot prove missing weights');
+const compiled=(profile)=>profile==='anima'?{
+ '359':{class_type:'CheckpointLoaderSimple',inputs:{}},'357':{class_type:'CLIPLoader',inputs:{}},'358':{class_type:'VAELoader',inputs:{}},
+ '547':{class_type:'CLIPTextEncode',inputs:{clip:['357',0],text:''}},'16':{class_type:'CLIPTextEncode',inputs:{clip:['357',0],text:''}},
+ '501':{class_type:'AdachiWebUIInpaint',inputs:{model:['359',0],positive:['547',0],negative:['16',0],vae:['358',0]}}
+}:{'518':{class_type:'CheckpointLoaderSimple',inputs:{}},'521':{class_type:'CLIPTextEncode',inputs:{clip:['518',1],text:''}},'520':{class_type:'CLIPTextEncode',inputs:{clip:['518',1],text:''}},'501':{class_type:'AdachiWebUIInpaint',inputs:{model:['518',0],positive:['521',0],negative:['520',0],vae:['518',2]}}};
+const b=new WorkspaceBindings({graph,sampler});b.updateExecutionGraph(compiled('anima'),'501');assert.equal(b.missingDependencies().length,0,'not-yet-loaded lists cannot prove missing weights');
 const info=(type,name,values)=>({[type]:{input:{required:{[name]:[values]}}}});
 const sources={'/object_info/CheckpointLoaderSimple':info('CheckpointLoaderSimple','ckpt_name',['wai.safetensors']),'/object_info/UNETLoader':info('UNETLoader','unet_name',[]),'/object_info/CLIPLoader':info('CLIPLoader','clip_name',[]),'/object_info/VAELoader':info('VAELoader','vae_name',['pixel_space']),'/models/loras':[]};
 await b.loadCatalog(async path=>({ok:true,json:async()=>sources[path]}));
 assert.deepEqual(b.missingDependencies().map(d=>d.widget.value),['anima_baseV10.safetensors','qwen_3_06b_base.safetensors','qwen_image_vae.safetensors']);
 assert.deepEqual(b.missingDependencies().map(d=>d.folder),['checkpoints','text_encoders','vae']);
-b.selectProfile('wai');assert.equal(b.missingDependencies().length,0,'an available checkpoint supplies its own CLIP and VAE');assert.equal(b.modelDependencies().length,1);
-b.selectProfile('anima');b.catalog.checkpoints.push('anima_baseV10.safetensors');b.catalog.clips.push('qwen_3_06b_base.safetensors');b.catalog.vaes.push('qwen_image_vae.safetensors');assert.equal(b.missingDependencies().length,0);
-const failed=new WorkspaceBindings({graph,sampler});await failed.loadCatalog(async()=>{throw Error('network offline');});assert.equal(failed.missingDependencies().length,0,'a network failure must not be reported as missing models');assert.ok(failed.catalogError);
+b.selectProfile('wai');b.updateExecutionGraph(compiled('wai'),'501');assert.equal(b.missingDependencies().length,0,'an available checkpoint supplies its own CLIP and VAE');assert.equal(b.modelDependencies().length,1);
+b.selectProfile('anima');b.updateExecutionGraph(compiled('anima'),'501');b.catalog.checkpoints.push('anima_baseV10.safetensors');b.catalog.clips.push('qwen_3_06b_base.safetensors');b.catalog.vaes.push('qwen_image_vae.safetensors');assert.equal(b.missingDependencies().length,0);
+const failed=new WorkspaceBindings({graph,sampler});failed.updateExecutionGraph(compiled('anima'),'501');await failed.loadCatalog(async()=>{throw Error('network offline');});assert.equal(failed.missingDependencies().length,0,'a network failure must not be reported as missing models');assert.ok(failed.catalogError);
 console.log('Workspace model dependencies: separate model/CLIP/VAE, absent weights, built-in checkpoint components and unavailable catalogs pass');

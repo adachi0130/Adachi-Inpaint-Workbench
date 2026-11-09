@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {workspaceRoutingNodes} from '../web/workspace_activation.js';
+const model={id:11,type:'CLIPTextEncode',mode:4,inputs:[]},setter={id:12,type:'SetNode',mode:4,inputs:[{link:1}]},getter={id:13,type:'GetNode',mode:4,inputs:[],findSetter:()=>setter},gate={id:14,type:'AdachiExclusiveSwitch',mode:4,inputs:[{link:2}]},root={id:15,type:'AdachiWebUIInpaint',mode:4,inputs:[{link:3}]};
+const nodes=[model,setter,getter,gate,root],graph={_nodes:nodes,links:{1:{origin_id:11},2:{origin_id:13},3:{origin_id:14}},getNodeById:id=>nodes.find(n=>n.id==id)};nodes.forEach(n=>n.graph=graph);
+graph._groups=[{size:[500,500],_nodes:[getter,gate,root]}];
+assert.deepEqual([...workspaceRoutingNodes([root])].map(n=>n.id).sort(),[13,14]);
+assert.equal(setter.mode,4);assert.equal(model.mode,4,'model processing is never activated by routing discovery');
+root.mode=0;assert.equal(workspaceRoutingNodes([root]).size,0,'manually ignored routes of an enabled workbench stay ignored');
+root.mode=4;gate.mode=0;assert.equal(workspaceRoutingNodes([root]).size,0,'a mixed group is not guessed to be entirely bypassed');
+const controller={active:{id:'preset'},planStates:()=>({plan:new Map([[root,4],[getter,4],[gate,4]])})};
+assert.deepEqual([...workspaceRoutingNodes([root],controller)].map(n=>n.id),[13],'an explicit bypass preset allows only its necessary routing');
+controller.planStates=()=>({plan:new Map([[root,0]])});assert.equal(workspaceRoutingNodes([root],controller).size,0,'an individually ignored sampler cannot revive other intentionally disabled nodes');
+console.log('Workspace activation: bypassed group routing only, preserved external setters and processors, explicit preset state and mixed-group safety pass');

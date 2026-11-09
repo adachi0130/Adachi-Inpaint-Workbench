@@ -14,3 +14,9 @@ try {
  assert.ok(calls>=3);
 } finally {r.destroy();}
 console.log('Result recovery: lost notifications, offline retries, duplicate delivery, workflow/node replacement and terminal errors pass');
+
+const nested={id:8,type:'AdachiImageCompare'},child={getNodeById:id=>String(id)==='8'?nested:null},container={id:5,subgraph:child},root={getNodeById:id=>String(id)==='5'?container:null};
+let nestedResult;
+const sub=new ResultRecovery({getGraph:()=>root,fetchApi:async()=>({ok:true,json:async()=>({nestedTask:{status:{completed:true,status_str:'success'},outputs:{'5:8':{adachi_originals:[{}],adachi_results:[{}]}}}})}),onOutput:n=>{nestedResult=n;}});
+try{sub.track(root,'nestedTask','5:8');await sub.recover();assert.equal(nestedResult,nested);}finally{sub.destroy();}
+console.log('Result recovery: native subgraph execution IDs resolve to the queued live comparison');
