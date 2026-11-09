@@ -10,6 +10,13 @@ export function installInpaintWorkbench(nodeType) {
     nodeType.prototype.onNodeCreated = function () {
         const result = created?.apply(this, arguments), node = this;
         const root = document.createElement("div"); root.className = "dd-inpaint dd-workbench";
+        if (node.comfyClass === "AdachiWebUIInpaint" || node.type === "AdachiWebUIInpaint") {
+            const launch = document.createElement("button");
+            launch.type = "button"; launch.textContent = "打开安达工作台";
+            launch.className = "adachi-workspace-launch";
+            launch.onclick = event => { event.preventDefault(); event.stopPropagation(); document.dispatchEvent(new CustomEvent("adachi-open-workspace", {detail:{sampler:node}})); };
+            root.append(launch);
+        }
         const fold = document.createElement("details"); fold.className = "dd-workbench-fold";
         const summary = document.createElement("summary"); summary.textContent = T("Painting tools and mask settings");
         summary.addEventListener("pointerdown", event => event.stopPropagation());
@@ -43,7 +50,7 @@ export function installInpaintWorkbench(nodeType) {
             placeholder.hidden = !!next;
             placeholder.textContent = editor ? T("The painting tools live in the other inpaint node connected to this image") : T("Connect an inline mask to show the painting tools");
         };
-        const contentHeight = () => fold.offsetHeight + actionHost.offsetHeight + (panel?.root.scrollHeight || 620);
+        const contentHeight = () => (root.querySelector('.adachi-workspace-launch')?.offsetHeight || 0) + fold.offsetHeight + actionHost.offsetHeight + (panel?.root.scrollHeight || 620);
         const scheduleSize = () => {
             cancelAnimationFrame(frame);
             frame = requestAnimationFrame(() => {

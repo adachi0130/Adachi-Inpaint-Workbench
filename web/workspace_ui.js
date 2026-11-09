@@ -9,10 +9,10 @@ const el=(tag,text,cls)=>{const e=document.createElement(tag);if(text)e.textCont
 const btn=(text,fn)=>{const b=el('button',text);b.type='button';b.onclick=fn;return b;};
 let currentWorkspace=null;
 export class Workspace {
- constructor(){
-  this.mounts=[];this.disposers=[];this.closed=false;this.running=false;this.checkVersion=0;
+ constructor(samplerNode=null){
+  this.preferredSampler=samplerNode;this.mounts=[];this.disposers=[];this.closed=false;this.running=false;this.checkVersion=0;
   this.root=el('div','','adachi-workspace');this.root.adachiWorkspace=this;this.root.setAttribute('role','dialog');this.root.setAttribute('aria-label','安达重绘工作台');
-  const head=el('header'),title=el('h1','重绘工作台');title.append(el('small','ADACHI / INPAINT'));head.append(title);
+  const head=el('header'),title=el('h1','安达工作台');head.append(title);
   this.status=el('span','正在读取当前工作流…','aw-status');head.append(this.status,btn('检查连接',()=>this.check()),btn('返回工作流',()=>this.close()));this.root.append(head);
   const main=el('main'),canvas=el('section','','aw-canvas'),toolbar=el('div','','aw-toolbar');
   this.tabs={};for(const [id,name] of [['edit','编辑蒙版'],['compare','滑动对比'],['before','前图'],['after','后图']]){const b=btn(name,()=>this.show(id));this.tabs[id]=b;toolbar.append(b);}
@@ -22,7 +22,7 @@ export class Workspace {
   this.note=el('div','生成结果供预览；点击采用后才会替换原图。','aw-note');canvas.append(toolbar,this.surface,foot,this.note);
   this.side=el('aside');this.side.append(el('h2','工作流设置'));this.settings=el('div');this.params=el('div','','aw-parameters');this.runButton=btn('生成',()=>this.run());this.runButton.className='primary';this.runButton.style.width='100%';this.side.append(this.settings,this.runButton,this.params);main.append(canvas,this.side);this.root.append(main);
   this.root.addEventListener('keydown',e=>{if(e.key==='Escape'&&e.target===this.root)this.close();});
-  this.root.addEventListener('pointerdown',e=>e.stopPropagation());document.body.append(this.root);
+  this.root.addEventListener('pointerdown',e=>e.stopPropagation());document.body.append(this.root);document.body.classList.add('adachi-workspace-open');
   // Render first. Discovery/catalog and actual server validation run afterward.
   setTimeout(()=>this.initialize().catch(e=>this.setStatus(e.message,'error')),0);
  }
@@ -33,7 +33,7 @@ export class Workspace {
  }
  async initialize(){
   if(this.closed)return;this.graph=app.graph;this.nodes=inspectWorkbench(this.graph);
-  this.editorNode=this.nodes.editors.find(n=>n.mode===0)||this.nodes.editors[0];this.sampler=this.nodes.samplers.find(n=>n.mode===0)||this.nodes.samplers[0];this.compareNode=this.nodes.comparisons.find(n=>n.mode===0)||this.nodes.comparisons[0];
+  this.editorNode=this.nodes.editors.find(n=>n.mode===0)||this.nodes.editors[0];this.sampler=this.preferredSampler||this.nodes.samplers.find(n=>n.mode===0)||this.nodes.samplers[0];this.compareNode=this.nodes.comparisons.find(n=>n.mode===0)||this.nodes.comparisons[0];
   this.editor=this.editorNode?.adachiEditor;this.compare=this.compareNode?.adachiCompare;
   if(!this.editor||!this.sampler?.adachiWorkbench||!this.compare)throw Error('当前工作流需要内联蒙版、安达重绘工作台和图像对比节点');
   this.history=this.editorNode.adachiWorkspaceHistory ||= new WorkspaceHistory(this.editorNode);
@@ -101,6 +101,9 @@ export class Workspace {
  }
 
  async pollResult(){if(!this.running||!this.promptId||this.polling||this.closed)return;this.polling=true;try{const r=await api.fetchApi(`/history/${encodeURIComponent(this.promptId)}`);if(!r.ok)return;const all=await r.json(),entry=all[this.promptId];if(!entry?.status?.completed)return;const output=entry.outputs?.[String(this.compareNode.id)];if(output)this.compareNode.onExecuted(output);this.running=false;this.sampler.adachiWorkspaceTask=null;this.runButton.disabled=false;this.runButton.textContent='生成';this.setStatus(entry.status.status_str==='success'?'生成完成':'生成失败，请查看 ComfyUI 错误信息',entry.status.status_str==='success'?'ok':'error');}catch{}finally{this.polling=false;}}
- close(){if(this.closed)return;this.closed=true;++this.checkVersion;clearInterval(this.timer);clearInterval(this.pollTimer);clearTimeout(this.checkTimer);for(const dispose of this.disposers.reverse())dispose();if(this.history){this.history.onChange=null;this.history.onRestore=null;}this.bindings?.destroy();for(const {element,marker,style}of this.mounts.reverse()){element.classList.remove('aw-embedded');element.hidden=false;element.inert=false;if(marker.parentNode)marker.replaceWith(element);if(style===null)element.removeAttribute('style');else element.setAttribute('style',style);}this.root.remove();this.editor?.schedule();this.compare?.schedule();this.compare?.updateButton();currentWorkspace=null;}
+ close(){if(this.closed)return;this.closed=true;++this.checkVersion;clearInterval(this.timer);clearInterval(this.pollTimer);clearTimeout(this.checkTimer);for(const dispose of this.disposers.reverse())dispose();if(this.history){this.history.onChange=null;this.history.onRestore=null;}this.bindings?.destroy();for(const {element,marker,style}of this.mounts.reverse()){element.classList.remove('aw-embedded');element.hidden=false;element.inert=false;if(marker.parentNode)marker.replaceWith(element);if(style===null)element.removeAttribute('style');else element.setAttribute('style',style);}this.root.remove();document.body.classList.remove('adachi-workspace-open');this.editor?.schedule();this.compare?.schedule();this.compare?.updateButton();currentWorkspace=null;}
 }
-app.registerExtension({name:'Adachi.InpaintWorkspace',setup(){const css=document.createElement('link');css.rel='stylesheet';css.href=new URL('./workspace.css?v=preview1',import.meta.url).href;document.head.append(css);const launch=btn('打开重绘工作台',()=>{if(!currentWorkspace)currentWorkspace=new Workspace();});launch.id='adachi-workspace-launch';Object.assign(launch.style,{position:'fixed',right:'18px',bottom:'18px',zIndex:900,padding:'9px 16px',background:'#fff',color:'#29465e',border:'1px solid #b5c4d2',borderRadius:'6px',boxShadow:'0 2px 12px #1b3a5220'});document.body.append(launch);}});
+app.registerExtension({name:'Adachi.InpaintWorkspace',setup(){
+ const css=document.createElement('link');css.rel='stylesheet';css.href=new URL('./workspace.css?v=canvas2',import.meta.url).href;document.head.append(css);
+ document.addEventListener('adachi-open-workspace',event=>{if(!currentWorkspace)currentWorkspace=new Workspace(event.detail?.sampler||null);});
+}});

@@ -39,7 +39,7 @@ English and Simplified Chinese interfaces follow the ComfyUI language setting. T
 
 ### White inpainting workspace (local preview)
 
-Load the `gpt test` workflow and click **打开重绘工作台** at the bottom right. The editor opens immediately; background validation checks the selected branch without running inference, and Generate validates again before queueing. The panel reuses group presets, painting, sampling and comparison controls. Model and LoRA selectors are folded away, with no LoRA selected by default. WAI and Anima profiles bind their own model, CLIP, VAE and conditioning. Refiner routing is opt-in.
+Load the `gpt test` workflow and click **打开安达工作台** on the inpaint node. The editor opens immediately; background validation checks the selected branch without running inference, and Generate validates again before queueing. The panel reuses group presets, painting, sampling and comparison controls. Model and LoRA selectors are folded away, with no LoRA selected by default. WAI and Anima profiles bind their own model, CLIP, VAE and conditioning. Refiner routing is opt-in.
 
 Generation never replaces the source automatically. Compare before/after or hover the divider, then adopt explicitly. Undo adoption or choose a previous source with its mask and crop state from the source history. History lasts for the currently loaded browser session. Closing the workspace returns live controls to the graph; parameter edits remain part of the current workflow. The local preview has been exercised with WAI v160 and no LoRA; other graphs require identifiable inpainting nodes and compatible model routing.
 
