@@ -1,13 +1,14 @@
 // Execution notifications are an optimization, not the sole delivery channel.
 // Poll only IDs queued by this browser; never guess from another workflow's
 // latest history entry or from a coincidentally matching node ID.
+import {executionNode,graphNodeEntries} from './workspace_flow.js';
 export class ResultRecovery {
     constructor({fetchApi,getGraph,onOutput,onPending=()=>{},onTerminal=()=>{},interval=2500}) {
         Object.assign(this,{fetchApi,getGraph,onOutput,onPending,onTerminal,interval});
         this.pending=new Map();this.delivered=new Set();
     }
     track(graph,promptId,nodeId) {
-        const node=graph?.getNodeById(nodeId),key=`${promptId}:${nodeId}`;
+        const node=executionNode(graph,nodeId),key=`${promptId}:${nodeId}`;
         if(!promptId || node?.type!=='AdachiImageCompare' || this.delivered.has(key) || this.pending.has(key))return;
         this.pending.set(key,{graph,node,promptId,nodeId:String(nodeId),key});
         this.onPending(node);this.schedule(0);
@@ -17,7 +18,7 @@ export class ResultRecovery {
         if(this.busy)return;this.busy=true;clearTimeout(this.timer);
         const groups=new Map();
         for(const record of this.pending.values()) {
-            if(record.graph!==this.getGraph() || record.graph.getNodeById(record.nodeId)!==record.node){this.pending.delete(record.key);continue;}
+            if(record.graph!==this.getGraph() || executionNode(record.graph,record.nodeId)!==record.node){this.pending.delete(record.key);continue;}
             const records=groups.get(record.promptId)||[];records.push(record);groups.set(record.promptId,records);
         }
         try {
@@ -28,7 +29,7 @@ export class ResultRecovery {
                     if(!response.ok)continue;
                     const entry=(await response.json())[promptId];if(!entry)continue;
                     for(const r of records) {
-                        if(r.graph!==this.getGraph() || r.graph.getNodeById(r.nodeId)!==r.node){this.pending.delete(r.key);continue;}
+                        if(r.graph!==this.getGraph() || executionNode(r.graph,r.nodeId)!==r.node){this.pending.delete(r.key);continue;}
                         const output=entry.outputs?.[r.nodeId];
                         if(output?.adachi_originals?.length && output?.adachi_results?.length) {
                             await this.onOutput(r.node,output,promptId,entry);
@@ -74,7 +75,7 @@ export function installComparisonRecovery(api,getGraph) {
     };
     const wake=()=>{
         recovery.schedule(0);
-        for(const node of getGraph()?._nodes||[]) {
+        for(const {node} of graphNodeEntries(getGraph())) {
             const view=node.adachiCompare;
             if(view && !view.ready && !view.loadingActive && view.results.length)view.loadSelected();
         }

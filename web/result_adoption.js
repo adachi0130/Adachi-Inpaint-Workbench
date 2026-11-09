@@ -1,4 +1,6 @@
 import { api } from "../../scripts/api.js";
+import { app } from "../../scripts/app.js";
+import { executionId } from "./workspace_flow.js";
 import { T } from "./i18n.js";
 
 export function installResultAdoption(node, crop) {
@@ -18,7 +20,7 @@ export function installResultAdoption(node, crop) {
         const editor = crop.editor, region = crop.region;
         if (!editor.ready || !region.locked) throw Error(T("Select a crop region before adopting a result"));
         if (crop.busy || editor.stroke) throw Error(T("Finish editing before adopting a result"));
-        if (origin && (origin.mode !== "crop" || String(origin.source) !== String(node.id) || origin.job !== region.job)) {
+        if (origin && (origin.mode !== "crop" || String(origin.source) !== executionId(app.rootGraph||app.graph,node) || origin.job !== region.job)) {
             throw Error(T("This result belongs to another crop; generate a result for the current region"));
         }
         if (file.size > 64 * 1024 * 1024) throw Error(T("File is too large (max 64 MB)"));

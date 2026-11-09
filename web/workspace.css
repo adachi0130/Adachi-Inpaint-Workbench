@@ -37,7 +37,7 @@ body.adachi-workspace-open > :not(.adachi-workspace):not(script):not(style):not(
 .adachi-workspace .aw-status {font-size:12px;max-width:42vw;padding:4px 8px;border-radius:4px;background:var(--aw-panel);color:var(--aw-muted);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .adachi-workspace .aw-status[data-state=ok] {color:var(--aw-ok)}
 .adachi-workspace .aw-status[data-state=error] {color:var(--aw-error)}
-.adachi-workspace main {display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:8px;padding:6px;flex:1;min-height:0}
+.adachi-workspace main {display:grid;grid-template-columns:minmax(0,1fr) 10px var(--aw-sidebar-width,360px);gap:0;padding:6px;flex:1;min-height:0}
 .adachi-workspace .aw-canvas {position:relative;min-height:0;overflow:hidden;border:1px solid var(--aw-line);border-radius:8px;background:var(--aw-panel)}
 .adachi-workspace .aw-surface {position:absolute;inset:0;min-height:0;background:var(--aw-stage)}
 .adachi-workspace .aw-toolbar {position:absolute;top:48px;left:8px;right:8px;z-index:5;display:flex;gap:6px;align-items:center;pointer-events:none}
@@ -139,3 +139,17 @@ body.adachi-workspace-open > :not(.adachi-workspace):not(script):not(style):not(
 .adachi-workspace .aw-generation-progress progress:not([value]) {background:linear-gradient(90deg,var(--aw-line) 20%,var(--aw-accent) 50%,var(--aw-line) 80%);background-size:200% 100%;animation:aw-progress-wait 1.5s linear infinite;}
 .adachi-workspace .aw-generation-progress progress:not([value])::-webkit-progress-bar,.adachi-workspace .aw-generation-progress progress:not([value])::-webkit-progress-value {background:transparent;}
 @media(prefers-reduced-motion:reduce){.adachi-workspace .aw-generation-progress progress:not([value]){animation:none}}
+
+.adachi-workspace .aw-splitter {position:relative;cursor:col-resize;touch-action:none;outline:none;}
+.adachi-workspace .aw-splitter::before {content:"";position:absolute;top:12px;bottom:12px;left:4px;width:2px;background:var(--aw-line);border-radius:2px;}
+.adachi-workspace .aw-splitter:hover::before,.adachi-workspace .aw-splitter:focus-visible::before,.adachi-workspace[data-resizing] .aw-splitter::before {background:var(--aw-accent);}
+.adachi-workspace[data-resizing],.adachi-workspace[data-resizing] * {cursor:col-resize!important;user-select:none!important;}
+@media(max-width:850px){.adachi-workspace .aw-splitter{display:none}.adachi-workspace main{gap:8px}}
+
+.adachi-workspace .aw-connections {font-size:12px;border-bottom:1px solid var(--aw-line);padding:3px 0 8px;margin:0 0 10px;}
+.adachi-workspace .aw-connections summary {color:var(--aw-muted);}
+.adachi-workspace .aw-connections label {display:block;margin-top:8px;color:var(--aw-muted);}
+.adachi-workspace .aw-connections select {display:block;width:100%;margin-top:4px;}
+.adachi-workspace .aw-connections button {padding:4px 8px;margin-top:8px;}
+.adachi-workspace .aw-connections p {color:var(--aw-error);}
+.adachi-workspace .aw-bindings details small {display:block;overflow-wrap:anywhere;}
