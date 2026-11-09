@@ -3,6 +3,7 @@
 from .backend import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS, normalize_exclusive_prompt
 from .preview_cleanup import start_preview_cleanup
 from .preview_store import PREVIEWS
+from .workspace_execution import register_workspace_routes
 from aiohttp import web
 from server import PromptServer
 import re
@@ -25,6 +26,7 @@ if not getattr(PromptServer.instance, "_adachi_preview_route", False):
     PromptServer.instance._adachi_preview_route = True
 
 start_preview_cleanup()
+register_workspace_routes(PromptServer.instance)
 
 WEB_DIRECTORY = "./web"
 

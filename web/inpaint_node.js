@@ -47,7 +47,7 @@ export function installInpaintWorkbench(nodeType) {
         const scheduleSize = () => {
             cancelAnimationFrame(frame);
             frame = requestAnimationFrame(() => {
-                if (removed || !node.graph || !root.isConnected) return;
+                if (removed || !node.graph || !root.isConnected || root.closest(".adachi-workspace")) return;
                 const required = node.computeSize()[1];
                 if (Math.abs(node.size[1] - required) > 1) node.setSize([node.size[0], required]);
                 node.graph.setDirtyCanvas(true, true);

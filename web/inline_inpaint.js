@@ -105,7 +105,7 @@ app.registerExtension({
             const fitNodeToImage = () => {
                 cancelAnimationFrame(fitFrame);
                 fitFrame = requestAnimationFrame(() => {
-                    if (!editor.ready || editor.destroyed || !node.graph) return;
+                    if (!editor.ready || editor.destroyed || !node.graph || editor.root.closest(".adachi-workspace")) return;
                     const width = editor.canvas.clientWidth, height = editor.canvas.clientHeight;
                     if (!width || !height) return;
                     const overhead = node.size[1] - height;
