@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased · stability audit (2026-11-10)
+## 2.0.1 · stability fixes (2026-11-10)
 
 - Release late preview object URLs after sibling failures, discard corrupt cached PNGs, bound decoding and cancel stale preview reads. Downloads and both ordinary/crop adoption use bounded transfers too.
 - Add upload inactivity detection and cancellation without limiting the overall duration of advancing XHR transfers; keep authentication fallback and real byte progress.

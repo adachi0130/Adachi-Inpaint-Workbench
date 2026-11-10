@@ -1,6 +1,6 @@
 # Verification record
 
-## 2026-11-10 · local stability audit after 2.0.0
+## 2.0.1 · stability audit (2026-11-10)
 
 - 68 Python regression tests and all 20 JavaScript test files cover new cancellation, stalled decoding/upload, corrupt-cache retry, dense/sparse/edge masks, bounded cache metadata, partial rollback failures, concurrent completed edits and malformed input mappings.
 - Real ComfyUI browser checks pass on frontends 1.42.11 and 1.52.7 in classic and Nodes 2.0 rendering. Each configuration performs 20 mount/close cycles with zero remaining workspace API listeners, delayed initialization disposal, a delayed submit response across close/reopen, and recovery with execution notifications suppressed.

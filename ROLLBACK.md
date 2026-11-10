@@ -1,13 +1,14 @@
 # Git versions and rollback
 
-The local stability audit dated 2026-11-10 starts from `local-before-stability-20261110` (the published `v2.0.0` commit). A complete copied-installation ZIP is stored in `ComfyUI/user/adachi-workbench-backups/` with prefix `Adachi-Inpaint-Workbench-before-stability-20261110-`. Restore that backup or switch a clean source checkout to the baseline tag, then reinstall, restart ComfyUI and hard-refresh. These local fixes do not rewrite the published 2.0.0 archive.
+The stability fixes in 2.0.1 start from `local-before-stability-20261110` (the published `v2.0.0` commit). A complete copied-installation ZIP is stored in `ComfyUI/user/adachi-workbench-backups/` with prefix `Adachi-Inpaint-Workbench-before-stability-20261110-`. Restore that backup or switch a clean source checkout to the baseline tag, then reinstall, restart ComfyUI and hard-refresh. The published 2.0.0 archive remains unchanged.
 
-The current version is **v2.0.0**. Git history lives in the source repository. The installed custom-node folder may be a ZIP/file copy without its own `.git`; do not run rollback commands in ComfyUI's parent repository.
+The current version is **v2.0.1**. Git history lives in the source repository. The installed custom-node folder may be a ZIP/file copy without its own `.git`; do not run rollback commands in ComfyUI's parent repository.
 
 Before installing, the installer saves the previous plugin directory under `ComfyUI/user/adachi-workbench-backups/`. Restore that ZIP to roll back a copied installation. For a Git clone, use the tags below.
 
 | Tag | Contents |
 |---|---|
+| `v2.0.1` | Stability, cancellation, recovery and dense-mask memory fixes |
 | `v2.0.0` | Standalone workbench, workflow discovery, cloud recovery, localization and unified template |
 | `v1.0.1` | Previous published version with comparison retry |
 | `v1.0.0` | First stable release with current bilingual crop instructions |
@@ -51,13 +52,13 @@ To undo only this update, run in the plugin folder:
 
 ```powershell
 git status --short
-git switch --detach v1.0.1
+git switch --detach v2.0.0
 ```
 
 Return to this version with:
 
 ```powershell
-git switch --detach v2.0.0
+git switch --detach v2.0.1
 ```
 
 Restart ComfyUI and hard-refresh the browser (`Ctrl+F5`) after switching versions.

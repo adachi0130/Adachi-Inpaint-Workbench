@@ -20,6 +20,6 @@ Per the [official publishing guide](https://docs.comfy.org/registry/publishing),
 The publishing workflow is manual-only. Check its result and the Registry version status after publishing.
 A Registry version cannot be overwritten once published, so later releases have to bump the version in `pyproject.toml`.
 
-## 2.0.0 verification
+## 2.0.1 verification
 
-After publishing 2.0.0, check both the Actions result and the new version's status in the [public Registry API](https://api.comfy.org/nodes/adachi-inpaint-workbench/versions?include_status_reason=true). A successful publishing job confirms upload, not Registry approval or Manager availability. Previous versions received automated scan flags; [scan review notes](SECURITY-REVIEW.md) explain the public findings and the checks required for this release. Do not report the version as approved while its status is `Pending` or `Flagged`.
+After publishing 2.0.1, check both the Actions result and the new version's status in the [public Registry API](https://api.comfy.org/nodes/adachi-inpaint-workbench/versions?include_status_reason=true). A successful publishing job confirms upload, not Registry approval or Manager availability. Previous versions received automated scan flags; [scan review notes](SECURITY-REVIEW.md) explain the public findings and the checks required for this release. Do not report the version as approved while its status is `Pending` or `Flagged`.
