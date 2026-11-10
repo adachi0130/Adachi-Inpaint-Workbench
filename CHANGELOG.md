@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased · stability audit (2026-11-10)
+
+- Release late preview object URLs after sibling failures, discard corrupt cached PNGs, bound decoding and cancel stale preview reads. Downloads and both ordinary/crop adoption use bounded transfers too.
+- Add upload inactivity detection and cancellation without limiting the overall duration of advancing XHR transfers; keep authentication fallback and real byte progress.
+- Dispose workspaces safely during initialization/validation, coalesce background checks, and hand submitted task IDs to a reopened workspace before result recovery. Recovery selects sliding comparison even when the result was already cached.
+- Share one exact-task history poller between node and workspace; cancel disposed recovery requests and release discarded pending states.
+- Keep the last good source usable after an invalid replacement. Protect source rollback from intervening completed strokes/crop changes and release partially decoded masks and retired blend canvases.
+- Bound preview-cache batch metadata to 512 batches as well as the existing byte limit. Empty/invalid batches leave cached images unchanged.
+- Find dense mask bounds from row/column occupancy instead of allocating coordinates per painted pixel; sanitize into a private tensor with one less full-image allocation.
+- Reject malformed workflow input mappings before core replacement hooks can crash. Existing node IDs, workflows, masks, crop layers, presets and sampling behavior are retained.
+
 ## 2.0.0 · 2026-11-09
 
 - Ship the standalone Adachi Workbench with English default labels and Simplified Chinese translations following ComfyUI's language setting.

@@ -100,7 +100,7 @@ def _image_tensor(image):
     value = torch.as_tensor(image)
     if value.ndim != 4 or value.shape[-1] not in (3, 4) or min(value.shape[:3]) < 1:
         raise ValueError("IMAGE must have shape [batch, height, width, 3 or 4].")
-    return torch.nan_to_num(value[..., :3].float(), nan=0.0, posinf=1.0, neginf=0.0).clamp(0.0, 1.0)
+    return torch.nan_to_num(value[..., :3].float(), nan=0.0, posinf=1.0, neginf=0.0).clamp_(0.0, 1.0)
 
 
 def _mask_tensor(mask, images):
@@ -117,7 +117,7 @@ def _mask_tensor(mask, images):
         value = value.expand(images.shape[0], -1, -1)
     if value.shape[0] != images.shape[0]:
         raise ValueError("Mask batch must contain one mask or match the image batch.")
-    value = torch.nan_to_num(value, nan=0.0, posinf=1.0, neginf=0.0).clamp(0, 1)
+    value = torch.nan_to_num(value, nan=0.0, posinf=1.0, neginf=0.0).clamp_(0, 1)
     if value.shape[-2:] != images.shape[1:3]:
         value = F.interpolate(value[:, None], size=images.shape[1:3], mode="bilinear", align_corners=False)[:, 0]
     return value
@@ -143,11 +143,15 @@ def _feather(mask, grow, blur):
 
 def _bbox(mask, padding, target_ratio):
     height, width = mask.shape
-    nonzero = torch.nonzero(mask > 0, as_tuple=False)
-    if not len(nonzero):
+    occupied = mask > 0
+    rows = torch.where(occupied.any(dim=1))[0]
+    if not len(rows):
         return (0, 0, width, height)
-    y0, x0 = nonzero.amin(0).tolist()
-    y1, x1 = (nonzero.amax(0) + 1).tolist()
+    # Dense masks previously allocated two int64 coordinates per painted pixel
+    # (512 MB for a 32 MP mask). Only row/column occupancy is needed for bounds.
+    columns = torch.where(occupied.any(dim=0))[0]
+    y0, y1 = int(rows[0]), int(rows[-1]) + 1
+    x0, x1 = int(columns[0]), int(columns[-1]) + 1
     x0, y0 = max(0, x0 - padding), max(0, y0 - padding)
     x1, y1 = min(width, x1 + padding), min(height, y1 + padding)
     crop_width, crop_height = x1 - x0, y1 - y0

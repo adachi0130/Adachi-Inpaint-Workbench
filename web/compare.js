@@ -1,19 +1,11 @@
 /* Original hover-comparison UI, MIT licensed. */
 import { T } from "./i18n.js";
+import {loadPreviewPair} from './preview_images.js';
 const element = (tag, className, text) => {
     const node = document.createElement(tag);
     if (className) node.className = className;
     if (text) node.textContent = text;
     return node;
-};
-const decodePreview = async (blob, signal) => {
-    const url=URL.createObjectURL(blob), image=new Image();
-    const abort=()=>{image.src="";};
-    signal.addEventListener("abort",abort,{once:true});
-    const timer=setTimeout(abort,20000);
-    try { image.src=url;await image.decode();if(signal.aborted)throw new DOMException("Cancelled","AbortError");return {image,url}; }
-    catch(error){URL.revokeObjectURL(url);throw error;}
-    finally{clearTimeout(timer);signal.removeEventListener("abort",abort);}
 };
 
 export class ImageCompareView {
@@ -114,8 +106,9 @@ export class ImageCompareView {
         if (!this.latestResult || this.downloading) return;
         const result = this.latestResult;
         this.downloading = true; this.updateButton();
+        const controller=this.downloadController=new AbortController();
         try {
-            const blob = await this.options.fetchResult(result);
+            const blob = await this.options.fetchResult(result,{signal:controller.signal});
             if (this.destroyed) return;
             const url = URL.createObjectURL(blob), link = document.createElement("a");
             link.href = url; link.download = "adachi-inpaint-result.png";
@@ -123,7 +116,7 @@ export class ImageCompareView {
             setTimeout(() => URL.revokeObjectURL(url), 60000);
             this.status("");
         } catch (error) { if (!this.destroyed) this.status(error.message, true); }
-        finally { this.downloading = false; if (!this.destroyed) this.updateButton(); }
+        finally {if(this.downloadController===controller)this.downloadController=null;this.downloading = false; if (!this.destroyed) this.updateButton();}
     }
 
     async setData(data, index = this.index) {
@@ -151,6 +144,7 @@ export class ImageCompareView {
     }
 
     async loadSelected({background=false}={}) {
+        if(this.destroyed)return;
         clearTimeout(this.retryTimer);this.loadController?.abort();
         const version=++this.version,controller=this.loadController=new AbortController();
         this.reloadButton.disabled=false;this.loadingActive=true;
@@ -165,24 +159,18 @@ export class ImageCompareView {
         try {
             let images;
             for(let attempt=0;attempt<3;attempt++) {
-                const states=blobs.map(blob=>({loaded:blob?.size||0,total:blob?.size||0,complete:!!blob})),decoded=[];
+                const states=blobs.map(blob=>({loaded:blob?.size||0,total:blob?.size||0,complete:!!blob}));
                 this.loading(attempt?T("Retrying comparison images")+` (${attempt+1}/3)`:T("Loading comparison images"),states);
-                const pair=new AbortController();const cancel=()=>pair.abort();controller.signal.addEventListener("abort",cancel,{once:true});
                 try {
-                    images=await Promise.all([original,this.results[this.index]].map(async (ref,i)=>{
-                        const blob=blobs[i] || await this.options.loadPreview(ref,{signal:pair.signal,onProgress:state=>{states[i]=state;if(current() && !pair.signal.aborted)this.loading(T("Loading comparison images"),states);}});
-                        blobs[i]=blob;
-                        if(current() && states.every(s=>s.complete))this.loading(T("Decoding comparison images…"));
-                        if(!current())throw new DOMException("Cancelled","AbortError");
-                        const result=await decodePreview(blob,pair.signal);decoded.push(result);return result;
-                    }));
+                    images=await loadPreviewPair([original,this.results[this.index]],{loadPreview:(...args)=>this.options.loadPreview(...args),cached:blobs,signal:controller.signal,
+                        onProgress:(i,state)=>{states[i]=state;if(current())this.loading(T("Loading comparison images"),states);},
+                        onDecoding:()=>{if(current() && states.every(s=>s.complete))this.loading(T("Decoding comparison images…"));}});
                     break;
                 } catch(error) {
-                    pair.abort();for(const item of decoded)URL.revokeObjectURL(item.url);
                     if(!current())return;
-                    if(attempt===2)throw error;
-                    await new Promise(resolve=>{const timer=setTimeout(resolve,1000*(attempt+1));controller.signal.addEventListener("abort",()=>{clearTimeout(timer);resolve();},{once:true});});
-                } finally {controller.signal.removeEventListener("abort",cancel);}
+                    if(attempt===2 || [404,410].includes(error.status))throw error;
+                    await new Promise(resolve=>{const done=()=>{clearTimeout(timer);controller.signal.removeEventListener('abort',done);resolve();};const timer=setTimeout(done,1000*(attempt+1));controller.signal.addEventListener('abort',done,{once:true});});
+                }
             }
             if(!current()){for(const item of images||[])URL.revokeObjectURL(item.url);return;}
             for(const url of this.previewUrls||[])URL.revokeObjectURL(url);
@@ -208,11 +196,12 @@ export class ImageCompareView {
         if (!this.targetSelect.value) { this.status(T("Select an inline mask to adopt into"), true); return; }
         const target = this.targetSelect.value, result = this.results[this.index];
         this.busy = true; this.updateButton(); this.status(T("Setting the result as the new source image…"));
+        const controller=this.adoptController=new AbortController();
         try {
-            await this.options.onAdopt(target, result);
+            await this.options.onAdopt(target, result,{signal:controller.signal});
             if (!this.destroyed) this.status(T("Adopted: back in the inline mask, keep painting to inpaint again"));
         } catch (error) { if (!this.destroyed) this.status(error.message, true); }
-        finally { this.busy = false; if (!this.destroyed) this.updateButton(); }
+        finally {if(this.adoptController===controller)this.adoptController=null;this.busy = false; if (!this.destroyed) this.updateButton();}
     }
 
     transform() {
@@ -281,6 +270,7 @@ export class ImageCompareView {
 
     destroy() {
         this.destroyed = true; ++this.version; clearTimeout(this.retryTimer);this.loadController?.abort();
+        this.downloadController?.abort();this.adoptController?.abort();
         window.removeEventListener("online",this.retryOnOnline);for(const url of this.previewUrls||[])URL.revokeObjectURL(url);
         cancelAnimationFrame(this.frame); this.observer.disconnect();
         this.pendingBlobs=null;this.before = this.after = null; this.canvas.width = this.canvas.height = 0; this.root.remove();

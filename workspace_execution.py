@@ -6,6 +6,14 @@ import time
 import uuid
 
 
+def validate_input_mappings(prompt):
+    # Core replacement hooks inspect inputs before validate_prompt runs. Reject
+    # malformed mappings here so a bad request cannot crash those hooks first.
+    for key, node in prompt.items():
+        if not isinstance(node, dict) or not isinstance(node.get("inputs", {}), dict):
+            raise ValueError(f"Invalid input mapping for execution node: {key}")
+
+
 def dependency_prompt(prompt, output_id):
     """Keep one output and its dependencies, including references into subgraphs."""
     output_id = str(output_id)
@@ -22,7 +30,10 @@ def dependency_prompt(prompt, output_id):
         node = prompt.get(key)
         if not isinstance(node, dict):
             raise ValueError(f"The execution graph references a missing node: {key}")
-        for value in node.get("inputs", {}).values():
+        inputs = node.get("inputs", {})
+        if not isinstance(inputs, dict):
+            raise ValueError(f"Invalid input mapping for execution node: {key}")
+        for value in inputs.values():
             if isinstance(value, list) and len(value) == 2 and isinstance(value[0], str) and isinstance(value[1], int):
                 pending.append(value[0])
     return {key: value for key, value in prompt.items() if key in found}
@@ -34,10 +45,12 @@ async def prepare_workspace(server, execution, payload):
         raise ValueError("No workflow execution graph was provided.")
     target = str(payload.get("compare_id", ""))
     data = deepcopy(payload)
+    validate_input_mappings(data["prompt"])
     # Hooks may restore Get/Set or subgraph links; prune only after they ran.
     data = server.trigger_on_prompt(data)
     if not isinstance(data, dict) or not isinstance(data.get("prompt"), dict):
         raise ValueError("A workflow extension rejected the execution graph.")
+    validate_input_mappings(data["prompt"])
     replacements = getattr(server, "node_replace_manager", None)
     if replacements is not None:
         replacements.apply_replacements(data["prompt"])

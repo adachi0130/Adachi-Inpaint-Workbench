@@ -56,3 +56,15 @@ function node() {
  n.adachiEditor.stroke={};assert.throws(()=>h.checkpoint("stroke"),/Finish the current edit/);
 }
 console.log("Workspace source history: repaint/blend pixels, crop state, layer, commands, failure atomicity and retention passed");
+{
+ const n=node(),before=captureSourceState(n),created=[];
+ let count=0;
+ await assert.rejects(restoreSourceState(n,before,{decode:async data=>{if(++count===2)throw Error('bad base');const c=await decode(data);created.push(c);return c;}}),/bad base/);
+ assert.equal(created[0].width,0,'a partial decode failure frees already allocated masks');
+ assert.equal(n.adachiEditor.image,before.image);
+ for(const change of [()=>n.adachiEditor.maskRevision++,()=>n.adachiCrop.revision++]){
+  await assert.rejects(restoreSourceState(n,before,{decode:async data=>{change();return decode(data);}}),/image changed/);
+  assert.equal(n.adachiEditor.image,before.image,'a completed stroke or crop change during decoding is preserved');
+ }
+ await assert.rejects(restoreSourceState(n,before,{decode:async data=>{n.graph=null;return decode(data);}}),/image changed/);
+}

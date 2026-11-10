@@ -1,14 +1,14 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
-import { InlineMaskEditor } from "./editor.js?v=0.9.0";
+import { InlineMaskEditor } from "./editor.js?v=stability1";
 import { installInpaintWorkbench } from "./inpaint_node.js?v=2.0.0";
 import { bindWidgetToNodeWidth } from "./widget_layout.js?v=0.5.5";
 import { routeWheelOutsideImage } from "./wheel_routing.js";
-import { InlineCropController } from "./inline_crop.js?v=0.8.2";
+import { InlineCropController } from "./inline_crop.js?v=stability1";
 import { canStoreDraft, prepareInlineDraft, syncInlineWidgets } from "./draft_guard.js?v=0.6.3";
 import { T } from "./i18n.js";
 import { removeLegacyFeedback } from "./legacy_feedback.js?v=0.6.4";
-import { uploadImageWithProgress } from "./upload_transport.js?v=0.9.0";
+import { uploadImageWithProgress } from "./upload_transport.js?v=stability1";
 
 const styleId = "adachi-inpaint-style";
 const stylesheet = document.getElementById(styleId) || document.createElement("link");
@@ -132,22 +132,17 @@ app.registerExtension({
                 onKeepFit(enabled) { node.properties.adachi_keep_fit = enabled; markChanged(); },
                 onImage() { if (!restoring || !node.properties.adachi_compact_ui) fitNodeToImage(); },
                 onGraphWheel: event => app.canvas?.processMouseWheel(event),
-                async onUpload(file, { preserveMask = false, preserveCrop = false, onProgress = null } = {}) {
+                async onUpload(file, { preserveMask = false, preserveCrop = false, onProgress = null, signal } = {}) {
                     if (preserveMask && editor.image && !editor.ready) throw new Error(T("Wait for the current image to finish loading"));
                     const version = ++uploadVersion;
                     const body = new FormData();
                     body.append("image", file, file.name);
                     body.append("type", "input");
                     body.append("subfolder", "adachi-inpaint");
-                    let uploaded;
-                    if (onProgress) uploaded = await uploadImageWithProgress(api, body, onProgress);
-                    else {
-                        const response = await api.fetchApi("/upload/image", { method: "POST", body });
-                        if (!response.ok) throw new Error(`${T("Upload failed")} (${response.status})`);
-                        uploaded = await response.json();
-                    }
+                    const uploaded = await uploadImageWithProgress(api, body, onProgress, {signal});
                     if (typeof uploaded?.name !== "string" || !uploaded.name) throw new Error(T("Upload failed"));
                     if (version !== uploadVersion || editor.destroyed) return;
+                    signal?.throwIfAborted();
                     const name = uploaded.subfolder ? `${uploaded.subfolder}/${uploaded.name}` : uploaded.name;
                     restoring = false;
                     crop?.activate("mask");
@@ -204,10 +199,10 @@ app.registerExtension({
             node.adachiCrop = crop;
             node.adachiEditor = editor;
             const stopWheelRouting = routeWheelOutsideImage(editor.root, editor.canvas, () => editor.ready);
-            node.adachiUseResult = async (file, origin) => {
+            node.adachiUseResult = async (file, origin, options={}) => {
                 if (editor.destroyed) throw new Error(T("The inline mask node was removed"));
-                if (crop.mode === "crop") return node.adachiAdoptCrop(file, origin);
-                await editor.options.onUpload(file, { preserveMask: true });
+                if (crop.mode === "crop") return node.adachiAdoptCrop(file, origin, options);
+                await editor.options.onUpload(file, { preserveMask: true, signal:options.signal });
                 editor.view = "overlay"; editor.updateButtons(); editor.schedule();
                 editor.status(T("Adopted the result as the new source image; the mask and undo history were preserved"));
             };
@@ -286,7 +281,7 @@ app.registerExtension({
             const previousImageCallback = imageWidget.callback;
             imageWidget.callback = function () { previousImageCallback?.apply(this, arguments); restore(); };
             const previousRemoved = node.onRemoved;
-            node.onRemoved = function () { clearTimeout(draftNoticeTimer); cancelAnimationFrame(restoreFrame); cancelAnimationFrame(fitFrame); stopWheelRouting(); crop.destroy(); editor.destroy(); return previousRemoved?.apply(this, arguments); };
+            node.onRemoved = function () { node.adachiWorkspaceHistory?.clear();node.adachiWorkspaceHistory=null;clearTimeout(draftNoticeTimer); cancelAnimationFrame(restoreFrame); cancelAnimationFrame(fitFrame); stopWheelRouting(); crop.destroy(); editor.destroy(); return previousRemoved?.apply(this, arguments); };
             node.setSize([Math.max(380, node.size[0]), Math.max(480, node.size[1])]);
             restoreFrame = requestAnimationFrame(restore);
             return result;

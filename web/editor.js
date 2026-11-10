@@ -249,6 +249,8 @@ export class InlineMaskEditor {
 
     async upload(file) {
         if (file.size > 64 * 1024 * 1024) { this.status(T("File is too large (max 64 MB)"), true); return; }
+        this.uploadController?.abort();
+        const controller=this.uploadController=new AbortController();
         const version = this.uploadUiVersion = (this.uploadUiVersion || 0) + 1;
         const progress = ({phase, loaded = 0, total = 0}) => {
             if (version !== this.uploadUiVersion || this.destroyed) return;
@@ -267,10 +269,11 @@ export class InlineMaskEditor {
             this.status(T("Loading image…"));
             // Keep the painted mask when a new source replaces the current one,
             // the same way adopting a result does. A first upload starts empty.
-            await this.options.onUpload?.(file, { preserveMask: !!this.image, onProgress: progress });
+            await this.options.onUpload?.(file, { preserveMask: !!this.image, onProgress: progress, signal:controller.signal });
         } catch (error) {
             if (version === this.uploadUiVersion && !this.destroyed) this.status(error.message, true);
         } finally {
+            if(this.uploadController===controller)this.uploadController=null;
             if (version === this.uploadUiVersion && !this.destroyed) this.uploadIndicator.hidden = true;
         }
     }
@@ -278,11 +281,12 @@ export class InlineMaskEditor {
     async setImage(url, maskData = "", name = "") {
         this.stroke = null; this.pointerId = null;
         const version = ++this.loadVersion;
+        const wasReady=this.ready;
         this.ready = false;
         try {
             const [image, loadedMask] = await Promise.all([loadImage(url), maskData ? loadImage(maskData) : Promise.resolve(null)]);
             if (version !== this.loadVersion || this.destroyed) return;
-            if (image.width * image.height > 32 * 1024 * 1024 || Math.max(image.width, image.height) > 16384) {
+            if (image.width * image.height > 32_000_000 || Math.max(image.width, image.height) > 16384) {
                 throw new Error(T("Image is too large; keep it under 32 MP and 16384 px per side"));
             }
             this.image = image;
@@ -316,7 +320,7 @@ export class InlineMaskEditor {
             this.options.onImage?.(image);
             this.status(T("Orange is the painted mask · Alt = temporary erase · Ctrl+wheel = brush size"));
         } catch (error) {
-            if (version === this.loadVersion && !this.destroyed) this.status(error.message, true);
+            if (version === this.loadVersion && !this.destroyed) {this.ready=!!this.image && wasReady;this.updateButtons();this.schedule();this.status(error.message, true);}
             throw error;
         }
     }
@@ -718,6 +722,7 @@ export class InlineMaskEditor {
     }
 
     destroy() {
+        this.uploadController?.abort();++this.uploadUiVersion;
         this.destroyed = true; ++this.loadVersion;
         cancelAnimationFrame(this.frame); this.observer.disconnect();
         this.stopWheelCapture();

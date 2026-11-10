@@ -1,6 +1,6 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
-import { ImageCompareView } from "./compare.js?v=workspace-network2";
+import { ImageCompareView } from "./compare.js?v=stability1";
 import { readPreview } from "./preview_transport.js";
 import { installComparisonRecovery } from "./result_recovery.js";
 import {executionId,executionNode,graphNodeEntries} from "./workspace_flow.js";
@@ -34,7 +34,7 @@ app.registerExtension({
         nodeType.prototype.onNodeCreated = function () {
             const value = created?.apply(this, arguments), node = this;
             const recovery=installComparisonRecovery(api,()=>app.rootGraph||app.graph);
-            node.adachiTrackPrompt=id=>{const graph=app.rootGraph||app.graph;return recovery.track(graph,id,executionId(graph,node));};
+            node.adachiTrackPrompt=(id,graph=app.rootGraph||app.graph)=>recovery.track(graph,id,executionId(graph,node));
             const compare = new ImageCompareView({
                 resolveUrl: viewUrl,
                 loadPreview: (image,options)=>readPreview(api.fetchApi.bind(api),viewPath(image),options),
@@ -44,19 +44,17 @@ app.registerExtension({
                 onGraphWheel: event => app.canvas?.processMouseWheel(event),
                 getTargets: () => targets(node),
                 onSelect: index => { node.properties.adachi_result_index = index; },
-                async fetchResult(image) {
-                    const response = await api.fetchApi(viewPath(image));
-                    if (!response.ok) throw new Error(T("Result preview expired; run the workflow again"));
-                    return response.blob();
+                async fetchResult(image, options) {
+                    return readPreview(api.fetchApi.bind(api),viewPath(image),options);
                 },
-                async onAdopt(id, image) {
-                    const target = executionNode(app.rootGraph||app.graph,id);
+                async onAdopt(id, image, options={}) {
+                    const graph=app.rootGraph||app.graph,target = executionNode(graph,id);
                     if (!target?.adachiUseResult) throw new Error(T("No inline mask node is available to receive the result"));
-                    const response = await api.fetchApi(viewPath(image));
-                    if (!response.ok) throw new Error(T("Result preview expired; run the workflow again"));
-                    const blob = await response.blob();
+                    const blob = await readPreview(api.fetchApi.bind(api),viewPath(image),{...options,maxBytes:64*1024*1024});
+                    options.signal?.throwIfAborted();
+                    if(graph!==(app.rootGraph||app.graph)||target!==executionNode(graph,id))throw Error(T("The workflow changed; check connections again"));
                     if (blob.size > 64 * 1024 * 1024) throw new Error(T("Result image exceeds 64 MiB; downscale it first"));
-                    await target.adachiUseResult(new File([blob], `adachi-result-${Date.now()}.png`, { type: "image/png" }), image.adachi_origin);
+                    await target.adachiUseResult(new File([blob], `adachi-result-${Date.now()}.png`, { type: "image/png" }), image.adachi_origin, options);
                     // Adoption starts a new round. Keep the accepted image visible
                     // as 1/1, then replace it with the next round's first outputs.
                     const data = { originals: [image], results: [image] };

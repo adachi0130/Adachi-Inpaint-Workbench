@@ -15,3 +15,9 @@ const pending=readPreview(stalled,'/cancel',{signal:cancel.signal});cancel.abort
 // A long transfer is allowed while actual data continues to arrive.
 let ticks=0;await readPreview(async(_,options)=>new Response(new ReadableStream({start(c){const t=setInterval(()=>{if(++ticks===5){clearInterval(t);c.close();}else c.enqueue(bytes);},5);options.signal.addEventListener('abort',()=>{clearInterval(t);c.error(Error('timed out'));});}})),'/slow',{idleMs:20});assert.equal(ticks,5);
 console.log('Preview transport: streamed byte progress, unknown length, truncation, expiry, size limit, inactivity timeout, cancellation and slow advancing transfer pass');
+let requests=0;
+await assert.rejects(readPreview(async()=>{requests++;return new Response(bytes);},'/never-start',{signal:AbortSignal.abort()}),{name:'AbortError'});
+assert.equal(requests,0);
+let stopped=false;
+await assert.rejects(readPreview(async()=>new Response(new ReadableStream({cancel(){stopped=true;}})),'/uncooperative-wrapper',{idleMs:5}),/timed out/);
+assert.equal(stopped,true,'cancel the response reader even when a custom fetch wrapper ignores its signal');

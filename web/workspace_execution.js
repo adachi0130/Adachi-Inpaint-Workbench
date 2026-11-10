@@ -44,5 +44,5 @@ async function prepareSnapshot(graph,{editorNode,samplerNode,compareNode,binding
  const workflow=JSON.parse(JSON.stringify(graph.serialize()));
  return {prompt,compare_id:compareId,client_id:api.clientId||'',extra_data:{extra_pnginfo:{workflow},auth_token_comfy_org:api.authToken,api_key_comfy_org:api.apiKey}};
 }
-export const validateWorkspace=prepared=>workspaceRequest(api,'validate',prepared);
+export const validateWorkspace=(prepared,options)=>workspaceRequest(api,'validate',prepared,options);
 export const submitWorkspace=prepared=>workspaceRequest(api,'submit',prepared);

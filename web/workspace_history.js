@@ -57,16 +57,19 @@ export async function restoreSourceState(node, state, {decode = decodeCanvas, on
     const editor = node.adachiEditor, crop = node.adachiCrop;
     if (!editor || editor.destroyed || !node.graph) throw Error(T("The source image node was removed"));
     if (editor.stroke || editor.pointerId != null || crop?.busy) throw Error(T("Finish the current edit first"));
-    const loadVersion = editor.loadVersion;
+    const loadVersion = editor.loadVersion, maskRevision = editor.maskRevision, cropRevision=crop?.revision;
     const contexts = {};
     try {
         // Decode all masks before altering live state. A failed decode leaves
         // the working image, mask and crop completely untouched.
         for (const [name, context] of Object.entries(state.contexts)) {
-            const [mask, baseMask] = await Promise.all([decode(context.mask), decode(context.baseMask)]);
+            const decoded=await Promise.allSettled([decode(context.mask), decode(context.baseMask)]);
+            const failed=decoded.find(item=>item.status==='rejected');
+            if(failed){for(const item of decoded)if(item.status==='fulfilled')item.value.width=item.value.height=0;throw failed.reason;}
+            const [mask,baseMask]=decoded.map(item=>item.value);
             contexts[name] = {...context, mask, baseMask, history:copyCommands(context.history), future:copyCommands(context.future)};
         }
-        if (editor.destroyed || editor.loadVersion !== loadVersion || editor.stroke || editor.pointerId != null || crop?.busy) {
+        if (editor.destroyed || !node.graph || editor.loadVersion !== loadVersion || editor.maskRevision !== maskRevision || crop?.revision !== cropRevision || editor.stroke || editor.pointerId != null || crop?.busy) {
             throw Error(T("The image changed during restoration; try again"));
         }
     } catch (error) { releaseContexts(contexts); throw error; }

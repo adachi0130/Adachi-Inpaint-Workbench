@@ -2,10 +2,13 @@ import {T} from './i18n.js';
 // Check protocol support before POSTing: old ComfyUI processes may serve the
 // updated JavaScript while still running the previous Python node package.
 const unavailable = () => new Error(T("The workbench backend is not loaded. Stop and restart ComfyUI, then check connections again; refreshing the browser is not enough."));
-export async function workspaceRequest(api, path, prepared) {
+export async function workspaceRequest(api, path, prepared, {signal}={}) {
     const controller = new AbortController();
+    const abort=()=>controller.abort();
+    if(signal?.aborted)controller.abort();else signal?.addEventListener('abort',abort,{once:true});
     const timer = setTimeout(() => controller.abort(), path === 'submit' ? 60000 : 20000);
     try {
+        controller.signal.throwIfAborted();
         let base;
         for (const candidate of ['/adachi-inpaint/workspace', '/api/adachi-inpaint/workspace']) {
             const probe = await api.fetchApi(`${candidate}/capabilities`, {signal:controller.signal});
@@ -34,7 +37,8 @@ export async function workspaceRequest(api, path, prepared) {
         }
         return data;
     } catch (error) {
+        if(signal?.aborted)throw error;
         if (error.name === 'AbortError') throw new Error(path === 'submit' ? T("Submission timed out. Check the task queue before retrying to avoid duplicate generations.") : T("Connection check timed out; check your network and retry"));
         throw error;
-    } finally { clearTimeout(timer); }
+    } finally {clearTimeout(timer);signal?.removeEventListener('abort',abort);controller.abort();}
 }

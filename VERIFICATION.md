@@ -1,5 +1,14 @@
 # Verification record
 
+## 2026-11-10 · local stability audit after 2.0.0
+
+- 68 Python regression tests and all 20 JavaScript test files cover new cancellation, stalled decoding/upload, corrupt-cache retry, dense/sparse/edge masks, bounded cache metadata, partial rollback failures, concurrent completed edits and malformed input mappings.
+- Real ComfyUI browser checks pass on frontends 1.42.11 and 1.52.7 in classic and Nodes 2.0 rendering. Each configuration performs 20 mount/close cycles with zero remaining workspace API listeners, delayed initialization disposal, a delayed submit response across close/reopen, and recovery with execution notifications suppressed.
+- Actual CPU image queues cover normal adoption/undo and crop-origin validation, crop/mask retention, layer adoption, automatic return to editing, protected exterior pixels and blend clear/undo. Invalid source replacement retains the previous usable image. Model sampling algorithms are unchanged; no new model-quality claim is based on these CPU queues.
+- Browser resource checks recover a corrupt PNG, reload 25 times and overlap 30 cancellation attempts. At settled checkpoints exactly two preview object URLs remain, destruction releases all tracked URLs, and no unhandled promise rejection is observed. Network fault tests exhaust immediate retries, then recover on reconnect with byte progress and no duplicate history entries.
+- Isolated CPU benchmark: a full 2048×4096 mask, four threads, four iterations per process averages 203.4 ms before and 14.6 ms after. Additional measured process peak working set is 521.0 MiB before versus 9.2 MiB after. This measures mask-bound computation only, not overall generation time or workflow frame rate.
+- Scope: local fault injection is not a long-duration cloud soak test, and cannot establish compatibility with every third-party plugin/model combination. The public 2.0.0 Registry version remains flagged pending external review; this local audit does not establish Registry approval.
+
 ## 2.0.0 · 2026-11-09
 
 - All 63 Python regression tests and 19 JavaScript test files pass. Frontend modules pass syntax checks; locale JSON, release metadata and local links in both READMEs validate.

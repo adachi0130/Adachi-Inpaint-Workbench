@@ -58,6 +58,23 @@ class WorkspaceTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaisesRegex(ValueError, "missing node"):
             workspace.dependency_prompt(prompt, "3")
 
+    def test_malformed_node_inputs_are_a_validation_error(self):
+        for value in ([], None, "invalid", 42):
+            prompt = self.prompt()
+            prompt["2"]["inputs"] = value
+            with self.assertRaisesRegex(ValueError, "Invalid input mapping"):
+                workspace.dependency_prompt(prompt, "3")
+
+    async def test_bad_inputs_never_reach_core_replacement_hooks(self):
+        def unexpected(_prompt):
+            self.fail("Malformed inputs reached a core hook")
+        server = types.SimpleNamespace(trigger_on_prompt=lambda data: data,
+            node_replace_manager=types.SimpleNamespace(apply_replacements=unexpected))
+        prompt = self.prompt()
+        prompt["2"]["inputs"] = None
+        with self.assertRaisesRegex(ValueError, "Invalid input mapping"):
+            await workspace.prepare_workspace(server, types.SimpleNamespace(), {"prompt":prompt, "compare_id":"3"})
+
     async def test_validation_error_is_returned_without_queueing(self):
         def validate(prompt):
             return False, {"message": "missing checkpoint"}, [], {"1": {"errors": []}}

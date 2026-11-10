@@ -16,8 +16,9 @@ def _limit():
 
 
 class PreviewStore:
-    def __init__(self, limit=None):
+    def __init__(self, limit=None, max_batches=512):
         self.limit = _limit() if limit is None else limit
+        self.max_batches = max(1, int(max_batches))
         self.nonce = secrets.token_hex(12)
         self.epoch = 0
         self.size = 0
@@ -32,6 +33,8 @@ class PreviewStore:
 
     def put_batch(self, images, owner):
         """Atomically retain a whole comparison batch, or explicitly reject it."""
+        if not images or any(not image for image in images):
+            raise ValueError("The comparison batch must contain nonempty images.")
         total = sum(len(image) for image in images)
         if total > self.limit:
             raise ValueError("The comparison batch exceeds the in-memory preview limit. Reduce batch size or increase ADACHI_COMPARE_MEMORY_MIB (64–4096 MiB).")
@@ -52,7 +55,7 @@ class PreviewStore:
                     self.groups.move_to_end(last[0])
                     self.latest[owner] = (last[0], before)
                     return list(group["descriptors"])
-            while self.groups and self.size + total > self.limit:
+            while self.groups and (self.size + total > self.limit or len(self.groups) >= self.max_batches):
                 group_id, group = self.groups.popitem(last=False)
                 self.size -= group["size"]
                 for key in group["keys"]:

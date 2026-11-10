@@ -7,6 +7,23 @@ def key(descriptor):
 
 
 class PreviewStoreTests(unittest.TestCase):
+    def test_tiny_batches_have_a_metadata_budget_and_empty_batches_are_atomic(self):
+        store = PreviewStore(1024 * 1024, max_batches=2)
+        first = store.put_batch([b"a"], "first")
+        second = store.put_batch([b"b"], "second")
+        store.get(key(first[0]))
+        generation = store.fingerprint()
+        with self.assertRaises(ValueError):
+            store.put_batch([], "empty")
+        with self.assertRaises(ValueError):
+            store.put_batch([b""], "empty")
+        self.assertEqual(store.fingerprint(), generation)
+        store.put_batch([b"c"], "third")
+        self.assertEqual(store.get(key(first[0])), b"a")
+        self.assertIsNone(store.get(key(second[0])))
+        self.assertEqual(len(store.groups), 2)
+        self.assertEqual(store.size, 2)
+
     def test_whole_batch_lru_and_cache_generation(self):
         store = PreviewStore(10)
         first = store.put_batch([b"aaa", b"bbb"], "1")

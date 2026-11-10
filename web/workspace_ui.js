@@ -17,6 +17,7 @@ let currentWorkspace=null;
 export class Workspace {
  constructor(samplerNode=null,options={}){
   this.preferredSampler=samplerNode;this.pipelineOptions=options;this.mounts=[];this.disposers=[];this.closed=false;this.running=false;this.checkVersion=0;
+  this.sessionController=new AbortController();
   this.root=el('div','','adachi-workspace');this.root.adachiWorkspace=this;this.root.setAttribute('role','dialog');this.root.setAttribute('aria-label','Adachi Workbench');
   const head=el('header'),title=el('h1','Adachi Workbench');head.append(title);
   this.status=el('span',T("Reading the current workflow…"),'aw-status');this.themeButton=iconButton(T("Switch theme"),'theme',()=>this.toggleTheme());head.append(this.status,this.themeButton,iconButton(T("Check connections"),'check',()=>this.check()),iconButton(T("Return to workflow"),'back',()=>this.close()));this.root.append(head);
@@ -28,7 +29,7 @@ export class Workspace {
   this.surface=el('div','','aw-surface');this.still=el('img','','aw-result-image');this.still.alt=T("Selected source image or generated result");this.still.hidden=true;this.surface.append(this.still);
   const foot=el('div','','aw-footer');this.undoButton=btn(T("↶ Undo"),()=>this.restoreHistory('undo'));this.originalButton=btn(T("Initial source"),()=>this.restoreHistory('original'));this.historySelect=el('select');this.historySelect.setAttribute('aria-label',T("Choose an adopted source image"));this.historySelect.onchange=()=>this.restoreHistory(Number(this.historySelect.value));foot.append(this.undoButton,this.originalButton,this.historySelect);
   this.footer=foot;this.undoButton.title=T("Restore the previous source image, mask and crop");this.originalButton.title=T("Restore the initial source image of this session");this.historySelect.title=T("Choose an earlier adopted or uploaded source image");this.note=el('div','','aw-note');canvas.append(toolbar,this.surface,foot,this.note);
-  this.side=el('aside');this.generationPanel=el('div','','aw-generation-progress');this.generationPanel.hidden=true;this.generationLabel=el('span');this.generationBar=el('progress');this.generationBar.max=1;this.generationBar.setAttribute('aria-label',T("Current stage progress"));this.generationPanel.title=T("Actual progress from the current node; stages without step counts show an indeterminate bar");this.generationPanel.append(this.generationLabel,this.generationBar);this.side.append(this.generationPanel,el('h2',T("Workflow settings")));this.settings=el('div');this.params=el('div','','aw-parameters');this.runButton=btn(T("Generate"),()=>this.run());this.runButton.className='primary';this.runButton.style.width='100%';this.side.append(this.settings,this.runButton,this.params);this.divider=el('div','','aw-splitter');main.append(canvas,this.divider,this.side);this.root.append(main);
+  this.side=el('aside');this.generationPanel=el('div','','aw-generation-progress');this.generationPanel.hidden=true;this.generationLabel=el('span');this.generationBar=el('progress');this.generationBar.max=1;this.generationBar.setAttribute('aria-label',T("Current stage progress"));this.generationPanel.title=T("Actual progress from the current node; stages without step counts show an indeterminate bar");this.generationPanel.append(this.generationLabel,this.generationBar);this.side.append(this.generationPanel,el('h2',T("Workflow settings")));this.settings=el('div');this.params=el('div','','aw-parameters');this.runButton=btn(T("Generate"),()=>this.run());this.runButton.disabled=true;this.runButton.className='primary';this.runButton.style.width='100%';this.side.append(this.settings,this.runButton,this.params);this.divider=el('div','','aw-splitter');main.append(canvas,this.divider,this.side);this.root.append(main);
   this.root.addEventListener('keydown',e=>{if(e.key==='Escape'&&e.target===this.root)this.close();});
   this.root.addEventListener('pointerdown',e=>e.stopPropagation());document.body.append(this.root);document.body.classList.add('adachi-workspace-open');this.stopSplitter=installWorkspaceSplitter(this.root,main,this.divider);
   // Render first. Discovery/catalog and actual server validation run afterward.
@@ -62,6 +63,8 @@ export class Workspace {
   this.history.onChange=()=>this.syncHistory();
   this.history.onRestore=()=>{syncCurrentDimensions(this.editorNode);app.canvas?.emitBeforeChange?.();app.canvas?.emitAfterChange?.();this.show('edit');this.scheduleCheck();};
   if(this.editor.ready)await this.history.checkpoint(T("Source when opened"));
+  if(this.closed)return;
+  if((app.rootGraph||app.graph)!==this.graph){this.close();return;}
   const originalTargets=this.compare.options.getTargets,originalManual=this.compare.manualTarget,originalTarget=this.compare.targetSelect.value;
   this.compare.options.getTargets=()=>({...originalTargets(),preferred:executionId(this.graph,this.editorNode)});this.compare.manualTarget=false;this.compare.refreshTargets();
   this.disposers.push(()=>{this.compare.options.getTargets=originalTargets;this.compare.manualTarget=originalManual;this.compare.targetSelect.value=originalTarget;this.compare.refreshTargets();});
@@ -97,11 +100,14 @@ export class Workspace {
   const event=(name,fn)=>{api.addEventListener(name,fn);this.disposers.push(()=>api.removeEventListener(name,fn));};
   for(const name of ['execution_start','executing','execution_cached','progress','progress_state','execution_success','execution_error','execution_interrupted'])event(name,e=>this.taskProgress.handle(name,e.detail));
   event('reconnecting',()=>this.taskProgress.connection(false));event('reconnected',()=>this.taskProgress.connection(true));
-  const recovered=e=>{if(e.detail.node!==this.compareNode || e.detail.promptId!==this.promptId)return;this.taskProgress.finish(e.detail.entry.status?.status_str==='success');this.running=false;this.sampler.adachiWorkspaceTask=null;this.runButton.disabled=false;this.runButton.textContent=T("Generate");this.setStatus(e.detail.entry.status?.status_str==='success'?T("Generation complete"):T("Generation failed; check the ComfyUI task history"),e.detail.entry.status?.status_str==='success'?'ok':'error');this.updateButtons();};
+  const queued=e=>{if(e.detail.sampler!==this.sampler)return;this.promptId=e.detail.promptId;this.running=!['complete','error'].includes(this.taskProgress.state);this.runButton.textContent=this.running?T("Generating…"):T("Generate");this.renderTaskProgress();this.updateButtons();};
+  document.addEventListener('adachi-workspace-queued',queued);this.disposers.push(()=>document.removeEventListener('adachi-workspace-queued',queued));
+  const recovered=e=>{if(e.detail.node!==this.compareNode || e.detail.promptId!==this.promptId)return;if(e.detail.entry.outputs?.[executionId(this.graph,this.compareNode)]?.adachi_results?.length)this.showGeneratedResult();this.taskProgress.finish(e.detail.entry.status?.status_str==='success');this.running=false;this.sampler.adachiWorkspaceTask=null;this.runButton.disabled=false;this.runButton.textContent=T("Generate");this.setStatus(e.detail.entry.status?.status_str==='success'?T("Generation complete"):T("Generation failed; check the ComfyUI task history"),e.detail.entry.status?.status_str==='success'?'ok':'error');this.updateButtons();};
   document.addEventListener('adachi-result-recovered',recovered);this.disposers.push(()=>document.removeEventListener('adachi-result-recovered',recovered));
   for(const name of ['execution_success','execution_error','execution_interrupted'])event(name,e=>{if(e.detail.prompt_id===this.promptId){this.running=false;this.sampler.adachiWorkspaceTask=null;this.runButton.disabled=false;this.runButton.textContent=T("Generate");this.setStatus(name==='execution_success'?T("Generation complete"):e.detail.exception_message||T("Generation stopped"),name==='execution_success'?'ok':'error');}});
   this.timer=setInterval(()=>{if((app.rootGraph||app.graph)!==this.graph||this.editor.destroyed)this.close();else{this.updateButtons();if(this.pendingResultView)this.showGeneratedResult();}},500);
-  this.pollTimer=setInterval(()=>this.pollResult(),2500);
+  // The comparison's exact-task recovery also serves the workspace. A second
+  // history poller doubled weak-network traffic and could replay old results.
   this.promptId=this.sampler.adachiWorkspaceTask;this.running=!!this.promptId;if(this.running){if(this.taskProgress.state==='idle')this.taskProgress.begin({},this.promptId);this.compareNode.adachiTrackPrompt?.(this.promptId);this.runButton.disabled=true;this.runButton.textContent=T("Generating…");}this.show('edit');this.syncHistory();this.scheduleCheck();
  }
  connectionPicker(){
@@ -120,11 +126,11 @@ export class Workspace {
   });apply.title=T("Select nodes from this workflow; this inpaint node remembers your choices");panel.append(apply);return panel;
  }
  syncHistory(){if(!this.history)return;this.historySelect.replaceChildren();this.history.entries.forEach((item,i)=>{const o=el('option',`${i+1} · ${item.label}`);o.value=i;this.historySelect.append(o);});this.historySelect.value=String(this.history.index);this.undoButton.disabled=!this.history.canUndo;this.originalButton.disabled=this.history.index===0;}
- updateButtons(){const busy=this.running||this.preparing;this.adoptButton.disabled=!this.compare?.ready||!!this.compare?.busy||this.compare?.pendingOutputs>0||busy;this.tabs.compare.disabled=!this.compare?.ready;this.sideButton.disabled=!this.compare?.ready;if(!this.preparing)this.bindings?.refreshProfiles();if(this.editor)this.editor.root.inert=(!this.connectionsConfirmed)||!!this.preparing&&!this.discovering;this.settings.inert=!!this.preparing;this.params.inert=!!this.preparing;this.historySelect.disabled=this.preparing||!!this.history?.busy;this.undoButton.disabled=this.preparing||!this.history?.canUndo;this.originalButton.disabled=this.preparing||this.history?.index<=0;if(this.compare?.adoptButton)this.compare.adoptButton.disabled=this.adoptButton.disabled;}
+ updateButtons(){const busy=this.running||this.preparing||this.submitting||this.sampler?.adachiWorkspaceSubmitting;this.runButton.disabled=!!(this.running||this.submitting||this.sampler?.adachiWorkspaceSubmitting);this.adoptButton.disabled=!this.compare?.ready||!!this.compare?.busy||this.compare?.pendingOutputs>0||busy;this.tabs.compare.disabled=!this.compare?.ready;this.sideButton.disabled=!this.compare?.ready;if(!this.preparing)this.bindings?.refreshProfiles();if(this.editor)this.editor.root.inert=(!this.connectionsConfirmed)||!!this.preparing&&!this.discovering;this.settings.inert=!!this.preparing;this.params.inert=!!this.preparing;this.historySelect.disabled=this.preparing||!!this.history?.busy;this.undoButton.disabled=this.preparing||!this.history?.canUndo;this.originalButton.disabled=this.preparing||this.history?.index<=0;if(this.compare?.adoptButton)this.compare.adoptButton.disabled=this.adoptButton.disabled;}
  show(which){this.view=which;if(this.editor)this.editor.root.hidden=which!=='edit';if(this.compare)this.compare.root.hidden=which!=='compare';this.still.hidden=!['before','after'].includes(which);if(!this.still.hidden){const image=which==='before'?this.compare?.before:this.compare?.after;if(image)this.still.src=image.src;}for(const [id,b]of Object.entries(this.tabs)){b.classList.toggle('active',id===which);b.setAttribute('aria-pressed',String(id===which));}this.sideButton.classList.toggle('active',['before','after'].includes(which));this.sideButton.setAttribute('aria-pressed',String(which==='before'));this.sideButton.title=which==='before'?T("Show after"):T("Show before");this.sideButton.setAttribute('aria-label',this.sideButton.title);this.editor?.schedule();this.compare?.schedule();}
  async adopt(){if(!this.compare?.ready||this.running)return;await this.compare.adopt();this.syncHistory();this.updateButtons();if(!this.compare.message.classList.contains('dd-error')){this.show(this.editorNode.adachiCrop?.mode==='crop'?'edit':'compare');this.note.textContent='';this.scheduleCheck();}}
  async restoreHistory(which){try{if(this.preparing||this.history?.busy)return;if(which==='undo')await this.history.undo();else if(which==='original')await this.history.original();else await this.history.restore(which);this.syncHistory();}catch(e){this.setStatus(e.message,'error');}}
- scheduleCheck(){clearTimeout(this.checkTimer);this.checkTimer=setTimeout(()=>this.check(),200);}
+ scheduleCheck(){++this.checkVersion;this.checkController?.abort();clearTimeout(this.checkTimer);if(!this.closed)this.checkTimer=setTimeout(()=>this.check(),200);}
  prepare(discovery=false){
   const task=(this.prepareTask||Promise.resolve()).catch(()=>{}).then(async()=>{
    if(this.closed||(app.rootGraph||app.graph)!==this.graph)throw Error(T("The workflow changed"));
@@ -136,10 +142,27 @@ export class Workspace {
   });
   this.prepareTask=task;return task;
  }
- async check(){const version=++this.checkVersion;if(this.closed||this.running)return false;this.setStatus(T("Checking in the background…"));try{const prepared=await this.prepare();const result=await validateWorkspace(prepared);if(this.closed||this.running||version!==this.checkVersion)return false;if(result.valid===false||result.ok===false)throw Error(result.error?.message||result.error||T("Workflow validation failed"));this.setStatus(T("Ready to generate"),'ok');return true;}catch(e){if(version===this.checkVersion && !this.running)this.setStatus(e.message||String(e),'error');return false;}}
+ async check(){
+  if(this.closed||this.running||this.submitting||this.sampler?.adachiWorkspaceSubmitting)return false;
+  if(this.checking){this.recheck=true;return false;}
+  const version=++this.checkVersion,controller=this.checkController=new AbortController();this.checking=true;
+  this.setStatus(T("Checking in the background…"));
+  try{
+   const prepared=await this.prepare();
+   if(this.closed||this.recheck||version!==this.checkVersion)return false;
+   const result=await validateWorkspace(prepared,{signal:controller.signal});
+   if(this.closed||this.running||this.recheck||version!==this.checkVersion)return false;
+   if(result.valid===false||result.ok===false)throw Error(result.error?.message||result.error||T("Workflow validation failed"));
+   this.setStatus(T("Ready to generate"),'ok');return true;
+  }catch(e){if(version===this.checkVersion&&!this.running)this.setStatus(e.message||String(e),'error');return false;}
+  finally{this.checking=false;if(this.recheck){this.recheck=false;this.scheduleCheck();}}
+ }
+
  async run() {
-  if(this.running)return;
-  ++this.checkVersion;clearTimeout(this.checkTimer);
+  if(this.closed||this.running||this.submitting||this.sampler?.adachiWorkspaceSubmitting)return;
+  if(!this.sampler||!this.taskProgress){this.setStatus(T("Controls are not ready; reopen the workbench shortly"),'error');return;}
+  this.submitting=true;this.sampler.adachiWorkspaceSubmitting=true;
+  ++this.checkVersion;this.checkController?.abort();clearTimeout(this.checkTimer);
   this.runButton.disabled=true; this.runButton.textContent=T("Checking…");
   const seed=this.sampler?.widgets?.find(w=>w.name==='seed'), oldSeed=seed?.value;
   let queuedSeed=oldSeed;
@@ -147,16 +170,19 @@ export class Workspace {
    for(const widget of this.sampler.widgets || []) widget.beforeQueued?.();
    queuedSeed=seed?.value;
    const prepared=structuredClone(await this.prepare());
-   await validateWorkspace(prepared);
+   await validateWorkspace(prepared,{signal:this.sessionController.signal});
    if(this.closed)return;
+   if((app.rootGraph||app.graph)!==this.graph||!this.sampler.graph||!this.compareNode.graph||this.editor.destroyed)throw Error(T("The workflow changed; check connections again"));
    this.running=true;this.taskProgress.begin(prepared.prompt);this.promptId=null; this.updateButtons();
    const queued=await submitWorkspace(prepared);
    this.promptId=queued.prompt_id;this.taskProgress.attach(this.promptId);
-   this.compareNode.adachiTrackPrompt?.(this.promptId);
    for(const widget of this.sampler.widgets || []) widget.afterQueued?.();
    this.sampler.adachiParameters.refresh();
    this.running=!['complete','error'].includes(this.taskProgress.state);
    this.sampler.adachiWorkspaceTask=this.running?this.promptId:null;
+   document.dispatchEvent(new CustomEvent('adachi-workspace-queued',{detail:{sampler:this.sampler,promptId:this.promptId}}));
+   this.compareNode.adachiTrackPrompt?.(this.promptId,this.graph);
+   if(this.closed)return;
    this.runButton.textContent=this.running?T("Generating…"):T("Generate");
    this.setStatus(this.running?T("Queued for generation"):this.taskProgress.label,this.running?'pending':this.taskProgress.state==='error'?'error':'ok');
   } catch(e) {
@@ -165,13 +191,13 @@ export class Workspace {
    if(seed && seed.value===queuedSeed)seed.value=oldSeed;
    this.setStatus(e.message||String(e),'error');
   } finally {
+   this.submitting=false;this.sampler.adachiWorkspaceSubmitting=false;
    if(!this.running){this.runButton.disabled=false;this.runButton.textContent=T("Generate");}
-   this.updateButtons();
+   if(!this.closed)this.updateButtons();
   }
  }
 
- async pollResult(){if(!this.running||!this.promptId||this.polling||this.closed)return;this.polling=true;try{const r=await api.fetchApi(`/history/${encodeURIComponent(this.promptId)}`);if(!r.ok)return;const all=await r.json(),entry=all[this.promptId];if(!entry?.status?.completed)return;const output=entry.outputs?.[executionId(this.graph,this.compareNode)];if(output)this.compareNode.onExecuted(output);this.taskProgress.finish(entry.status.status_str==='success');this.running=false;this.sampler.adachiWorkspaceTask=null;this.runButton.disabled=false;this.runButton.textContent=T("Generate");this.setStatus(entry.status.status_str==='success'?T("Generation complete"):T("Generation failed; check the ComfyUI error log"),entry.status.status_str==='success'?'ok':'error');}catch{}finally{this.polling=false;}}
- close(){if(this.closed)return;this.closed=true;++this.checkVersion;clearInterval(this.timer);clearInterval(this.pollTimer);clearTimeout(this.checkTimer);this.stopSplitter?.();for(const dispose of this.disposers.reverse())dispose();if(this.history){this.history.onChange=null;this.history.onRestore=null;}if(this.taskProgress)this.taskProgress.onChange=()=>{};this.bindings?.destroy();for(const {element,marker,style}of this.mounts.reverse()){element.classList.remove('aw-embedded');element.hidden=false;element.inert=false;if(marker.parentNode)marker.replaceWith(element);if(style===null)element.removeAttribute('style');else element.setAttribute('style',style);}this.root.remove();document.body.classList.remove('adachi-workspace-open');this.editor?.schedule();this.compare?.schedule();this.compare?.updateButton();currentWorkspace=null;}
+ close(){if(this.closed)return;this.closed=true;this.sessionController.abort();this.checkController?.abort();++this.checkVersion;clearInterval(this.timer);clearInterval(this.pollTimer);clearTimeout(this.checkTimer);this.stopSplitter?.();for(const dispose of this.disposers.reverse())dispose();if(this.history){this.history.onChange=null;this.history.onRestore=null;}if(this.taskProgress)this.taskProgress.onChange=()=>{};this.bindings?.destroy();for(const {element,marker,style}of this.mounts.reverse()){element.classList.remove('aw-embedded');element.hidden=false;element.inert=false;if(marker.parentNode)marker.replaceWith(element);if(style===null)element.removeAttribute('style');else element.setAttribute('style',style);}this.root.remove();document.body.classList.remove('adachi-workspace-open');this.editor?.schedule();this.compare?.schedule();this.compare?.updateButton();currentWorkspace=null;}
 }
 app.registerExtension({name:'Adachi.InpaintWorkspace',setup(){
  const css=document.createElement('link');css.rel='stylesheet';css.href=new URL('./workspace.css?v=2.0.0',import.meta.url).href;document.head.append(css);

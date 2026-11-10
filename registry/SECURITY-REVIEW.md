@@ -4,6 +4,8 @@ Publication and Registry approval are separate steps. Check the [public version 
 
 ## Previous scan findings
 
+On 2026-11-10, **2.0.0** is also `NodeVersionStatusFlagged`, with extraction `pending`. Its six `info` records match the configuration read, `Function.bind()` in `web/compare_node.js`, `web/inline_crop.js`, `web/result_recovery.js` and `web/workspace_ui.js`, and the upload send in `web/upload_transport.js`. The same code-purpose explanations below apply; no official approval is claimed.
+
 On 2026-11-09, versions **1.0.0** and **1.0.1** were `NodeVersionStatusFlagged`, with `comfy_node_extract_status: pending`. Their public scan reasons contained the following three `info` findings. Line numbers refer to those releases.
 
 | File / line | Reported rule | Purpose and assessment |

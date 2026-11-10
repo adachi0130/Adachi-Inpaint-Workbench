@@ -20,3 +20,13 @@ let nestedResult;
 const sub=new ResultRecovery({getGraph:()=>root,fetchApi:async()=>({ok:true,json:async()=>({nestedTask:{status:{completed:true,status_str:'success'},outputs:{'5:8':{adachi_originals:[{}],adachi_results:[{}]}}}})}),onOutput:n=>{nestedResult=n;}});
 try{sub.track(root,'nestedTask','5:8');await sub.recover();assert.equal(nestedResult,nested);}finally{sub.destroy();}
 console.log('Result recovery: native subgraph execution IDs resolve to the queued live comparison');
+{
+ let resolve,signal,discarded=0,delivered=0;
+ const pending=new ResultRecovery({getGraph:()=>graph,onOutput:()=>delivered++,onDiscard:()=>discarded++,
+  fetchApi:async(_path,options)=>{signal=options.signal;return new Promise(r=>resolve=r);}});
+ pending.track(graph,'late','3');const task=pending.recover();pending.destroy();
+ assert.equal(signal.aborted,true);assert.equal(discarded,1);
+ resolve({ok:true,json:async()=>({late:{status:{completed:true},outputs:{'3':{adachi_originals:[{}],adachi_results:[{}]}}}})});
+ await task;assert.equal(delivered,0,'destroyed recovery cannot deliver a late response');
+ pending.track(graph,'new','3');assert.equal(pending.pending.size,0);assert.equal(pending.controllers.size,0);
+}

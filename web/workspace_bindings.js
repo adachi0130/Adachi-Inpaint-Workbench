@@ -114,13 +114,14 @@ export class WorkspaceBindings {
         return binding;
     }
     async loadCatalog(fetchApi) {
-        const get = async path => {const r=await fetchApi(path);if(!r.ok)throw Error(T("Model list request failed ({status})",{status:r.status}));return r.json();};
+        this.catalogController?.abort();const controller=this.catalogController=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
+        const get = async path => {const r=await fetchApi(path,{signal:controller.signal});if(!r.ok)throw Error(T("Model list request failed ({status})",{status:r.status}));return r.json();};
         const sources=[['checkpoints','/object_info/CheckpointLoaderSimple','CheckpointLoaderSimple','ckpt_name'],
             ['unets','/object_info/UNETLoader','UNETLoader','unet_name'],
             ['clips','/object_info/CLIPLoader','CLIPLoader','clip_name'],
             ['vaes','/object_info/VAELoader','VAELoader','vae_name'],['loras','/models/loras']];
-        const results=await Promise.allSettled(sources.map(([,path])=>get(path)));
-        if(this.destroyed)return;
+        let results;try{results=await Promise.allSettled(sources.map(([,path])=>get(path)));}finally{clearTimeout(timer);}
+        if(this.destroyed || this.catalogController!==controller)return;
         results.forEach((result,i)=>{if(result.status!=='fulfilled')return;const [key,,type,input]=sources[i];
             const values=type?result.value?.[type]?.input?.required?.[input]?.[0]:result.value;
             if(Array.isArray(values)){this.catalog[key]=values.map(String);this.catalogReady.add(key);}
@@ -193,5 +194,5 @@ export class WorkspaceBindings {
         }
 
     }
-    destroy() {this.destroyed=true;this.root?.remove();}
+    destroy() {this.destroyed=true;this.catalogController?.abort();this.root?.remove();}
 }

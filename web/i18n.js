@@ -6,6 +6,7 @@
 // buttons are drawn by this plugin, so they translate here by reading Comfy.Locale.
 
 const ZH = {
+  "Image upload timed out; check the connection and try again": "图片上传超时，请检查连接后重试",
   "Load a source image first": "请先载入原图",
   "Finish the current edit first": "请先结束当前编辑",
   "The source image node was removed": "原图节点已移除",

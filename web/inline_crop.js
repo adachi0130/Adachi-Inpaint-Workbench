@@ -1,7 +1,7 @@
 import { CROP_PRESETS, cropAt } from "./crop_geometry.js?v=0.6.2";
 import { T } from "./i18n.js";
 import { syncCropDimensions, syncCurrentDimensions } from "./parameter_bridge.js?v=0.8.2";
-import { installResultAdoption } from "./result_adoption.js?v=0.7.2";
+import { installResultAdoption } from "./result_adoption.js?v=stability1";
 
 const fields = ["mask", "baseMask", "history", "future", "lastMask", "dirty"];
 const canvas = (w, h) =>
@@ -646,6 +646,7 @@ export class InlineCropController {
       this.layer = null;
       this.widgets.layer_image.value = "";
       this.widgets.blend_data.value = "";
+      for(const key of ['mask','baseMask']){const raster=this.contexts.blend?.[key];if(raster && raster!==e.mask && raster!==e.baseMask)raster.width=raster.height=0;}
       this.contexts.blend = null;
       this.state({ ...this.region, job: crypto.randomUUID() });
     } finally {
@@ -670,6 +671,7 @@ export class InlineCropController {
     this.changed();
   }
   destroy() {
+    this.adoptController?.abort();
     this.stopOriginalPreview();
     window.removeEventListener("blur", this.previewBlur);
     for (const name of ["pointerup", "pointercancel"]) {
