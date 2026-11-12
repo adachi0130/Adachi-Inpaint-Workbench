@@ -8,7 +8,7 @@ class Raster {
 const decode = async data => new Raster(JSON.parse(data).pixels);
 const source = name => ({src:name, width:4,height:3});
 const context = prefix => ({mask:new Raster(prefix+"-mask"), baseMask:new Raster(prefix+"-base"),history:[{type:"brush",points:[{x:1,y:2}]}],future:[{type:"erase",points:[{x:2,y:1}]}],lastMask:prefix+"-serialized",dirty:false});
-const widgetNames=["image","mask_data","source_data","edit_mode","crop_state","blend_data","layer_image"];
+const widgetNames=["image","mask_data","source_data","edit_mode","crop_state","blend_data","layer_image","paint_data"];
 function node() {
     const n={properties:{},widgets:widgetNames.map(name=>({name,value:name})),graph:{setDirtyCanvas(){}}};
     const e=n.adachiEditor={...context("repaint"),image:source("original"),ready:true,loadVersion:1,maskRevision:0,pan:{x:1,y:2},zoom:2,keepFit:true,view:"overlay",filename:{textContent:"original.png"},sizeLabel:{},embed:{checked:false},flush(){},schedule(){},updateButtons(){}};
@@ -18,6 +18,7 @@ function node() {
 
 {
  const n=node(),e=n.adachiEditor,c=n.adachiCrop;
+ n.adachiColorPaint={async prepareRestore(data){return data;},commitRestore(data){this.restored=data;}};
  n.widgets.find(w=>w.name==="edit_mode").value="crop";
  n.widgets.find(w=>w.name==="crop_state").value=JSON.stringify({locked:true,x:1,y:2,width:512,height:768,job:"job-a"});
  const before=captureSourceState(n);
@@ -29,6 +30,7 @@ function node() {
  assert.equal(c.contexts.blend.mask.pixels,"blend-mask");assert.equal(c.target,"mask");
  assert.equal(e.history[0].points[0].x,1);assert.equal(e.future[0].type,"erase");
  assert.equal(JSON.parse(n.widgets.find(w=>w.name==="crop_state").value).job,"job-a");
+ assert.equal(n.adachiColorPaint.restored,'paint_data');
  assert.deepEqual(e.pan,{x:1,y:2});assert.equal(e.zoom,2);assert.equal(e.keepFit,true);
  assert.notEqual(e.mask,before.contexts.mask.mask);
  e.mask.pixels="changed-again";await restoreSourceState(n,before,{decode});assert.equal(e.mask.pixels,"repaint-mask");
@@ -43,8 +45,18 @@ function node() {
  const n=node(),before=captureSourceState(n),old=n.adachiEditor.image;
  await assert.rejects(restoreSourceState(n,before,{decode:async()=>{throw Error("broken PNG")}}),/broken PNG/);
  assert.equal(n.adachiEditor.image,old);
+ n.adachiColorPaint={async prepareRestore(){throw Error('bad paint');},commitRestore(){throw Error('must not commit');}};
+ await assert.rejects(restoreSourceState(n,before,{decode}),/bad paint/);
+ assert.equal(n.adachiEditor.image,old,'paint decode failure preserves the current image');
+ delete n.adachiColorPaint;
  await assert.rejects(restoreSourceState(n,before,{decode:async data=>{n.adachiEditor.loadVersion++;return decode(data)}}),/image changed/);
  assert.equal(n.adachiEditor.image,old);
+}
+{
+ const n=node(),before=captureSourceState(n),old=n.adachiEditor.image;
+ n.adachiColorPaint={revision:1,async prepareRestore(){this.revision++;return null;},commitRestore(){throw Error('must not commit');}};
+ await assert.rejects(restoreSourceState(n,before,{decode}),/image changed/);
+ assert.equal(n.adachiEditor.image,old,'paint changes during history decode must not be overwritten');
 }
 {
  const n=node(),h=new WorkspaceHistory(n,{maxEntries:3});h.checkpoint("original");

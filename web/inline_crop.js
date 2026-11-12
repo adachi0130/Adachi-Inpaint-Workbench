@@ -1,7 +1,7 @@
 import { CROP_PRESETS, cropAt } from "./crop_geometry.js?v=0.6.2";
 import { T } from "./i18n.js";
 import { syncCropDimensions, syncCurrentDimensions } from "./parameter_bridge.js?v=0.8.2";
-import { installResultAdoption } from "./result_adoption.js?v=stability1";
+import { installResultAdoption } from "./result_adoption.js?v=2.1.0";
 
 const fields = ["mask", "baseMask", "history", "future", "lastMask", "dirty"];
 const canvas = (w, h) =>
@@ -628,9 +628,26 @@ export class InlineCropController {
     this.editor.flush();
     this.busy = true;
     this.sync();
+    // Releasing an adopted crop must first preserve the visible composite on
+    // the server. Show its real upload progress, particularly on remote hosts;
+    // do not unlock or discard the layer if that upload fails.
+    const e = this.editor;
+    const version = e.uploadUiVersion = (e.uploadUiVersion || 0) + 1;
+    const progress = ({phase, loaded = 0, total = 0}) => {
+      if (version !== e.uploadUiVersion || e.destroyed) return;
+      e.uploadIndicator.hidden = false;
+      if (phase === "upload" && total > 0) {
+        const percent = Math.max(0, Math.min(100, Math.round(100 * loaded / total)));
+        e.uploadLabel.textContent = `${T("Uploading image")} ${percent}%`;
+        e.uploadBar.value = percent;
+      } else {
+        e.uploadLabel.textContent = T(phase === "processing" ? "Upload complete, loading image…" : phase === "authenticated" ? "Uploading with authentication…" : "Uploading image…");
+        e.uploadBar.removeAttribute("value");
+      }
+    };
+    progress({phase:"upload"});
     try {
-      const e = this.editor,
-        c = canvas(e.image.width, e.image.height);
+      const c = canvas(e.image.width, e.image.height);
       this.drawSource(c.getContext("2d"));
       const blob = await new Promise((resolve) =>
         c.toBlob(resolve, "image/png"),
@@ -641,8 +658,9 @@ export class InlineCropController {
         new File([blob], `merged-${crypto.randomUUID()}.png`, {
           type: "image/png",
         }),
-        { preserveMask: true, preserveCrop: true },
+        { preserveMask: true, preserveCrop: true, onProgress: progress },
       );
+      e.status("");
       this.layer = null;
       this.widgets.layer_image.value = "";
       this.widgets.blend_data.value = "";
@@ -650,6 +668,7 @@ export class InlineCropController {
       this.contexts.blend = null;
       this.state({ ...this.region, job: crypto.randomUUID() });
     } finally {
+      if (version === e.uploadUiVersion && !e.destroyed) e.uploadIndicator.hidden = true;
       this.busy = false;
       this.sync();
       this.editor.schedule();

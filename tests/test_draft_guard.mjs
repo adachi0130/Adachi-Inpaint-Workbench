@@ -105,6 +105,14 @@ const namedOnly = {nodes:[{type:"AdachiInlineMask", widgets_values_named:{source
 await prepareInlineDraft(namedOnly,{fits:()=>false,upload:async()=>"named.png"});
 assert.equal(namedOnly.nodes[0].widgets_values_named.source_data,"");
 assert.equal(namedOnly.nodes[0].widgets_values_named.mask_data,"keep");
+const painted={nodes:[{type:'AdachiInlineMask',widgets_values:['file.png','mask','','crop','region','blend','layer.png',large],widgets_values_named:{paint_data:'stale'}}]};
+await prepareInlineDraft(painted,{fits:g=>g.nodes[0].widgets_values[7].length<100,upload:async data=>{assert.equal(data,large);return 'adachi-inpaint/paint.png';}});
+assert.equal(painted.nodes[0].widgets_values[7],'adachi-inpaint/paint.png');
+assert.equal(painted.nodes[0].widgets_values_named.paint_data,'adachi-inpaint/paint.png');
+assert.equal(painted.nodes[0].widgets_values[0],'file.png');
+const failPaint={nodes:[{type:'AdachiInlineMask',widgets_values:['file.png','mask','','crop','region','blend','layer.png',large]}]};
+await assert.rejects(prepareInlineDraft(failPaint,{fits:()=>false,upload:async()=>{throw Error('offline')}}),/offline/);
+assert.equal(failPaint.nodes[0].widgets_values[7],large);
 const widgets=inlineWidgetNames.map((name,index)=>({name,value:`live-${index}`}));
 widgets.splice(1,0,{name:"unrelated",value:"untouched"});
 const snapshot={widgets_values:Array(8).fill("old"),widgets_values_named:{source_data:large,unrelated:"keep"}};

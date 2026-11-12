@@ -1,6 +1,6 @@
 // Probe only our own temporary key. Existing ComfyUI drafts are never edited or deleted.
 export const inlineWidgetNames = [
-  "image", "mask_data", "source_data", "edit_mode", "crop_state", "blend_data", "layer_image",
+  "image", "mask_data", "source_data", "edit_mode", "crop_state", "blend_data", "layer_image", "paint_data",
 ];
 
 // Some extensions also serialize a named snapshot. Keep it in step with the
@@ -35,24 +35,22 @@ export async function prepareInlineDraft(graph, { fits, upload }) {
         node.widgets_values_named[name] = node.widgets_values[index];
     }
   }
-  const candidates = nodes.filter((node) => {
-    const embedded = node.widgets_values?.[2] ?? node.widgets_values_named?.source_data;
-    return typeof embedded === "string" && embedded.startsWith("data:") && embedded.length >= 256 * 1024;
-  }).sort((a, b) => (b.widgets_values?.[2] ?? b.widgets_values_named.source_data).length - (a.widgets_values?.[2] ?? a.widgets_values_named.source_data).length);
+  const candidates = nodes.flatMap(node => [[2,"source_data"],[7,"paint_data"]].map(([index,name]) => ({node,index,name,embedded:node.widgets_values?.[index] ?? node.widgets_values_named?.[name]})))
+    .filter(({embedded})=>typeof embedded === "string" && embedded.startsWith("data:") && embedded.length >= 256 * 1024)
+    .sort((a,b)=>b.embedded.length-a.embedded.length);
   let converted = 0;
-  for (const node of candidates) {
+  for (const {node,index,name,embedded} of candidates) {
     if (fits(graph) !== false) break;
-    const embedded = node.widgets_values?.[2] ?? node.widgets_values_named.source_data;
     const filename = await upload(embedded);
     if (typeof filename !== "string" || !filename) throw new Error("Source upload returned no filename");
     // Commit only after a successful exact upload. All masks and layers stay intact.
     if (Array.isArray(node.widgets_values)) {
-      node.widgets_values[0] = filename;
-      node.widgets_values[2] = "";
+      if(name === "source_data") node.widgets_values[0] = filename;
+      node.widgets_values[index] = name === "source_data" ? "" : filename;
     }
     if (node.widgets_values_named) {
-      node.widgets_values_named.image = filename;
-      node.widgets_values_named.source_data = "";
+      if(name === "source_data") node.widgets_values_named.image = filename;
+      node.widgets_values_named[name] = name === "source_data" ? "" : filename;
     }
     converted++;
   }

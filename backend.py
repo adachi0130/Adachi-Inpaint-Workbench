@@ -328,6 +328,7 @@ class AdachiInlineMask:
             "crop_state": ("STRING", {"default": "{}"}),
             "blend_data": ("STRING", {"default": ""}),
             "layer_image": ("STRING", {"default": ""}),
+            "paint_data": ("STRING", {"default": "", "multiline": False, "tooltip": "Transparent color paint layer PNG."}),
         }}
 
     RETURN_TYPES = ("IMAGE", "MASK", "IMAGE")
@@ -343,6 +344,13 @@ class AdachiInlineMask:
         for value in (image, mask_data, source_data, json.dumps(kwargs, sort_keys=True, default=str)):
             digest.update(str(value).encode("utf-8"))
             digest.update(b"\x00")
+        paint_data = kwargs.get("paint_data", "")
+        if paint_data and not paint_data.startswith("data:"):
+            try:
+                stat = _input_path(paint_data).stat()
+                digest.update(f"{stat.st_size}:{stat.st_mtime_ns}".encode("utf-8"))
+            except (ValueError, OSError):
+                return float("nan")
         if not source_data:
             # The source is a stable input file; hashing its size and mtime is
             # enough to detect a replacement and avoids reading a full high-res
@@ -355,7 +363,7 @@ class AdachiInlineMask:
                 return float("nan")
         return digest.hexdigest()
 
-    def load(self, image="", mask_data="", source_data="", edit_mode="mask", crop_state="{}", blend_data="", layer_image="", result=None):
+    def load(self, image="", mask_data="", source_data="", edit_mode="mask", crop_state="{}", blend_data="", layer_image="", paint_data="", result=None):
         raster = _data_image(source_data) if source_data else _read_raster(_input_path(image))
         rgba = raster.convert("RGBA")
         pixels = torch.from_numpy(np.asarray(rgba.convert("RGB"), dtype=np.float32).copy() / 255.0)[None]
@@ -371,9 +379,22 @@ class AdachiInlineMask:
             state = _crop_state(crop_state)
             if state.get("locked"):
                 x, y, width, height = _crop_box(state, pixels.shape[2], pixels.shape[1])
-                composite = _blend_layer(pixels, _load_layer(layer_image), blend_data, state)
+                composite = _paint_layer(_blend_layer(pixels, _load_layer(layer_image), blend_data, state), paint_data)
                 return composite[:, y:y+height, x:x+width].clone(), mask[:, y:y+height, x:x+width].clone(), composite
+        pixels = _paint_layer(pixels, paint_data)
         return pixels, mask, pixels
+
+
+def _paint_layer(pixels, paint_data):
+    """Composite a full-image RGBA paint layer without changing the repaint mask."""
+    if not paint_data:
+        return pixels
+    layer = (_data_image(paint_data) if paint_data.startswith("data:") else _read_raster(_input_path(paint_data))).convert("RGBA")
+    if layer.size != (pixels.shape[2], pixels.shape[1]):
+        raise ValueError("The paint layer dimensions must match the source image.")
+    rgba = torch.from_numpy(np.asarray(layer, dtype=np.float32).copy() / 255.0)
+    alpha = rgba[..., 3:4].unsqueeze(0)
+    return pixels * (1.0 - alpha) + rgba[..., :3].unsqueeze(0) * alpha
 
 
 class AdachiInpaintPrepare:
@@ -973,6 +994,7 @@ class AdachiLayerCommit:
             "result": ("IMAGE",), "image": ("STRING", {"default": ""}),
             "source_data": ("STRING", {"default": ""}), "crop_state": ("STRING", {"default": "{}"}),
             "blend_data": ("STRING", {"default": ""}), "target": ("STRING", {"default": ""}),
+            "paint_data": ("STRING", {"default": ""}),
         }}
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "compose"
@@ -980,12 +1002,12 @@ class AdachiLayerCommit:
     CATEGORY = "_Adachi/internal"
     DESCRIPTION = "Internal layer sink. Use Inline Mask in Crop & Blend mode."
 
-    def compose(self, result, image="", source_data="", crop_state="{}", blend_data="", target=""):
+    def compose(self, result, image="", source_data="", crop_state="{}", blend_data="", target="", paint_data=""):
         raster = (_data_image(source_data) if source_data else _read_raster(_input_path(image))).convert("RGB")
         original = torch.from_numpy(np.asarray(raster, dtype=np.float32).copy()/255)[None]
         state = _crop_state(crop_state)
         generated = _image_tensor(result).cpu()
-        composite = _blend_layer(original, generated, blend_data, state)
+        composite = _paint_layer(_blend_layer(original, generated, blend_data, state), paint_data)
         layer = _store_layer(generated[-1])
         return {"ui": {"adachi_layer": [{"target": target, "job": state.get("job", ""), "image": layer}]}, "result": (composite,)}
 

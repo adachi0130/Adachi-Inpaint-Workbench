@@ -3,7 +3,7 @@ import { InpaintParameterPanel } from "./inpaint_panel.js?v=workspace-zoom-20261
 import { connectedEditor, connectedSamplers, relocateWidgets, syncCurrentDimensions } from "./parameter_bridge.js?v=0.8.2";
 import { routeWheelOutsideImage } from "./wheel_routing.js";
 import { T } from "./i18n.js";
-import { bindWidgetToNodeWidth } from "./widget_layout.js?v=0.5.5";
+import { bindWidgetToNodeWidth, createWidgetHost } from "./widget_layout.js?v=stable-host-20261112";
 
 export function installInpaintWorkbench(nodeType) {
     const created = nodeType.prototype.onNodeCreated;
@@ -81,11 +81,12 @@ export function installInpaintWorkbench(nodeType) {
         root.append(panel.root);
         node.adachiParameters = panel; node.adachiWorkbench = { root, tools, fold, actionHost, get source() { return source; } };
         const stopWheelRouting = routeWheelOutsideImage(root, null, () => false);
-        const widget = node.addDOMWidget("adachi_workbench", "adachi_inpaint_controls", root, {
+        const widgetHost = createWidgetHost(root);
+        const widget = node.addDOMWidget("adachi_workbench", "adachi_inpaint_controls", widgetHost, {
             serialize: false, hideOnZoom: false, getMinHeight: contentHeight, getMaxHeight: () => Math.max(4096, contentHeight()),
         });
         widget.serialize = false;
-        bindWidgetToNodeWidth(node, widget, root);
+        bindWidgetToNodeWidth(node, widget, widgetHost);
         const observer = new ResizeObserver(scheduleSize); observer.observe(tools); observer.observe(fold); observer.observe(actionHost);
         const configured = node.onConfigure;
         node.onConfigure = function () {

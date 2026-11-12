@@ -1,7 +1,11 @@
 # Changelog
 
-## Unreleased
+## 2.1.0 · 2026-11-12
 
+- Add an independent color-paint layer to Mask and Crop & Blend modes. Alt-click samples the visible image color, Ctrl + wheel changes brush size, and the painted image is used for inpainting.
+- Show upload progress while merging an adopted crop before releasing the selection; keep the selection when the upload fails so it can be retried.
+- Keep the editor, comparison and parameter controls in the workspace when ComfyUI remounts DOM widgets during layout changes.
+- Show download and upload progress while adopting results; retry transient image-read failures after uploads and preserve the previous source on failure.
 - Add wheel zoom, middle-button pan and Fit to the standalone workspace's sliding and before/after comparison views.
 - Move Generate, width, height and denoise controls higher in the workspace settings, and allow positive and negative prompts to be collapsed.
 - Adopt GPL-3.0-only for the current project and preserve the original MIT copyright and permission notice for earlier releases and applicable legacy material. Previous releases retain the permissions under which they were distributed.

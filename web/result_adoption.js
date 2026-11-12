@@ -17,7 +17,7 @@ export function installResultAdoption(node, crop) {
         removeLegacyInput();
         return result;
     };
-    node.adachiAdoptCrop = async (file, origin, {signal}={}) => {
+    node.adachiAdoptCrop = async (file, origin, {signal,onProgress}={}) => {
         const editor = crop.editor, region = crop.region;
         if (!editor.ready || !region.locked) throw Error(T("Select a crop region before adopting a result"));
         if (crop.busy || editor.stroke) throw Error(T("Finish editing before adopting a result"));
@@ -39,7 +39,7 @@ export function installResultAdoption(node, crop) {
             const body = new FormData();
             body.append("image", file, `adopted-${crypto.randomUUID()}.png`);
             body.append("type", "input"); body.append("subfolder", "adachi-inpaint-layers");
-            const uploaded = await uploadImageWithProgress(api,body,null,{signal:controller.signal});
+            const uploaded = await uploadImageWithProgress(api,body,onProgress,{signal:controller.signal});
             if (typeof uploaded.name !== "string" || !uploaded.name) throw Error(T("Upload failed"));
             if (editor.destroyed || crop.mode !== "crop" || crop.region.job !== region.job) {
                 throw Error(T("The crop changed while adopting the result"));

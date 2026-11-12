@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {createPaintDraftProtection} from '../web/paint_draft.js';
+const tick=()=>new Promise(r=>setTimeout(r,20));
+let w={value:'data:old'},p={revision:1,drawing:false},checks=0,marks=0,errors=[],requests=[];
+const protect=createPaintDraftProtection({paint:()=>p,widget:()=>w,graph:()=>({}),disposed:()=>false,persist:()=>true,fits:()=>{checks++;return false;},upload:data=>new Promise((resolve,reject)=>requests.push({data,resolve,reject})),changed:()=>marks++,onError:e=>errors.push(e.message)});
+protect.schedule();await tick();assert.equal(requests.length,1);
+protect.schedule();await tick();assert.equal(checks,1,'slow upload must not spin');
+w.value='data:new';p.revision++;protect.schedule();await tick();assert.equal(requests.length,1);
+requests[0].resolve('old.png');await tick();assert.equal(w.value,'data:new');assert.equal(requests.length,2,'new edit is uploaded after old request settles');
+requests[1].resolve('new.png');await tick();assert.equal(w.value,'new.png');assert(marks>0);
+p.drawing=true;w.value='data:stroke';p.revision++;const before=checks;protect.schedule();await tick();assert.equal(checks,before,'drawing must not spin');
+p.drawing=false;protect.schedule();await tick();assert.equal(requests.length,3);requests[2].reject(Error('offline'));await tick();assert.equal(w.value,'data:stroke');assert.deepEqual(errors,['offline']);
+protect.dispose();console.log('Paint draft: pending upload and stroke do not spin; stale upload, retry and offline retention passed');

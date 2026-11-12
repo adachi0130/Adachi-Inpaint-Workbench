@@ -202,12 +202,17 @@ export class ImageCompareView {
         if (!this.targetSelect.value) { this.status(T("Select an inline mask to adopt into"), true); return; }
         const target = this.targetSelect.value, result = this.results[this.index];
         this.busy = true; this.updateButton(); this.status(T("Setting the result as the new source image…"));
+        const progress = ({phase, loaded=0, total=0}={}) => {
+            const text = phase === 'download' ? T('Downloading result…') : phase === 'upload' ? T('Uploading result…') : phase === 'authenticated' ? T('Uploading with authentication…') : phase === 'processing' ? T('Upload complete, loading image…') : T('Preparing result…');
+            this.loading(text, phase === 'download' || phase === 'upload' ? [{loaded,total}] : undefined);
+        };
+        progress({phase:'prepare'});
         const controller=this.adoptController=new AbortController();
         try {
-            await this.options.onAdopt(target, result,{signal:controller.signal});
+            await this.options.onAdopt(target, result,{signal:controller.signal,onProgress:progress});
             if (!this.destroyed) this.status(T("Adopted: back in the inline mask, keep painting to inpaint again"));
         } catch (error) { if (!this.destroyed) this.status(error.message, true); }
-        finally {if(this.adoptController===controller)this.adoptController=null;this.busy = false; if (!this.destroyed) this.updateButton();}
+        finally {if(this.adoptController===controller)this.adoptController=null;this.busy = false; if (!this.destroyed) {this.progressBox.hidden=true;this.updateButton();}}
     }
 
     transform() {

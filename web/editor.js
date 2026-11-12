@@ -2,6 +2,7 @@
  * Original implementation. No WebUI source is bundled. */
 import { registerImageWheel } from "./wheel_gestures.js";
 import { T } from "./i18n.js";
+import { loadImage } from "./image_load.js";
 const el = (tag, cls, text) => {
     const node = document.createElement(tag);
     if (cls) node.className = cls;
@@ -9,12 +10,6 @@ const el = (tag, cls, text) => {
     return node;
 };
 const makeCanvas = () => document.createElement("canvas");
-const loadImage = (url) => new Promise((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => resolve(image);
-        image.onerror = () => reject(new Error(T("Cannot load image")));
-    image.src = url;
-});
 
 export class InlineMaskEditor {
     constructor(options = {}) {
@@ -47,7 +42,7 @@ export class InlineMaskEditor {
         // this canvas at window capture so image gestures stay inside it.
         this.stopWheelCapture = registerImageWheel(this.canvas, () => this.ready, event => this.wheel(event), options.onGraphWheel);
         this.modifierDown = event => {
-            if (event.key !== "Alt" || !this.ready || !this.canvas.matches(":hover")) return;
+            if (event.key !== "Alt" || this.colorPaint?.active || !this.ready || !this.canvas.matches(":hover")) return;
             event.preventDefault(); this.altErase = true; this.updateButtons(); this.schedule();
         };
         this.modifierUp = event => {
@@ -279,13 +274,13 @@ export class InlineMaskEditor {
         }
     }
 
-    async setImage(url, maskData = "", name = "") {
+    async setImage(url, maskData = "", name = "", options = {}) {
         this.stroke = null; this.pointerId = null;
         const version = ++this.loadVersion;
         const wasReady=this.ready;
         this.ready = false;
         try {
-            const [image, loadedMask] = await Promise.all([loadImage(url), maskData ? loadImage(maskData) : Promise.resolve(null)]);
+            const [image, loadedMask] = await Promise.all([loadImage(url,options), maskData ? loadImage(maskData) : Promise.resolve(null)]);
             if (version !== this.loadVersion || this.destroyed) return;
             if (image.width * image.height > 32_000_000 || Math.max(image.width, image.height) > 16384) {
                 throw new Error(T("Image is too large; keep it under 32 MP and 16384 px per side"));
@@ -326,9 +321,9 @@ export class InlineMaskEditor {
         }
     }
 
-    async replaceSource(url, name = "") {
+    async replaceSource(url, name = "", options = {}) {
         const version = ++this.loadVersion;
-        const image = await loadImage(url);
+        const image = await loadImage(url,options);
         if (version !== this.loadVersion || this.destroyed) return false;
         // A different size cannot keep the painted mask; report it so the caller
         // can fall back to a fresh load instead of failing the upload.
@@ -362,6 +357,7 @@ export class InlineMaskEditor {
     }
 
     setTool(tool) {
+        if (this.colorPaint?.active) { this.colorPaint.active = false; this.colorPaint.sync(); }
         this.tool = tool;
         if (this.stage) this.stage.classList.toggle("dd-pan", tool === "pan");
         this.updateButtons();
@@ -373,7 +369,7 @@ export class InlineMaskEditor {
         if (this.downloadButton) this.downloadButton.disabled = !this.image;
         this.stage?.classList.toggle("dd-erasing", !!(this.altErase || this.tool === "erase" || this.stroke?.type === "erase"));
         for (const [name, button] of Object.entries(this.toolButtons || {})) {
-            const active = name === (this.altErase ? "erase" : this.tool);
+            const active = !this.colorPaint?.active && name === (this.altErase ? "erase" : this.tool);
             button.classList.toggle("dd-active", active);
             button.setAttribute("aria-pressed", String(active));
         }
@@ -423,7 +419,8 @@ export class InlineMaskEditor {
 
     pointerMove(event) {
         if (!this.ready) return;
-        if (this.altErase !== !!event.altKey) { this.altErase = !!event.altKey; this.updateButtons(); }
+        const eraseModifier=!!event.altKey && !this.colorPaint?.active;
+        if (this.altErase !== eraseModifier) { this.altErase = eraseModifier; this.updateButtons(); }
         this.cursor = this.point(event);
         if (event.pointerId === this.pointerId) {
             event.preventDefault(); event.stopPropagation();

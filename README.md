@@ -72,6 +72,10 @@ The [official workflow](examples/Adachi-Workbench.json) is a starting point, not
 
 Upload, drop or paste a source image and paint on **Inline Mask** itself. In Mask mode, uploading an image automatically fills the connected inpaint dimensions; a replacement of the same size keeps the mask, while a different-sized image starts with a fresh mask. Mask strokes stay in the browser and are saved with the workflow; painting does not require a disk save/load round-trip for every stroke.
 
+Use the **✎ color paint** button at the lower left to paint directly on the image in either mode. Choose a color or **Alt + click** the visible image to sample one; **Ctrl + wheel** changes brush size. Color painting uses a separate layer with its own undo and redo, and the painted image becomes the source for subsequent inpainting. Click the button again to return to mask editing.
+
+If browser draft storage is too small, the color layer may be saved as a PNG in ComfyUI's input directory instead of embedded in the workflow. Include that referenced file when moving the workflow to another machine.
+
 While a source image uploads, a progress bar reports the bytes actually sent and then shows when the image is loading. On platforms requiring a special authentication fallback, the indicator stays indeterminate rather than showing an estimated percentage.
 
 - Brush, soft edges, hardness, opacity, pen pressure, temporary erasing and shape tools.
@@ -106,6 +110,8 @@ In Crop & Blend mode, choose one of six 64-aligned presets spanning 512–2048 p
 Generate, inspect the result in **Image Compare**, then click **Adopt this result** to return it. There is no feedback wire and generation does not automatically replace the editor image. Use the inpaint node's **image** output for comparison; its `crop` output is the sampling canvas and can have a different size. In the [official workflow](examples/Adachi-Workbench.json), select **Inpaint**, then switch Inline Mask to **Crop & Blend**.
 
 After adoption, the result appears in the selected area and the editor returns to the repaint mask, ready for another pass. Select **◐ blend layers** to paint the layer mask: brush keeps new pixels, **Alt** restores original pixels, and soft edges blend seams. The blend mask is independent of the repaint mask. While editing the blend mask, **hold the right mouse button** to preview the original and release it to return to the workspace. To select a new region, switch to **◌ repaint mask** and right-click (or press Escape); the visible result is merged before the selection is released. Left-click places the next region. The **↶ Undo** button undoes strokes in the active mask. Hover the bottom controls for instructions. For a generated batch, select the desired result in Image Compare before adopting it. A result tagged with an older crop is rejected after selecting another region.
+
+Merging an adopted crop can take time on a slow connection: upload progress is shown while the selection is being released. If the upload fails, the selection remains in place and the operation can be retried.
 
 ### Inpaint the whole image or just the masked region
 
@@ -306,6 +312,7 @@ See [verification notes](VERIFICATION.md) for tested configurations and limits, 
 
 | Versions | Highlights and fixes |
 | --- | --- |
+| 2.1.0 | Color-paint layer, crop merge progress, workspace comparison zoom, reordered controls, collapsible prompts and GPL-3.0-only licensing. |
 | 2.0.1 | Weak-network retry and cancellation, preview resource cleanup, rollback races, dense-mask memory reduction and safer malformed-workflow handling. |
 | 2.0.0 | Standalone light/dark workbench, workflow discovery, editable generation, task progress, result recovery and unified template. |
 | 1.0.1 / 1.0.0 / 0.9 | Stable release; preview reload/retry, in-memory comparisons and real upload progress. |

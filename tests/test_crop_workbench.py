@@ -30,6 +30,25 @@ class InlineCropTests(unittest.TestCase):
         image,mask,full=backend.AdachiInlineMask().load(source_data=self.source,mask_data=url(Image.fromarray(pixels)),edit_mode='crop',crop_state=self.state)
         self.assertTrue(torch.equal(image,self.original[:,16:80,32:96]));self.assertTrue(torch.equal(full,self.original))
         self.assertEqual(mask.sum().item(),20);self.assertEqual(mask[0,4,3].item(),1)
+    def test_color_paint_composites_after_crop_layer_before_crop_without_touching_mask(self):
+        paint=np.zeros((96,128,4),dtype=np.uint8)
+        paint[20,35]=[255,0,0,255]
+        paint[21,36]=[0,255,0,128]
+        paint[4,5]=[0,0,255,255]
+        paint_data=url(Image.fromarray(paint))
+        mask=np.zeros((96,128),dtype=np.uint8);mask[20,35]=255
+        with patch.object(backend,'_load_layer',return_value=torch.ones(1,64,64,3)):
+            image,m,full=backend.AdachiInlineMask().load(source_data=self.source,mask_data=url(Image.fromarray(mask)),edit_mode='crop',crop_state=self.state,layer_image='layer.png',paint_data=paint_data)
+        self.assertTrue(torch.equal(image,full[:,16:80,32:96]))
+        self.assertTrue(torch.equal(full[0,20,35],torch.tensor([1.,0.,0.])))
+        self.assertTrue(torch.allclose(full[0,21,36],torch.tensor([127/255,1.,127/255])))
+        self.assertTrue(torch.equal(full[0,4,5],torch.tensor([0.,0.,1.])))
+        self.assertEqual(m.sum().item(),1)
+        flat,_,_=backend.AdachiInlineMask().load(source_data=self.source,paint_data=paint_data)
+        self.assertTrue(torch.equal(flat[0,20,35],torch.tensor([1.,0.,0.])))
+        self.assertNotEqual(backend.AdachiInlineMask.IS_CHANGED(source_data=self.source),backend.AdachiInlineMask.IS_CHANGED(source_data=self.source,paint_data=paint_data))
+        with self.assertRaisesRegex(ValueError,'dimensions must match'):
+            backend.AdachiInlineMask().load(source_data=self.source,paint_data=url(Image.new('RGBA',(1,1))))
     def test_layer_blend_preserves_outside_and_supports_batch_and_soft_edges(self):
         alpha=np.zeros((64,64),dtype=np.uint8);alpha[:,:32]=255;alpha[:,32:48]=128
         result=torch.stack([torch.zeros(64,64,3),torch.ones(64,64,3)])
@@ -51,6 +70,22 @@ class InlineCropTests(unittest.TestCase):
             descriptor=a['ui']['adachi_layer'][0]['image'];name=descriptor['subfolder']+'/'+descriptor['filename']
             image,_,full=backend.AdachiInlineMask().load(source_data=self.source,edit_mode='crop',crop_state=self.state,layer_image=name)
             self.assertTrue(torch.equal(image,torch.ones(1,64,64,3)));self.assertTrue(torch.equal(full,a['result'][0][:1]))
+    def test_legacy_layer_sink_applies_paint_above_generated_layer(self):
+        paint=np.zeros((96,128,4),dtype=np.uint8);paint[20,35]=[255,0,0,255]
+        with tempfile.TemporaryDirectory() as folder,patch.dict('sys.modules',{'folder_paths':types.SimpleNamespace(get_input_directory=lambda:folder)}):
+            output=backend.AdachiLayerCommit().compose(torch.ones(1,64,64,3),source_data=self.source,crop_state=self.state,paint_data=url(Image.fromarray(paint)))['result'][0]
+            self.assertTrue(torch.equal(output[0,20,35],torch.tensor([1.,0.,0.])))
+            self.assertTrue(torch.equal(output[0,20,36],torch.ones(3)))
+    def test_paint_input_file_preserves_transparency_and_changes_fingerprint(self):
+        pixels=np.zeros((96,128,4),dtype=np.uint8);pixels[20,35]=[255,0,0,255]
+        with tempfile.TemporaryDirectory() as folder,patch.dict('sys.modules',{'folder_paths':types.SimpleNamespace(get_input_directory=lambda:folder)}):
+            path=Path(folder)/'paint.png';Image.fromarray(pixels).save(path)
+            a=backend.AdachiInlineMask.IS_CHANGED(source_data=self.source,paint_data='paint.png')
+            result,_,_=backend.AdachiInlineMask().load(source_data=self.source,paint_data='paint.png')
+            self.assertTrue(torch.equal(result[0,20,35],torch.tensor([1.,0.,0.])))
+            path.unlink()
+            self.assertTrue(np.isnan(backend.AdachiInlineMask.IS_CHANGED(source_data=self.source,paint_data='paint.png')))
+            self.assertIsInstance(a,str)
     def test_invalid_regions_or_result_sizes_fail_before_writing(self):
         for change in ({'x':-1},{'y':80},{'width':65},{'height':0},{'x':True}):
             with self.subTest(change=change),self.assertRaises(ValueError):

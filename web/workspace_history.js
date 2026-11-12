@@ -1,7 +1,7 @@
 import {T} from './i18n.js';
 // Session-only source checkpoints for the full-screen workspace. Capturing and
 // restoring never uploads a new image or serializes the rest of the workflow.
-const WIDGETS = ["image", "mask_data", "source_data", "edit_mode", "crop_state", "blend_data", "layer_image"];
+const WIDGETS = ["image", "mask_data", "source_data", "edit_mode", "crop_state", "blend_data", "layer_image", "paint_data"];
 const copyCommands = commands => (commands || []).map(command => ({ ...command,
     ...(command.points ? {points: command.points.map(point => ({...point}))} : {}),
 }));
@@ -27,7 +27,7 @@ async function decodeCanvas(data) {
 export function captureSourceState(node) {
     const editor = node.adachiEditor, crop = node.adachiCrop;
     if (!editor?.ready || !editor.image || editor.destroyed) throw Error(T("Load a source image first"));
-    if (editor.stroke || editor.pointerId != null || crop?.busy) throw Error(T("Finish the current edit first"));
+    if (editor.stroke || editor.pointerId != null || crop?.busy || node.adachiColorPaint?.drawing || node.adachiColorPaint?.restoring) throw Error(T("Finish the current edit first"));
     editor.flush();
     const target = crop?.target || "mask", contexts = {};
     for (const [name, context] of Object.entries(crop?.contexts || {})) {
@@ -56,9 +56,10 @@ function releaseContexts(contexts, active) {
 export async function restoreSourceState(node, state, {decode = decodeCanvas, onRestore} = {}) {
     const editor = node.adachiEditor, crop = node.adachiCrop;
     if (!editor || editor.destroyed || !node.graph) throw Error(T("The source image node was removed"));
-    if (editor.stroke || editor.pointerId != null || crop?.busy) throw Error(T("Finish the current edit first"));
-    const loadVersion = editor.loadVersion, maskRevision = editor.maskRevision, cropRevision=crop?.revision;
+    if (editor.stroke || editor.pointerId != null || crop?.busy || node.adachiColorPaint?.drawing || node.adachiColorPaint?.restoring) throw Error(T("Finish the current edit first"));
+    const loadVersion = editor.loadVersion, maskRevision = editor.maskRevision, cropRevision=crop?.revision, paintRevision=node.adachiColorPaint?.revision;
     const contexts = {};
+    let paintSnapshot;
     try {
         // Decode all masks before altering live state. A failed decode leaves
         // the working image, mask and crop completely untouched.
@@ -69,7 +70,8 @@ export async function restoreSourceState(node, state, {decode = decodeCanvas, on
             const [mask,baseMask]=decoded.map(item=>item.value);
             contexts[name] = {...context, mask, baseMask, history:copyCommands(context.history), future:copyCommands(context.future)};
         }
-        if (editor.destroyed || !node.graph || editor.loadVersion !== loadVersion || editor.maskRevision !== maskRevision || crop?.revision !== cropRevision || editor.stroke || editor.pointerId != null || crop?.busy) {
+        if(node.adachiColorPaint?.prepareRestore) paintSnapshot = await node.adachiColorPaint.prepareRestore(state.widgets.paint_data || "",state.image.width,state.image.height);
+        if (editor.destroyed || !node.graph || editor.loadVersion !== loadVersion || editor.maskRevision !== maskRevision || crop?.revision !== cropRevision || node.adachiColorPaint?.revision !== paintRevision || editor.stroke || editor.pointerId != null || crop?.busy || node.adachiColorPaint?.drawing || node.adachiColorPaint?.restoring) {
             throw Error(T("The image changed during restoration; try again"));
         }
     } catch (error) { releaseContexts(contexts); throw error; }
@@ -100,6 +102,7 @@ export async function restoreSourceState(node, state, {decode = decodeCanvas, on
         crop.hover = null; crop.revision++; crop.patchKey = null;
         crop.syncPreset?.(); crop.sync?.();
     }
+    if(node.adachiColorPaint?.commitRestore) node.adachiColorPaint.commitRestore(paintSnapshot,state.image.width,state.image.height);
     releaseContexts(oldContexts, active);
     editor.updateButtons?.(); editor.schedule?.();
     node.graph.setDirtyCanvas?.(true, true);

@@ -1,19 +1,21 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
-import { InlineMaskEditor } from "./editor.js?v=stability1";
+import { InlineMaskEditor } from "./editor.js?v=2.1.0";
 import { installInpaintWorkbench } from "./inpaint_node.js?v=workspace-zoom-20261112";
-import { bindWidgetToNodeWidth } from "./widget_layout.js?v=0.5.5";
+import { bindWidgetToNodeWidth, createWidgetHost } from "./widget_layout.js?v=stable-host-20261112";
 import { routeWheelOutsideImage } from "./wheel_routing.js";
-import { InlineCropController } from "./inline_crop.js?v=stability1";
-import { canStoreDraft, prepareInlineDraft, syncInlineWidgets } from "./draft_guard.js?v=0.6.3";
+import { InlineCropController } from "./inline_crop.js?v=2.1.0";
+import { canStoreDraft, prepareInlineDraft, syncInlineWidgets } from "./draft_guard.js?v=2.1.0";
 import { T } from "./i18n.js";
 import { removeLegacyFeedback } from "./legacy_feedback.js?v=0.6.4";
 import { uploadImageWithProgress } from "./upload_transport.js?v=stability1";
+import { ColorPaint } from "./color_paint.js";
+import { createPaintDraftProtection } from "./paint_draft.js";
 
 const styleId = "adachi-inpaint-style";
 const stylesheet = document.getElementById(styleId) || document.createElement("link");
 stylesheet.id = styleId; stylesheet.rel = "stylesheet";
-stylesheet.href = new URL("./editor.css?v=workspace-network2", import.meta.url).href;
+stylesheet.href = new URL("./editor.css?v=color-paint-20261112", import.meta.url).href;
 if (!stylesheet.isConnected) document.head.append(stylesheet);
 
 function hide(widget) {
@@ -71,7 +73,7 @@ app.registerExtension({
             const count = await prepareInlineDraft(graphData, {
                 fits: graph => canStoreDraft(graph, options), upload: uploadEmbeddedSource,
             });
-            if (count) console.info(`[Adachi Inpaint] Saved ${count} oversized embedded source(s) as exact input files before workflow draft initialization. Masks and layers were preserved.`);
+            if (count) console.info(`[Adachi Inpaint] Saved ${count} oversized embedded source or paint layer(s) as input files before workflow draft initialization.`);
         } catch (error) {
             console.warn("[Adachi Inpaint] Draft preflight failed; embedded source data was retained.", error);
         }
@@ -93,8 +95,8 @@ app.registerExtension({
                 node.graph?.setDirtyCanvas(true, true);
             };
             const find = name => node.widgets?.find(widget => widget.name === name);
-            const imageWidget = find("image"), maskWidget = find("mask_data"), sourceWidget = find("source_data");
-            for (const widget of [imageWidget, maskWidget, sourceWidget]) hide(widget);
+            const imageWidget = find("image"), maskWidget = find("mask_data"), sourceWidget = find("source_data"), paintWidget=find("paint_data");
+            for (const widget of [imageWidget, maskWidget, sourceWidget, paintWidget]) hide(widget);
             let crop;
             let draftRecovery = null;
             let draftNoticeTimer = 0;
@@ -121,8 +123,8 @@ app.registerExtension({
                 if (!embedded && !filename) return;
                 restoring = true;
                 editor.embed.checked = !!embedded;
-                try { crop?.activate("mask"); await editor.setImage(embedded || imageUrl(filename), maskWidget?.value || "", embedded ? T("Embedded image") : filename); await crop?.restore(); }
-                catch (error) { console.warn("[Adachi Inpaint]", error); }
+                try { crop?.activate("mask"); await editor.setImage(embedded || imageUrl(filename), maskWidget?.value || "", embedded ? T("Embedded image") : filename); await crop?.restore(); await node.adachiColorPaint?.restore(paintWidget?.value || ""); }
+                catch (error) { console.warn("[Adachi Inpaint]", error); editor.status(error.message, true); }
                 finally { restoring = false; }
             };
             const editor = new InlineMaskEditor({
@@ -148,13 +150,14 @@ app.registerExtension({
                     crop?.activate("mask");
                     let kept = false;
                     if (preserveMask && editor.ready) {
-                        kept = await editor.replaceSource(imageUrl(name), file.name);
+                        kept = await editor.replaceSource(imageUrl(name), file.name, {retry:true,signal});
                         if (version !== uploadVersion || editor.destroyed) return;
                         // A different-sized replacement cannot reuse the old mask.
                         // Actually load it as a fresh image before clearing state.
-                        if (!kept) await editor.setImage(imageUrl(name), "", file.name);
-                    } else await editor.setImage(imageUrl(name), "", file.name);
+                        if (!kept) await editor.setImage(imageUrl(name), "", file.name, {retry:true,signal});
+                    } else await editor.setImage(imageUrl(name), "", file.name, {retry:true,signal});
                     if (version !== uploadVersion || editor.destroyed) return;
+                    if (!preserveCrop) node.adachiColorPaint?.clear();
                     imageWidget.value = name;
                     maskWidget.value = kept ? editor.flush() : "";
                     sourceWidget.value = editor.embed.checked ? editor.sourceData() : "";
@@ -198,22 +201,28 @@ app.registerExtension({
             crop = new InlineCropController(node, editor, {find, hide, changed:markChanged, imageUrl, beforeModeChange});
             node.adachiCrop = crop;
             node.adachiEditor = editor;
+            const paintDraft=createPaintDraftProtection({paint:()=>node.adachiColorPaint,widget:()=>paintWidget,graph:()=>app.rootGraph||node.graph,disposed:()=>editor.destroyed||!node.graph,persist:()=>app.ui.settings.getSettingValue('Comfy.Workflow.Persist')!==false,fits:graph=>canStoreDraft(graph.serialize(),draftOptions()),upload:uploadEmbeddedSource,changed:markChanged,onError:error=>editor.status(`${T("Paint layer could not be saved as an input file; embedded data was retained")}: ${error.message}`,true)});
+            node.adachiColorPaint = new ColorPaint(editor,crop,paintWidget,paintDraft.schedule,imageUrl);
+            editor.colorPaint=node.adachiColorPaint;
+            const acceptCrop=crop.accept.bind(crop);
+            crop.accept=async(...args)=>{const old=crop.widgets.layer_image.value,region={...crop.region};const result=await acceptCrop(...args);if(crop.widgets.layer_image.value && crop.widgets.layer_image.value!==old)node.adachiColorPaint.clearRegion(region);return result;};
             const stopWheelRouting = routeWheelOutsideImage(editor.root, editor.canvas, () => editor.ready);
             node.adachiUseResult = async (file, origin, options={}) => {
                 if (editor.destroyed) throw new Error(T("The inline mask node was removed"));
                 if (crop.mode === "crop") return node.adachiAdoptCrop(file, origin, options);
-                await editor.options.onUpload(file, { preserveMask: true, signal:options.signal });
+                await editor.options.onUpload(file, { preserveMask: true, signal:options.signal, onProgress:options.onProgress });
                 editor.view = "overlay"; editor.updateButtons(); editor.schedule();
                 editor.status(T("Adopted the result as the new source image; the mask and undo history were preserved"));
             };
-            const domWidget = node.addDOMWidget("adachi_canvas", "adachi_inline_mask", editor.root, {
+            const widgetHost = createWidgetHost(editor.root);
+            const domWidget = node.addDOMWidget("adachi_canvas", "adachi_inline_mask", widgetHost, {
                 serialize: false,
                 hideOnZoom: false,
                 getMinHeight: () => 170,
                 getMaxHeight: () => 4096,
             });
             domWidget.serialize = false;
-            bindWidgetToNodeWidth(node, domWidget, editor.root);
+            bindWidgetToNodeWidth(node, domWidget, widgetHost);
             // Leave computeLayoutSize in charge: a fixed computeSize height
             // prevents the DOM canvas from growing with the node vertically.
             const resizeHandle = document.createElement("div");
@@ -260,17 +269,20 @@ app.registerExtension({
             const previousSerialize = maskWidget.serializeValue;
             maskWidget.serializeValue = function () {
                 editor.flush();
+                if(node.adachiColorPaint.drawing) node.adachiColorPaint.flush();
                 return previousSerialize ? previousSerialize.apply(this, arguments) : maskWidget.value;
             };
             const previousSerializeNode = node.onSerialize;
             node.onSerialize = function (data) {
                 const result = previousSerializeNode?.apply(this, arguments);
                 editor.flush();
+                if(node.adachiColorPaint.drawing) node.adachiColorPaint.flush();
                 if (data) syncInlineWidgets(data, node.widgets);
                 return result;
             };
             const previousQueued = maskWidget.beforeQueued;
-            maskWidget.beforeQueued = function () { editor.flush(); return previousQueued?.apply(this, arguments); };
+            maskWidget.beforeQueued = function () { editor.flush(); if(node.adachiColorPaint.drawing) node.adachiColorPaint.flush(); return previousQueued?.apply(this, arguments); };
+            if(paintWidget){const previousPaintSerialize=paintWidget.serializeValue;paintWidget.serializeValue=function(){if(node.adachiColorPaint.drawing)node.adachiColorPaint.flush();return previousPaintSerialize?previousPaintSerialize.apply(this,arguments):paintWidget.value;};}
             const previousConfigure = node.onConfigure;
             node.onConfigure = function () {
                 const configured = previousConfigure?.apply(this, arguments);
@@ -281,7 +293,7 @@ app.registerExtension({
             const previousImageCallback = imageWidget.callback;
             imageWidget.callback = function () { previousImageCallback?.apply(this, arguments); restore(); };
             const previousRemoved = node.onRemoved;
-            node.onRemoved = function () { node.adachiWorkspaceHistory?.clear();node.adachiWorkspaceHistory=null;clearTimeout(draftNoticeTimer); cancelAnimationFrame(restoreFrame); cancelAnimationFrame(fitFrame); stopWheelRouting(); crop.destroy(); editor.destroy(); return previousRemoved?.apply(this, arguments); };
+            node.onRemoved = function () { node.adachiWorkspaceHistory?.clear();node.adachiWorkspaceHistory=null;clearTimeout(draftNoticeTimer);paintDraft.dispose(); cancelAnimationFrame(restoreFrame); cancelAnimationFrame(fitFrame); stopWheelRouting(); node.adachiColorPaint.destroy();crop.destroy(); editor.destroy(); return previousRemoved?.apply(this, arguments); };
             node.setSize([Math.max(380, node.size[0]), Math.max(480, node.size[1])]);
             restoreFrame = requestAnimationFrame(restore);
             return result;

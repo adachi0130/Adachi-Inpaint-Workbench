@@ -1,6 +1,6 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
-import { ImageCompareView } from "./compare.js?v=workspace-zoom-20261112";
+import { ImageCompareView } from "./compare.js?v=2.1.0";
 import { readPreview } from "./preview_transport.js";
 import { installComparisonRecovery } from "./result_recovery.js";
 import {executionId,executionNode,graphNodeEntries} from "./workspace_flow.js";
@@ -8,7 +8,7 @@ import {upstreamNodes} from "./workbench_analysis.js";
 import { appendComparison } from "./compare_history.js?v=0.5.8";
 import { routeWheelOutsideImage } from "./wheel_routing.js";
 import { T } from "./i18n.js";
-import { bindWidgetToNodeWidth } from "./widget_layout.js?v=0.5.5";
+import { bindWidgetToNodeWidth, createWidgetHost } from "./widget_layout.js?v=stable-host-20261112";
 
 function viewPath(image) {
     if (image?.type === "adachi_memory") return `/adachi-inpaint/compare/${encodeURIComponent(image.filename || "")}`;
@@ -50,7 +50,8 @@ app.registerExtension({
                 async onAdopt(id, image, options={}) {
                     const graph=app.rootGraph||app.graph,target = executionNode(graph,id);
                     if (!target?.adachiUseResult) throw new Error(T("No inline mask node is available to receive the result"));
-                    const blob = await readPreview(api.fetchApi.bind(api),viewPath(image),{...options,maxBytes:64*1024*1024});
+                    options.onProgress?.({phase:'download'});
+                    const blob = await readPreview(api.fetchApi.bind(api),viewPath(image),{...options,onProgress:p=>options.onProgress?.({phase:'download',...p}),maxBytes:64*1024*1024});
                     options.signal?.throwIfAborted();
                     if(graph!==(app.rootGraph||app.graph)||target!==executionNode(graph,id))throw Error(T("The workflow changed; check connections again"));
                     if (blob.size > 64 * 1024 * 1024) throw new Error(T("Result image exceeds 64 MiB; downscale it first"));
@@ -67,11 +68,12 @@ app.registerExtension({
             });
             node.adachiCompare = compare;
             const stopWheelRouting = routeWheelOutsideImage(compare.root, null, () => false);
-            const widget = node.addDOMWidget("adachi_compare", "adachi_compare_view", compare.root, {
+            const widgetHost = createWidgetHost(compare.root);
+            const widget = node.addDOMWidget("adachi_compare", "adachi_compare_view", widgetHost, {
                 serialize: false, hideOnZoom: false, getMinHeight: () => 420, getMaxHeight: () => 4096,
             });
             widget.serialize = false;
-            bindWidgetToNodeWidth(node, widget, compare.root);
+            bindWidgetToNodeWidth(node, widget, widgetHost);
             const executed = node.onExecuted;
             node.onExecuted = function (output) {
                 const result = executed?.apply(this, arguments);
