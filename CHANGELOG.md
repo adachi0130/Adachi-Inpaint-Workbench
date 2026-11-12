@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.1.1 · 2026-11-12
+
+- Remove the duplicate lower Fit button in the standalone workspace; the top Fit control and the workflow comparison node's button remain available.
+- Move the whole-image and masked-area choices directly below Generate in the workspace.
+- Place color-paint controls in the existing lower toolbar for both editing modes.
+
 ## 2.1.0 · 2026-11-12
 
 - Add an independent color-paint layer to Mask and Crop & Blend modes. Alt-click samples the visible image color, Ctrl + wheel changes brush size, and the painted image is used for inpainting.

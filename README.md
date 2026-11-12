@@ -312,6 +312,7 @@ See [verification notes](VERIFICATION.md) for tested configurations and limits, 
 
 | Versions | Highlights and fixes |
 | --- | --- |
+| 2.1.1 | Streamlined comparison Fit controls, moved repaint-area choices below Generate, and combined color-paint controls with the lower toolbar. |
 | 2.1.0 | Color-paint layer, crop merge progress, workspace comparison zoom, reordered controls, collapsible prompts and GPL-3.0-only licensing. |
 | 2.0.1 | Weak-network retry and cancellation, preview resource cleanup, rollback races, dense-mask memory reduction and safer malformed-workflow handling. |
 | 2.0.0 | Standalone light/dark workbench, workflow discovery, editable generation, task progress, result recovery and unified template. |
