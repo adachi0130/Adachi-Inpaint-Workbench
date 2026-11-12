@@ -1,6 +1,3 @@
 .github/
-preview/
 tests/
 registry/
-VERIFICATION.md
-ROLLBACK.md

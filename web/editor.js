@@ -1,4 +1,5 @@
-/* Original implementation, MIT licensed. No WebUI source is bundled. */
+/* SPDX-License-Identifier: GPL-3.0-only
+ * Original implementation. No WebUI source is bundled. */
 import { registerImageWheel } from "./wheel_gestures.js";
 import { T } from "./i18n.js";
 const el = (tag, cls, text) => {

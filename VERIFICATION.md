@@ -1,5 +1,10 @@
 # Verification record
 
+## 2026-11-12 · model compatibility and documentation
+
+- A real SD 1.5 checkpoint VAE was loaded on CPU and tested through the plugin: 64×64 encode, mock sampling, decode and masked compositing succeeded with a [1,4,8,8] latent, finite output and exact protected pixels. This is not a complete diffusion-generation test.
+- The installed 2.0.1 frontend was captured in an isolated ComfyUI instance. Screenshots use a synthetic image and a CPU ImageInvert result to demonstrate the interface, not an AI-generated inpaint.
+
 ## 2.0.1 · stability audit (2026-11-10)
 
 - 68 Python regression tests and all 20 JavaScript test files cover new cancellation, stalled decoding/upload, corrupt-cache retry, dense/sparse/edge masks, bounded cache metadata, partial rollback failures, concurrent completed edits and malformed input mappings.

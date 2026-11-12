@@ -1,4 +1,5 @@
-/* Original hover-comparison UI, MIT licensed. */
+/* SPDX-License-Identifier: GPL-3.0-only
+ * Original hover-comparison UI. */
 import { T } from "./i18n.js";
 import {loadPreviewPair} from './preview_images.js';
 const element = (tag, className, text) => {

@@ -8,7 +8,7 @@ An inline inpainting workspace for ComfyUI, with WebUI-style controls and tools 
 
 **English** · [简体中文](README.zh-CN.md)
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-38966b)](LICENSE)
+[![License: GPL-3.0-only](https://img.shields.io/badge/License-GPL--3.0--only-38966b)](LICENSE)
 [![ComfyUI custom nodes](https://img.shields.io/badge/ComfyUI-Custom_Nodes-4776b4)](https://github.com/Comfy-Org/ComfyUI)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-4776b4)](pyproject.toml)
 [![Validate plugin](https://github.com/adachi0130/Adachi-Inpaint-Workbench/actions/workflows/ci.yml/badge.svg)](https://github.com/adachi0130/Adachi-Inpaint-Workbench/actions/workflows/ci.yml)
@@ -37,6 +37,17 @@ English and Simplified Chinese interfaces follow the ComfyUI language setting. T
 
 ## Features
 
+<details open>
+<summary>Workbench screenshots</summary>
+
+![Light workbench with an inline mask and workflow settings](preview/workbench-light.png)
+
+![Dark workbench with the comparison divider](preview/workbench-compare-dark.png)
+
+*Screenshots captured from the running plugin using a synthetic illustration. The comparison result is a CPU color inversion to demonstrate the divider, not an AI-generated inpaint.*
+
+</details>
+
 ### Adachi Workbench · light and dark themes
 
 Click **Open Adachi Workbench** on an Adachi Inpaint Workbench node. Workflows need the plugin’s Inline Mask, inpaint and Image Compare nodes; their IDs, titles, preset names and model filenames can be different. The workspace follows the selected node’s actual connections to its editor and result. If several candidates are ambiguous, choose them under **Workflow connections**. An enabled Group Bypass Presets node supplies its own preset buttons; missing or ambiguous controllers show a reminder.
@@ -60,7 +71,7 @@ Upload, drop or paste a source image and paint on **Inline Mask** itself. In Mas
 While a source image uploads, a progress bar reports the bytes actually sent and then shows when the image is loading. On platforms requiring a special authentication fallback, the indicator stays indeterminate rather than showing an estimated percentage.
 
 - Brush, soft edges, hardness, opacity, pen pressure, temporary erasing and shape tools.
-- A compact **↑ upload / ⛶ fit / pin** toolbar, with a mode selector at the upper right. Enable the pin (**Keep**) to keep the image fitted and centered; plain wheel then navigates the workflow, while `Ctrl` + wheel still changes brush size and `Shift` + wheel changes hardness.
+- A compact **↑ upload / ⛶ fit / pin** toolbar, with a mode selector at the upper right. The pin (**Keep**) preserves the current view; use **Fit** first if desired. Plain wheel then navigates the workflow, while `Ctrl` + wheel still changes brush size and `Shift` + wheel changes hardness.
 - Resize the editor horizontally or vertically. The pin state and node dimensions survive workflow reload.
 - The connected **Adachi Inpaint Workbench** node hosts the painting controls and sampling parameters, leaving more space for the picture. Its painting tools, mask mode and fill content fold behind an arrow; **Undo / Redo / Invert / Fill / Clear / Import / Export** remain visible. Fold state is saved with the workflow.
 - Bounded display buffers and cached image/mask compositing reduce redraw cost at large graph zoom; the saved mask retains its source resolution.
@@ -121,7 +132,7 @@ Save group states for your own setups: text-to-image, inpainting, model variants
 
 ![Group Bypass Presets with a preset list on the left and per-group states on the right](preview/group-bypass-presets.png)
 
-Choose a preset on the left, configure **Enabled / Bypassed / Keep current** on the right, or apply it from the node's right-click menu. Presets are stored in the workflow and need no wires or third-party group controller. Missing groups are reported; overlapping groups give the smaller group's setting priority.
+Choose a preset on the left, configure **Enabled / Bypassed / Keep current** on the right, or apply it from the node's right-click menu. Use the arrow to collapse or reopen the group details; this preference is saved in the workflow. Presets are stored in the workflow and need no wires or third-party group controller. Missing groups are reported; overlapping groups give the smaller group's setting priority.
 
 ### Automatically use the remaining branch
 
@@ -216,7 +227,7 @@ For modular sampling: `Prepare.pixels → VAE Encode → Set Latent Noise Mask �
 | Release crop selection | In **◌ repaint mask**, right-click or press Escape; left-click to select a new region |
 | Undo / redo | `Ctrl+Z` / `Ctrl+Shift+Z`, or `Ctrl+Y` |
 | Image zoom / pan, when unpinned | Wheel / Space + drag, middle-button drag, or the pan tool (`H`) |
-| Keep the image fitted | Pin beside **Fit**; click again to unlock |
+| Keep the current view | Fit first if desired, then use the pin; click again to unlock |
 | Adjust editor height | Drag the bottom `↕` handle |
 
 The painting panel also provides invert, fill, clear, PNG mask import/export, image/mask/overlay views and **Embed source in workflow**. Overlay opacity affects display only. Scrolling over buttons and parameter controls navigates the outer workflow; a gesture starting on the workflow keeps navigating it when the pointer crosses the picture.
@@ -226,6 +237,23 @@ The painting panel also provides invert, fill, clear, PNG mask import/export, im
 Use the single [official template: Adachi-Workbench.json](examples/Adachi-Workbench.json). It includes text-to-image and inpainting branches, a shared checkpoint, Group Bypass Presets, automatic exclusive conditioning/image selection, comparison and saving. The preset controller stays outside the groups it controls. Select one preset at a time; enabling both branches intentionally fails exclusive selection.
 
 All example labels are English. Prompts are newly written neutral examples; the checkpoint is a placeholder for your own model. Inpaint requires uploading a source first. Crop & Blend uses the same connected editor, so no second workflow is needed. For model families with separate model, text encoder and VAE loaders, replace the checkpoint block with compatible loaders and connect the matching outputs.
+
+## Model and workflow compatibility
+
+The inpaint node uses ComfyUI `MODEL`, `CONDITIONING`, `VAE`, image and mask inputs with `common_ksampler`. Matching interfaces alone do not establish compatibility with a model's required conditioning, sampler, latent format or reference-image pipeline. Use a matched model, encoder and VAE; the **inpaint_model** switch is for compatible dedicated inpainting architectures.
+
+| Family / case | Evidence | What remains unverified |
+| --- | --- | --- |
+| WAI (SDXL-based) | End-to-end 512×512 generation without LoRA, including two- and six-step runs; template text-to-image and inpaint branches both ran. | This does not establish support for every SDXL checkpoint, LoRA or extension. |
+| SD 1.5 | Workflow validation plus real checkpoint VAE encode/decode and masked compositing on CPU; `[1,4,8,8]` latent. | The sampler was mocked in the VAE test; a full diffusion generation has not been verified. |
+| Anima / Wan-derived image VAE | Single-frame 5D latents and a real, randomly initialized Wan VAE were exercised. The user reported a remote workflow running after moving the CLIP encoder out of a subgraph. | No independently reproducible end-to-end run with real Anima weights was available in this audit. |
+| FLUX, SD3, Qwen and other families | Not verified. | Their model-specific conditioning, guidance, sampling, reference-image and VAE requirements may need separate workflow nodes; compatibility cannot be assumed. |
+
+Only still-image 4D latents and single-frame 5D `[B,C,1,H,W]` latents are supported; multi-frame video is rejected. To try a different model, first run its normal ComfyUI workflow, connect its matching model/conditioning/VAE to the inpaint node, start with **inpaint_model** off unless the architecture requires it, and check the protected pixels and output resolution. Start with a small image and few steps.
+
+The standalone page requires this plugin's **Inline Mask**, **Adachi Inpaint Workbench** and **Image Compare** nodes. It follows supported connections, Get/Set, Use Everywhere and subgraph execution IDs, and preserves intermediate processing in the tested pipelines. Unknown custom loaders, LoRA classes, prompt fields or virtual routes may remain controlled by the workflow rather than being editable in the page; custom LoRA override cannot be guaranteed for unrecognized loaders. Select explicit nodes under **Workflow connections** when discovery is ambiguous and inspect the result for complex graphs. The page validates and runs the chosen comparison output and its dependencies: unrelated `Save Image` or other output branches do not automatically run there; queue the original workflow when those outputs are needed.
+
+Group presets capture group-level enabled/bypassed states, not every node's individual mixed or muted state. Masks are embedded in saved workflows, while source images and unmerged crop layers normally reference files under `input/`; move those files too, or embed/merge before sharing. Source undo history is limited to the current browser session. Comparison previews are process-local and may expire on eviction or server restart; deployments with multiple backend instances need requests to reach the same instance. Local network-failure simulations passed, but a long-running real cloud soak test has not been performed. For crop/blend and source-history operations, use HTTPS or localhost: the browser's `crypto.randomUUID()` is unavailable in insecure contexts such as many plain-HTTP LAN addresses.
 
 ## Compatibility and important behaviour
 
@@ -270,9 +298,24 @@ node --experimental-default-type=module tests/test_compare_history.mjs
 
 See [verification notes](VERIFICATION.md) for tested configurations and limits, [changelog](CHANGELOG.md) for updates, and [rollback instructions](ROLLBACK.md) for returning to an earlier version. Model-family and image-quality coverage is not exhaustive.
 
+## Release history
+
+| Versions | Highlights and fixes |
+| --- | --- |
+| 2.0.1 | Weak-network retry and cancellation, preview resource cleanup, rollback races, dense-mask memory reduction and safer malformed-workflow handling. |
+| 2.0.0 | Standalone light/dark workbench, workflow discovery, editable generation, task progress, result recovery and unified template. |
+| 1.0.1 / 1.0.0 / 0.9 | Stable release; preview reload/retry, in-memory comparisons and real upload progress. |
+| 0.8 | Crop adoption and dimension sync, latest-result download, different-sized upload refresh. |
+| 0.7 | Preserve masks on replacement, source download and pin-current-view behavior. |
+| 0.6 | Inline crop/blend, locked selection and dimension sync, right-click preview/reselection and draft recovery; magic wand and quick selection were later removed. |
+| 0.5 | Group presets and automatic exclusive switch, mask retention, 5D image VAE support and canvas performance fixes. |
+| 0.4 / 0.3 / 0.2 | Inline controls and vertical resizing, comparison/adoption, temporary eraser and bilingual node UI. |
+
+The [complete changelog](CHANGELOG.md) lists individual releases and fixes.
+
 ## Credits and license
 
-Created by **Adachi / 安达**. Licensed under [MIT](LICENSE).
+Created by **Adachi / 安达**. The current project is licensed under [GNU GPL-3.0-only](LICENSE). You may use it commercially; when distributing the covered program or modifications, follow GPL-3.0 source and license requirements. Releases through v2.0.1 were distributed under MIT; recipients retain those earlier permissions. The original copyright and license notice is preserved in [LICENSES](LICENSES/MIT-previous-releases.txt). The current branch's GPL terms do not retroactively revoke the earlier MIT grant.
 
 Built for [ComfyUI](https://github.com/Comfy-Org/ComfyUI), with familiar inpainting controls inspired by WebUI and hover-comparison interaction inspired by [rgthree-comfy](https://github.com/rgthree/rgthree-comfy). This repository contains its own implementation; those projects are not bundled dependencies.
 

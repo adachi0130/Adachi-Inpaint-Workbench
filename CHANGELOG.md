@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Adopt GPL-3.0-only for the current project and preserve the original MIT copyright and permission notice for earlier releases and applicable legacy material. Previous releases retain the permissions under which they were distributed.
+- Update bilingual documentation with real workspace screenshots, a tested-model compatibility matrix, workflow limits and a concise release history.
+
 ## 2.0.1 · stability fixes (2026-11-10)
 
 - Release late preview object URLs after sibling failures, discard corrupt cached PNGs, bound decoding and cancel stale preview reads. Downloads and both ordinary/crop adoption use bounded transfers too.

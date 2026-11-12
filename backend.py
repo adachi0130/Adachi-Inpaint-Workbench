@@ -1,4 +1,6 @@
-"""Portable inline inpainting nodes for ComfyUI (MIT licensed).
+"""Portable inline inpainting nodes for ComfyUI (GPL-3.0-only).
+
+SPDX-License-Identifier: GPL-3.0-only
 
 All image and crop operations below are original implementations. No code from
 AUTOMATIC1111, Forge or their AGPL components is included.
