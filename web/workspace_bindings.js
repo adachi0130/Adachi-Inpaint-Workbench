@@ -133,6 +133,11 @@ export class WorkspaceBindings {
     render() {
         if(!this.root || this.destroyed)return;
         const doc=this.root.ownerDocument;
+        const active=doc.activeElement;
+        const focus=active?.tagName==='TEXTAREA' && this.root.contains(active)?{
+            id:active.dataset.executionId,field:active.dataset.widget,
+            start:active.selectionStart,end:active.selectionEnd,direction:active.selectionDirection,scroll:active.scrollTop,
+        }:null;
         const el=(tag,text)=>{const e=doc.createElement(tag);if(text)e.textContent=text;return e;};
         const row=(label,control)=>{const l=el('label',label);l.append(control);return l;};
         const select=(values,current,change)=>{const s=el('select');for(const [value,label] of values){const o=el('option',label);o.value=value;s.append(o);}s.value=current;s.onchange=()=>change(s.value);return s;};
@@ -175,9 +180,23 @@ export class WorkspaceBindings {
         this.root.append(details);
         for(const [kind,label] of [['positive',T("Positive prompt")],['negative',T("Negative prompt")]]) {
             const entries=this.flow?.encoders[kind]||[];
-            if(!entries.length){const info=el('p',label+": "+(this.flow?T("Controlled by the original workflow"):T("Reading connections…")));info.title=T("Encoders are identified from the execution graph; unrecognized conditioning stays controlled by the original workflow");this.root.append(info);continue;}
-            const container=entries.length>1?el('details'):this.root;
-            if(entries.length>1){container.append(el('summary',T("{label} · {count} encoders",{label,count:entries.length})));this.root.append(container);}
+            const container=el('details');container.className='aw-prompt-section';container.dataset.promptKind=kind;
+            container.append(el('summary',entries.length>1?T("{label} · {count} encoders",{label,count:entries.length}):label));
+            const savedOpen=this.sampler.properties?.adachi_workspace_ui?.promptOpen?.[kind];
+            let lastOpen=typeof savedOpen==='boolean'?savedOpen:entries.length<=1;
+            container.open=lastOpen;
+            container.ontoggle=()=>{
+                // Native <details> emits asynchronous toggle events even when
+                // open is initialized programmatically or an old panel is removed.
+                if(!container.isConnected || container.open===lastOpen)return;
+                lastOpen=container.open;this.sampler.properties??={};
+                let ui=this.sampler.properties.adachi_workspace_ui;
+                if(!ui || typeof ui!=='object' || Array.isArray(ui))ui=this.sampler.properties.adachi_workspace_ui={};
+                if(!ui.promptOpen || typeof ui.promptOpen!=='object' || Array.isArray(ui.promptOpen))ui.promptOpen={};
+                ui.promptOpen[kind]=lastOpen;this.markChanged();
+            };
+            this.root.append(container);
+            if(!entries.length){const info=el('p',this.flow?T("Controlled by the original workflow"):T("Reading connections…"));info.title=T("Encoders are identified from the execution graph; unrecognized conditioning stays controlled by the original workflow");container.append(info);continue;}
             for(const entry of entries)for(const name of entry.fields){
                 const w=widget(entry.node,name),linked=Array.isArray(entry.api.inputs?.[name]);
                 const saved=this.settings.textOverrides[entry.id]||{},legacy=entries.length===1&&name==='text'?this.settings[kind]:undefined;
@@ -187,12 +206,21 @@ export class WorkspaceBindings {
                 text.dataset.executionId=entry.id;text.dataset.widget=name;
                 text.oninput=()=>{this.settings.textOverrides[entry.id]??={};this.settings.textOverrides[entry.id][name]=text.value;this.changed();};
                 const title=entries.length>1||entry.fields.length>1?`${label} · ${entry.node?.title||entry.api.class_type} · ${name}`:label;
-                text.setAttribute('aria-label',title);const field=row(title,text);
+                text.setAttribute('aria-label',title);const field=row(entries.length===1&&entry.fields.length===1?'':title,text);
                 field.title=T("Actual sampler connections · {node} #{id} · {field}. {description}",{node:entry.node?.title||entry.api.class_type,id:entry.id,field:name,description:linked?T("Text comes from upstream; typing creates an override."):T("Changes affect only this encoder; downstream conditioning is preserved.")});
                 const reset=el('button','↶');reset.type='button';reset.title=T("Restore {label} from the workflow",{label:title});reset.onclick=()=>{delete this.settings.textOverrides[entry.id]?.[name];if(entries.length===1&&name==='text')delete this.settings[kind];this.render();this.changed();};field.append(reset);container.append(field);
             }
         }
-
+        // Catalog and route discovery can re-render the panel asynchronously.
+        // Restore the active prompt and caret only when that field still exists
+        // and is visible; switching profile or closing a fold must not steal focus.
+        if(focus){
+            const target=[...this.root.querySelectorAll('textarea')].find(el=>el.dataset.executionId===focus.id && el.dataset.widget===focus.field);
+            if(target && !target.closest('details:not([open])')){
+                target.focus({preventScroll:true});
+                target.setSelectionRange(focus.start,focus.end,focus.direction);target.scrollTop=focus.scroll;
+            }
+        }
     }
     destroy() {this.destroyed=true;this.catalogController?.abort();this.root?.remove();}
 }

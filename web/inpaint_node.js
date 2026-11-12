@@ -1,5 +1,5 @@
 import { app } from "../../scripts/app.js";
-import { InpaintParameterPanel } from "./inpaint_panel.js?v=adachi-name";
+import { InpaintParameterPanel } from "./inpaint_panel.js?v=workspace-zoom-20261112";
 import { connectedEditor, connectedSamplers, relocateWidgets, syncCurrentDimensions } from "./parameter_bridge.js?v=0.8.2";
 import { routeWheelOutsideImage } from "./wheel_routing.js";
 import { T } from "./i18n.js";

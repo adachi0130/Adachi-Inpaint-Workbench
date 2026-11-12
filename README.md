@@ -58,7 +58,11 @@ New profiles inherit the workflow’s LoRA chains, including different positive/
 
 Drag the divider between the image and settings to resize them. The width is remembered; double-click resets it, and arrow keys make small adjustments. Narrow screens keep the stacked layout. The theme icon remembers the light/dark preference. Hover controls for help.
 
+The Generate button, width, height and denoise controls are near the top of the settings panel. Collapse the positive and negative prompt sections when you need more room.
+
 Generation shows actual workflow stages and sampler steps above settings. You can keep painting, zooming and changing parameters; the queued task uses its submitted snapshot. Generated results open sliding comparison without replacing the source. Use the single before/after icon to toggle images, the pencil to edit, and **Adopt** to adopt. Crop adoption returns to editing with its region and mask intact. Source history can restore previous images, masks and crop state for the loaded browser session.
+
+In the standalone workspace's sliding and before/after comparison views, scroll over the image to zoom, drag with the middle mouse button to pan, and use **Fit** to restore the fitted view. The workflow's Image Compare node continues to use the wheel for navigating the workflow canvas.
 
 The comparison node and workspace recover lost execution notifications by queued task ID. Image loading reports actual received bytes, a percentage when size is known, then decoding; transient failures retry and can resume after reconnecting. Expired server-side previews require another run. Recovery does not create preview files. Updating backend code requires a full ComfyUI restart; frontend-only updates need a hard refresh.
 

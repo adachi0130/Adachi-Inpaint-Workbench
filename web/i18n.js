@@ -88,6 +88,7 @@ const ZH = {
   "Use the workflow Refiner (must be compatible with the main model)": "使用工作流中的 Refiner（需与主模型兼容）",
   "Positive prompt": "正面提示词",
   "Negative prompt": "负面提示词",
+  "Fit comparison image": "适应对比图片",
   "Controlled by the original workflow": "由原工作流控制",
   "Reading connections…": "正在读取连接…",
   "Encoders are identified from the execution graph; unrecognized conditioning stays controlled by the original workflow": "通过实际执行图查找编码器；无法明确识别的条件保留原工作流",

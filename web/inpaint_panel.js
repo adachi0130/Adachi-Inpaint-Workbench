@@ -83,7 +83,7 @@ export class InpaintParameterPanel {
         const widget = this.widget(name); if (!widget) return;
         label = T(label);
         min ??= widget.options?.min ?? 0; max ??= widget.options?.max ?? 1000000;
-        const wrapper = el("label", "dd-param-field"); const row = el("span", "dd-param-number-label"); row.append(el("span", "", label));
+        const wrapper = el("label", "dd-param-field"); wrapper.dataset.adachiParam = name; const row = el("span", "dd-param-number-label"); row.append(el("span", "", label));
         const input = el("input"); input.type = "number"; input.min = min; input.max = max; input.step = step; input.setAttribute("aria-label", label); row.append(input); wrapper.append(row);
         let slider;
         const update = raw => {
@@ -120,7 +120,7 @@ export class InpaintParameterPanel {
         this.body.append(this.maskSettings);
         this.options.onMaskSettings?.(this.maskSettings);
         this.enum(this.body, "area", "Sampling area", true);
-        const resolution = el("div", "dd-param-resolution"); resolution.append(el("span", "dd-param-label", T("Sampling resolution")));
+        const resolution = el("div", "dd-param-resolution"); resolution.dataset.adachiParam = "resolution"; resolution.append(el("span", "dd-param-label", T("Sampling resolution")));
         this.sourceSize = el("button", "", T("Use source size")); this.sourceSize.type = "button";
         this.sourceSize.title = T("Fill width and height from the current source image; aligned to 8 px and clamped to 64-8192 px");
         this.sourceSize.onclick = () => {

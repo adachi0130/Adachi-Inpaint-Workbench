@@ -2,6 +2,7 @@
  * Original hover-comparison UI. */
 import { T } from "./i18n.js";
 import {loadPreviewPair} from './preview_images.js';
+import {CompareViewport} from './compare_viewport.js';
 const element = (tag, className, text) => {
     const node = document.createElement(tag);
     if (className) node.className = className;
@@ -16,6 +17,7 @@ export class ImageCompareView {
         this.originals = []; this.results = []; this.index = 0;
         this.split = .5;
         this.version = 0; this.ready = false;
+        this.viewport = new CompareViewport();this.workspaceZoom=false;this.displayMode='compare';
         this.dimensionsLabel = element("span", "dd-dimensions");
         const toolbar = element("div", "dd-row dd-compare-toolbar");
         toolbar.append(element("span", "dd-compare-label", T("Result")));
@@ -33,7 +35,7 @@ export class ImageCompareView {
         this.downloadButton.onclick = event => { event.preventDefault(); event.stopPropagation(); this.downloadLatest(); };
         toolbar.append(this.downloadButton);
         const fit = element("button", "", T("Fit")); fit.type = "button";
-        fit.onclick = event => { event.preventDefault(); event.stopPropagation(); this.schedule(); }; toolbar.append(fit);
+        fit.onclick = event => { event.preventDefault(); event.stopPropagation(); this.fitView(); }; toolbar.append(fit);
         this.stage = element("div", "dd-stage dd-compare-stage");
         this.canvas = document.createElement("canvas"); this.canvas.tabIndex = 0;
         this.canvas.setAttribute("aria-label", T("Result left, original right; hover to compare"));
@@ -65,10 +67,12 @@ export class ImageCompareView {
         this.root.append(this.stage, toolbar, adoption, this.message);
         this.canvas.addEventListener("pointermove", event => this.move(event));
         this.canvas.addEventListener("pointerdown", event => {
+            if(this.workspaceZoom && this.ready && event.button===1){event.preventDefault();event.stopPropagation();this.panDrag={id:event.pointerId,x:event.clientX,y:event.clientY};this.canvas.setPointerCapture(event.pointerId);return;}
             if (!this.ready || event.button !== 0) return;
             event.preventDefault(); event.stopPropagation(); this.canvas.focus({ preventScroll: true });
             this.move(event);
         });
+        for(const type of ['pointerup','pointercancel','lostpointercapture'])this.canvas.addEventListener(type,event=>{if(this.panDrag?.id===event.pointerId)this.panDrag=null;});
         this.canvas.addEventListener("wheel", event => this.wheel(event), { passive: false });
         this.canvas.addEventListener("keydown", event => {
             if (["ArrowLeft", "ArrowRight"].includes(event.key)) {
@@ -174,6 +178,7 @@ export class ImageCompareView {
                 }
             }
             if(!current()){for(const item of images||[])URL.revokeObjectURL(item.url);return;}
+            if(this.before && (this.before.width!==images[0].image.width || this.before.height!==images[0].image.height))this.viewport.fit();
             for(const url of this.previewUrls||[])URL.revokeObjectURL(url);
             this.previewUrls=images.map(item=>item.url);this.before=images[0].image;this.after=images[1].image;
             this.ready=true;this.pendingBlobs=null;this.retryCount=0;this.empty.hidden=true;this.progressBox.hidden=true;
@@ -207,6 +212,7 @@ export class ImageCompareView {
 
     transform() {
         const rect = this.canvas.getBoundingClientRect();
+        if(this.workspaceZoom && this.before)return this.viewport.transform(rect.width,rect.height,this.before.width,this.before.height);
         const scale = this.before ? Math.min(rect.width / this.before.width, rect.height / this.before.height) : 1;
         return { width: rect.width, height: rect.height, scale, x: (rect.width - (this.before?.width || 0) * scale) / 2, y: (rect.height - (this.before?.height || 0) * scale) / 2 };
     }
@@ -215,11 +221,19 @@ export class ImageCompareView {
 
     wheel(event) {
         event.preventDefault(); event.stopPropagation();
+        if(this.workspaceZoom){
+            if(!this.ready)return;
+            const rect=this.canvas.getBoundingClientRect(),delta=event.deltaY*(event.deltaMode===1?16:event.deltaMode===2?rect.height:1);
+            this.viewport.zoomAt(rect.width,rect.height,this.before.width,this.before.height,event.clientX-rect.left,event.clientY-rect.top,delta);
+            if(this.displayMode==='compare')this.move(event);this.schedule();return;
+        }
         this.options.onGraphWheel?.(event);
     }
 
     move(event) {
         if (!this.ready) return;
+        if(this.panDrag && this.panDrag.id===event.pointerId){this.viewport.pan(event.clientX-this.panDrag.x,event.clientY-this.panDrag.y);this.panDrag.x=event.clientX;this.panDrag.y=event.clientY;this.schedule();return;}
+        if(this.displayMode!=='compare')return;
         this.hovered = true;
         this.split = Math.max(0, Math.min(1, this.position(event).x / this.before.width));
         this.schedule();
@@ -227,43 +241,47 @@ export class ImageCompareView {
 
     schedule() { if (!this.frame && !this.destroyed) this.frame = requestAnimationFrame(() => { this.frame = 0; this.render(); }); }
 
+    enableWorkspaceZoom(enabled) {this.workspaceZoom=!!enabled;this.panDrag=null;this.displayMode='compare';this.viewport.fit();this.lastPaint=null;this.schedule();}
+    setDisplayMode(mode) {this.displayMode=['compare','before','after'].includes(mode)?mode:'compare';this.lastPaint=null;this.schedule();}
+    fitView() {this.viewport.fit();this.lastPaint=null;this.schedule();}
+
     render() {
         const t = this.transform(), ratio = Math.min(devicePixelRatio || 1, 2);
         if (!t.width || !t.height) return;
         // Graph zoom changes the screen rect, not the amount of source detail.
         // Never allocate a huge upscaled bitmap just to magnify existing pixels.
-        const rasterRatio = Math.min(ratio, this.ready ? 1 / t.scale : ratio,
+        const rasterRatio = Math.min(ratio, this.ready && !this.workspaceZoom ? 1 / t.scale : ratio,
             8192 / t.width, 8192 / t.height, Math.sqrt(16 * 1024 * 1024 / (t.width * t.height)));
         const width = Math.max(1, Math.round(t.width * rasterRatio)), height = Math.max(1, Math.round(t.height * rasterRatio));
         if (this.canvas.width !== width || this.canvas.height !== height) { this.canvas.width = width; this.canvas.height = height; }
         const ctx = this.canvas.getContext("2d");
         ctx.setTransform(1, 0, 0, 1, 0, 0);
-        this.divider.hidden = !this.ready || !this.hovered;
+        this.divider.hidden = !this.ready || !this.hovered || this.displayMode!=='compare';
         if (!this.ready) { ctx.clearRect(0, 0, width, height); this.lastPaint = null; return; }
         const split = this.split * this.before.width;
         const lineX = Math.round((t.x + split * t.scale) * rasterRatio) + .5;
-        if (this.hovered) {
+        if (this.hovered && this.displayMode==='compare') {
             const screenScale = t.width / this.canvas.clientWidth || 1;
             Object.assign(this.divider.style, {
                 left: `${(t.x + split * t.scale) / screenScale}px`, top: `${t.y / screenScale}px`,
                 height: `${this.before.height * t.scale / screenScale}px`, width: `${1 / screenScale}px`,
             });
         }
-        const key = [this.version, width, height, t.scale * rasterRatio, t.x * rasterRatio, t.y * rasterRatio].join(":");
+        const key = [this.version, this.displayMode, width, height, t.scale * rasterRatio, t.x * rasterRatio, t.y * rasterRatio].join(":");
         const previous = this.lastPaint;
         ctx.save();
         // While hovering, pixels outside the old/new divider positions are
         // unchanged. Clip the redraw to that strip rather than repainting all.
-        if (previous?.key === key && previous.hovered && this.hovered) {
+        if (this.displayMode==='compare' && previous?.key === key && previous.hovered && this.hovered) {
             const left = Math.max(0, Math.floor(Math.min(previous.lineX, lineX)) - 2);
             const right = Math.min(width, Math.ceil(Math.max(previous.lineX, lineX)) + 2);
             ctx.beginPath(); ctx.rect(left, 0, right - left, height); ctx.clip();
         }
         ctx.clearRect(0, 0, width, height);
         ctx.setTransform(t.scale * rasterRatio, 0, 0, t.scale * rasterRatio, t.x * rasterRatio, t.y * rasterRatio);
-        ctx.drawImage(this.after, 0, 0, this.before.width, this.before.height);
+        ctx.drawImage(this.displayMode==='before'?this.before:this.after, 0, 0, this.before.width, this.before.height);
         this.lastPaint = { key, hovered: this.hovered, lineX };
-        if (!this.hovered) { ctx.restore(); return; }
+        if (!this.hovered || this.displayMode!=='compare') { ctx.restore(); return; }
         ctx.save(); ctx.beginPath(); ctx.rect(split, 0, this.before.width - split, this.before.height); ctx.clip();
         ctx.drawImage(this.before, 0, 0); ctx.restore();
         ctx.restore();

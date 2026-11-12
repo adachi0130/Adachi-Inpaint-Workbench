@@ -11,7 +11,7 @@ import { prepareWorkspacePrompt, validateWorkspace, submitWorkspace } from './wo
 import { syncCurrentDimensions } from './parameter_bridge.js?v=0.8.2';
 const el=(tag,text,cls)=>{const e=document.createElement(tag);if(text)e.textContent=text;if(cls)e.className=cls;return e;};
 const btn=(text,fn)=>{const b=el('button',text);b.type='button';b.onclick=fn;return b;};
-const icons={edit:'<path d="m14 3 7 7-11 11H3v-7L14 3Z"/><path d="m11 6 7 7"/>',compare:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 2v20M3 8h9M3 13h9M3 18h9"/>',side:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16M6 12h12m-3-3 3 3-3 3"/>',theme:'<path d="M20 15.5A9 9 0 0 1 8.5 4 9 9 0 1 0 20 15.5Z"/>',check:'<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>',back:'<path d="m9 5-7 7 7 7M3 12h19"/>'};
+const icons={edit:'<path d="m14 3 7 7-11 11H3v-7L14 3Z"/><path d="m11 6 7 7"/>',compare:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 2v20M3 8h9M3 13h9M3 18h9"/>',side:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16M6 12h12m-3-3 3 3-3 3"/>',theme:'<path d="M20 15.5A9 9 0 0 1 8.5 4 9 9 0 1 0 20 15.5Z"/>',check:'<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>',back:'<path d="m9 5-7 7 7 7M3 12h19"/>',fit:'<path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/>'};
 const iconButton=(label,kind,fn)=>{const b=btn('',fn);b.title=label;b.setAttribute('aria-label',label);b.innerHTML=`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[kind]}</svg>`;b.className='aw-icon';return b;};
 let currentWorkspace=null;
 export class Workspace {
@@ -24,12 +24,12 @@ export class Workspace {
   const main=el('main'),canvas=el('section','','aw-canvas'),toolbar=el('div','','aw-toolbar');
   this.tabs={edit:iconButton(T("Edit mask"),'edit',()=>this.show('edit')),compare:iconButton(T("Slide to compare"),'compare',()=>this.show('compare'))};
   this.sideButton=iconButton(T("Show before"),'side',()=>this.show(this.view==='before'?'after':'before'));
-  toolbar.append(this.tabs.edit,this.tabs.compare,this.sideButton);
+  this.fitCompareButton=iconButton(T("Fit comparison image"),'fit',()=>this.compare?.fitView());this.fitCompareButton.disabled=true;toolbar.append(this.tabs.edit,this.tabs.compare,this.sideButton,this.fitCompareButton);
   toolbar.append(el('span','','spacer'));this.adoptButton=btn(T("Adopt"),()=>this.adopt());this.adoptButton.title=T("Use this result as the next source image and keep the mask; restore earlier images below");this.adoptButton.className='primary';toolbar.append(this.adoptButton);
   this.surface=el('div','','aw-surface');this.still=el('img','','aw-result-image');this.still.alt=T("Selected source image or generated result");this.still.hidden=true;this.surface.append(this.still);
   const foot=el('div','','aw-footer');this.undoButton=btn(T("↶ Undo"),()=>this.restoreHistory('undo'));this.originalButton=btn(T("Initial source"),()=>this.restoreHistory('original'));this.historySelect=el('select');this.historySelect.setAttribute('aria-label',T("Choose an adopted source image"));this.historySelect.onchange=()=>this.restoreHistory(Number(this.historySelect.value));foot.append(this.undoButton,this.originalButton,this.historySelect);
   this.footer=foot;this.undoButton.title=T("Restore the previous source image, mask and crop");this.originalButton.title=T("Restore the initial source image of this session");this.historySelect.title=T("Choose an earlier adopted or uploaded source image");this.note=el('div','','aw-note');canvas.append(toolbar,this.surface,foot,this.note);
-  this.side=el('aside');this.generationPanel=el('div','','aw-generation-progress');this.generationPanel.hidden=true;this.generationLabel=el('span');this.generationBar=el('progress');this.generationBar.max=1;this.generationBar.setAttribute('aria-label',T("Current stage progress"));this.generationPanel.title=T("Actual progress from the current node; stages without step counts show an indeterminate bar");this.generationPanel.append(this.generationLabel,this.generationBar);this.side.append(this.generationPanel,el('h2',T("Workflow settings")));this.settings=el('div');this.params=el('div','','aw-parameters');this.runButton=btn(T("Generate"),()=>this.run());this.runButton.disabled=true;this.runButton.className='primary';this.runButton.style.width='100%';this.side.append(this.settings,this.runButton,this.params);this.divider=el('div','','aw-splitter');main.append(canvas,this.divider,this.side);this.root.append(main);
+  this.side=el('aside');this.generationPanel=el('div','','aw-generation-progress');this.generationPanel.hidden=true;this.generationLabel=el('span');this.generationBar=el('progress');this.generationBar.max=1;this.generationBar.setAttribute('aria-label',T("Current stage progress"));this.generationPanel.title=T("Actual progress from the current node; stages without step counts show an indeterminate bar");this.generationPanel.append(this.generationLabel,this.generationBar);this.side.append(this.generationPanel,el('h2',T("Workflow settings")));this.settings=el('div');this.params=el('div','','aw-parameters');this.quickParams=el('div','','dd-inpaint aw-quick-params');this.runButton=btn(T("Generate"),()=>this.run());this.runButton.disabled=true;this.runButton.className='primary';this.runButton.style.width='100%';this.side.append(this.runButton,this.quickParams,this.settings,this.params);this.divider=el('div','','aw-splitter');main.append(canvas,this.divider,this.side);this.root.append(main);
   this.root.addEventListener('keydown',e=>{if(e.key==='Escape'&&e.target===this.root)this.close();});
   this.root.addEventListener('pointerdown',e=>e.stopPropagation());document.body.append(this.root);document.body.classList.add('adachi-workspace-open');this.stopSplitter=installWorkspaceSplitter(this.root,main,this.divider);
   // Render first. Discovery/catalog and actual server validation run afterward.
@@ -69,6 +69,13 @@ export class Workspace {
   this.compare.options.getTargets=()=>({...originalTargets(),preferred:executionId(this.graph,this.editorNode)});this.compare.manualTarget=false;this.compare.refreshTargets();
   this.disposers.push(()=>{this.compare.options.getTargets=originalTargets;this.compare.manualTarget=originalManual;this.compare.targetSelect.value=originalTarget;this.compare.refreshTargets();});
   this.mount(this.editor.root,this.surface,true);this.mount(this.compare.root,this.surface,true);this.mount(this.sampler.adachiWorkbench.root,this.params);
+  // Move the existing controls, rather than copying widgets: linked inputs,
+  // source-size synchronization and sampler updates keep their native wiring.
+  this.sampler.adachiParameters.refresh();
+  for(const name of ['resolution','width','height','denoise']){
+   const field=this.sampler.adachiParameters.body.querySelector(`:scope > [data-adachi-param="${name}"]`);
+   if(field)this.mount(field,this.quickParams);
+  }
   // The dock can wrap on narrow screens or with long history labels. Keep
   // crop/result controls above its measured height instead of a fixed offset.
   const dockObserver=new ResizeObserver(()=>{
@@ -81,6 +88,7 @@ export class Workspace {
   const editorWheel=this.editor.options.onGraphWheel,compareWheel=this.compare.options.onGraphWheel;
   this.editor.options.onGraphWheel=()=>{};this.compare.options.onGraphWheel=()=>{};
   this.disposers.push(()=>{this.editor.options.onGraphWheel=editorWheel;this.compare.options.onGraphWheel=compareWheel;});
+  this.compare.enableWorkspaceZoom(true);this.disposers.push(()=>{this.compare.setDisplayMode('compare');this.compare.enableWorkspaceZoom(false);});
   this.bindings=new WorkspaceBindings({graph:this.graph,sampler:this.sampler,canvas:app.canvas,onChange:()=>this.scheduleCheck(),markChanged:()=>{app.canvas?.emitBeforeChange?.();app.canvas?.emitAfterChange?.();}});
   this.settings.append(this.connectionPicker(),this.bindings.createPanel());
   this.prepare(true).catch(e=>this.setStatus(e.message,'error'));
@@ -105,7 +113,7 @@ export class Workspace {
   const recovered=e=>{if(e.detail.node!==this.compareNode || e.detail.promptId!==this.promptId)return;if(e.detail.entry.outputs?.[executionId(this.graph,this.compareNode)]?.adachi_results?.length)this.showGeneratedResult();this.taskProgress.finish(e.detail.entry.status?.status_str==='success');this.running=false;this.sampler.adachiWorkspaceTask=null;this.runButton.disabled=false;this.runButton.textContent=T("Generate");this.setStatus(e.detail.entry.status?.status_str==='success'?T("Generation complete"):T("Generation failed; check the ComfyUI task history"),e.detail.entry.status?.status_str==='success'?'ok':'error');this.updateButtons();};
   document.addEventListener('adachi-result-recovered',recovered);this.disposers.push(()=>document.removeEventListener('adachi-result-recovered',recovered));
   for(const name of ['execution_success','execution_error','execution_interrupted'])event(name,e=>{if(e.detail.prompt_id===this.promptId){this.running=false;this.sampler.adachiWorkspaceTask=null;this.runButton.disabled=false;this.runButton.textContent=T("Generate");this.setStatus(name==='execution_success'?T("Generation complete"):e.detail.exception_message||T("Generation stopped"),name==='execution_success'?'ok':'error');}});
-  this.timer=setInterval(()=>{if((app.rootGraph||app.graph)!==this.graph||this.editor.destroyed)this.close();else{this.updateButtons();if(this.pendingResultView)this.showGeneratedResult();}},500);
+  this.timer=setInterval(()=>{if((app.rootGraph||app.graph)!==this.graph||this.editor.destroyed||!this.sampler?.graph||!this.compareNode?.graph)this.close();else{this.updateButtons();if(this.pendingResultView)this.showGeneratedResult();}},500);
   // The comparison's exact-task recovery also serves the workspace. A second
   // history poller doubled weak-network traffic and could replay old results.
   this.promptId=this.sampler.adachiWorkspaceTask;this.running=!!this.promptId;if(this.running){if(this.taskProgress.state==='idle')this.taskProgress.begin({},this.promptId);this.compareNode.adachiTrackPrompt?.(this.promptId);this.runButton.disabled=true;this.runButton.textContent=T("Generating…");}this.show('edit');this.syncHistory();this.scheduleCheck();
@@ -126,8 +134,19 @@ export class Workspace {
   });apply.title=T("Select nodes from this workflow; this inpaint node remembers your choices");panel.append(apply);return panel;
  }
  syncHistory(){if(!this.history)return;this.historySelect.replaceChildren();this.history.entries.forEach((item,i)=>{const o=el('option',`${i+1} · ${item.label}`);o.value=i;this.historySelect.append(o);});this.historySelect.value=String(this.history.index);this.undoButton.disabled=!this.history.canUndo;this.originalButton.disabled=this.history.index===0;}
- updateButtons(){const busy=this.running||this.preparing||this.submitting||this.sampler?.adachiWorkspaceSubmitting;this.runButton.disabled=!!(this.running||this.submitting||this.sampler?.adachiWorkspaceSubmitting);this.adoptButton.disabled=!this.compare?.ready||!!this.compare?.busy||this.compare?.pendingOutputs>0||busy;this.tabs.compare.disabled=!this.compare?.ready;this.sideButton.disabled=!this.compare?.ready;if(!this.preparing)this.bindings?.refreshProfiles();if(this.editor)this.editor.root.inert=(!this.connectionsConfirmed)||!!this.preparing&&!this.discovering;this.settings.inert=!!this.preparing;this.params.inert=!!this.preparing;this.historySelect.disabled=this.preparing||!!this.history?.busy;this.undoButton.disabled=this.preparing||!this.history?.canUndo;this.originalButton.disabled=this.preparing||this.history?.index<=0;if(this.compare?.adoptButton)this.compare.adoptButton.disabled=this.adoptButton.disabled;}
- show(which){this.view=which;if(this.editor)this.editor.root.hidden=which!=='edit';if(this.compare)this.compare.root.hidden=which!=='compare';this.still.hidden=!['before','after'].includes(which);if(!this.still.hidden){const image=which==='before'?this.compare?.before:this.compare?.after;if(image)this.still.src=image.src;}for(const [id,b]of Object.entries(this.tabs)){b.classList.toggle('active',id===which);b.setAttribute('aria-pressed',String(id===which));}this.sideButton.classList.toggle('active',['before','after'].includes(which));this.sideButton.setAttribute('aria-pressed',String(which==='before'));this.sideButton.title=which==='before'?T("Show after"):T("Show before");this.sideButton.setAttribute('aria-label',this.sideButton.title);this.editor?.schedule();this.compare?.schedule();}
+ updateButtons(){const busy=this.running||this.preparing||this.submitting||this.sampler?.adachiWorkspaceSubmitting;this.runButton.disabled=!!(this.running||this.submitting||this.sampler?.adachiWorkspaceSubmitting);this.adoptButton.disabled=!this.compare?.ready||!!this.compare?.busy||this.compare?.pendingOutputs>0||busy;this.tabs.compare.disabled=!this.compare?.ready;this.sideButton.disabled=!this.compare?.ready;this.fitCompareButton.disabled=!this.compare?.ready||!['compare','before','after'].includes(this.view);if(!this.preparing)this.bindings?.refreshProfiles();if(this.editor)this.editor.root.inert=(!this.connectionsConfirmed)||!!this.preparing&&!this.discovering;this.settings.inert=!!this.preparing;this.params.inert=!!this.preparing;this.quickParams.inert=!!this.preparing;this.historySelect.disabled=this.preparing||!!this.history?.busy;this.undoButton.disabled=this.preparing||!this.history?.canUndo;this.originalButton.disabled=this.preparing||this.history?.index<=0;if(this.compare?.adoptButton)this.compare.adoptButton.disabled=this.adoptButton.disabled;}
+ show(which){
+  this.view=which;
+  if(this.editor)this.editor.root.hidden=which!=='edit';
+  const comparing=['compare','before','after'].includes(which);
+  if(this.compare){this.compare.root.hidden=!comparing;if(comparing)this.compare.setDisplayMode(which);}
+  this.still.hidden=true;
+  for(const [id,b]of Object.entries(this.tabs)){b.classList.toggle('active',id===which);b.setAttribute('aria-pressed',String(id===which));}
+  this.sideButton.classList.toggle('active',['before','after'].includes(which));this.sideButton.setAttribute('aria-pressed',String(which==='before'));
+  this.sideButton.title=which==='before'?T("Show after"):T("Show before");this.sideButton.setAttribute('aria-label',this.sideButton.title);
+  this.fitCompareButton.disabled=!this.compare?.ready||!comparing;
+  this.editor?.schedule();this.compare?.schedule();
+ }
  async adopt(){if(!this.compare?.ready||this.running)return;await this.compare.adopt();this.syncHistory();this.updateButtons();if(!this.compare.message.classList.contains('dd-error')){this.show(this.editorNode.adachiCrop?.mode==='crop'?'edit':'compare');this.note.textContent='';this.scheduleCheck();}}
  async restoreHistory(which){try{if(this.preparing||this.history?.busy)return;if(which==='undo')await this.history.undo();else if(which==='original')await this.history.original();else await this.history.restore(which);this.syncHistory();}catch(e){this.setStatus(e.message,'error');}}
  scheduleCheck(){++this.checkVersion;this.checkController?.abort();clearTimeout(this.checkTimer);if(!this.closed)this.checkTimer=setTimeout(()=>this.check(),200);}
@@ -200,6 +219,6 @@ export class Workspace {
  close(){if(this.closed)return;this.closed=true;this.sessionController.abort();this.checkController?.abort();++this.checkVersion;clearInterval(this.timer);clearInterval(this.pollTimer);clearTimeout(this.checkTimer);this.stopSplitter?.();for(const dispose of this.disposers.reverse())dispose();if(this.history){this.history.onChange=null;this.history.onRestore=null;}if(this.taskProgress)this.taskProgress.onChange=()=>{};this.bindings?.destroy();for(const {element,marker,style}of this.mounts.reverse()){element.classList.remove('aw-embedded');element.hidden=false;element.inert=false;if(marker.parentNode)marker.replaceWith(element);if(style===null)element.removeAttribute('style');else element.setAttribute('style',style);}this.root.remove();document.body.classList.remove('adachi-workspace-open');this.editor?.schedule();this.compare?.schedule();this.compare?.updateButton();currentWorkspace=null;}
 }
 app.registerExtension({name:'Adachi.InpaintWorkspace',setup(){
- const css=document.createElement('link');css.rel='stylesheet';css.href=new URL('./workspace.css?v=2.0.0',import.meta.url).href;document.head.append(css);
+ const css=document.createElement('link');css.rel='stylesheet';css.href=new URL('./workspace.css?v=workspace-zoom-20261112',import.meta.url).href;document.head.append(css);
  document.addEventListener('adachi-open-workspace',event=>{if(!currentWorkspace)currentWorkspace=new Workspace(event.detail?.sampler||null);});
 }});

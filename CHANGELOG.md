@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add wheel zoom, middle-button pan and Fit to the standalone workspace's sliding and before/after comparison views.
+- Move Generate, width, height and denoise controls higher in the workspace settings, and allow positive and negative prompts to be collapsed.
 - Adopt GPL-3.0-only for the current project and preserve the original MIT copyright and permission notice for earlier releases and applicable legacy material. Previous releases retain the permissions under which they were distributed.
 - Update bilingual documentation with real workspace screenshots, a tested-model compatibility matrix, workflow limits and a concise release history.
 

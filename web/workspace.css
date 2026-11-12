@@ -154,3 +154,5 @@ body.adachi-workspace-open > :not(.adachi-workspace):not(script):not(style):not(
 .adachi-workspace .aw-connections button {padding:4px 8px;margin-top:8px;}
 .adachi-workspace .aw-connections p {color:var(--aw-error);}
 .adachi-workspace .aw-bindings details small {display:block;overflow-wrap:anywhere;}
+
+.adachi-workspace .aw-quick-params {height:auto;flex:none;border:0;border-radius:0;overflow:visible;gap:8px;padding:12px 0;background:transparent;container-type:normal;}
