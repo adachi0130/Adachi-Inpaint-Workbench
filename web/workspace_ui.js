@@ -72,7 +72,7 @@ export class Workspace {
   // Move the existing controls, rather than copying widgets: linked inputs,
   // source-size synchronization and sampler updates keep their native wiring.
   this.sampler.adachiParameters.refresh();
-  for(const name of ['resolution','width','height','denoise']){
+  for(const name of ['area','resolution','width','height','denoise']){
    const field=this.sampler.adachiParameters.body.querySelector(`:scope > [data-adachi-param="${name}"]`);
    if(field)this.mount(field,this.quickParams);
   }
@@ -219,6 +219,6 @@ export class Workspace {
  close(){if(this.closed)return;this.closed=true;this.sessionController.abort();this.checkController?.abort();++this.checkVersion;clearInterval(this.timer);clearInterval(this.pollTimer);clearTimeout(this.checkTimer);this.stopSplitter?.();for(const dispose of this.disposers.reverse())dispose();if(this.history){this.history.onChange=null;this.history.onRestore=null;}if(this.taskProgress)this.taskProgress.onChange=()=>{};this.bindings?.destroy();for(const {element,marker,style}of this.mounts.reverse()){element.classList.remove('aw-embedded');const removed=(element===this.editor?.root&&(this.editor.destroyed||!this.editorNode?.graph))||(element===this.compare?.root&&!this.compareNode?.graph)||(element===this.sampler?.adachiWorkbench?.root&&!this.sampler?.graph);if(removed){marker.remove();element.remove();continue;}element.hidden=false;element.inert=false;if(marker.parentNode)marker.replaceWith(element);if(style===null)element.removeAttribute('style');else element.setAttribute('style',style);}this.root.remove();document.body.classList.remove('adachi-workspace-open');this.editor?.schedule();this.compare?.schedule();this.compare?.updateButton();currentWorkspace=null;}
 }
 app.registerExtension({name:'Adachi.InpaintWorkspace',setup(){
- const css=document.createElement('link');css.rel='stylesheet';css.href=new URL('./workspace.css?v=2.1.0',import.meta.url).href;document.head.append(css);
+ const css=document.createElement('link');css.rel='stylesheet';css.href=new URL('./workspace.css?v=toolbar-layout-20261112',import.meta.url).href;document.head.append(css);
  document.addEventListener('adachi-open-workspace',event=>{if(!currentWorkspace)currentWorkspace=new Workspace(event.detail?.sampler||null);});
 }});

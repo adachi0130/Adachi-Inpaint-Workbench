@@ -98,7 +98,6 @@ body.adachi-workspace-open > :not(.adachi-workspace):not(script):not(style):not(
 .adachi-workspace .aw-canvas .dd-crop-bar button,.adachi-workspace .aw-canvas .dd-crop-bar select,.adachi-workspace .aw-canvas .dd-crop-bar input {
   height:28px;min-height:28px;font-size:12px;color:var(--aw-text);
 }
-.adachi-workspace .aw-canvas .dd-color-paint {bottom:calc(var(--aw-history-height,40px) + var(--aw-crop-height,32px) + 24px);background:var(--aw-panel);border:1px solid var(--aw-line);box-shadow:0 2px 8px #0002;}
 .adachi-workspace .aw-canvas .dd-files button {opacity:1}
 .adachi-workspace .aw-canvas .dd-adoption {display:none}
 .adachi-workspace .aw-canvas .dd-compare-stage {position:absolute;inset:0;min-height:0}

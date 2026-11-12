@@ -1,6 +1,6 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
-import { ImageCompareView } from "./compare.js?v=2.1.0";
+import { ImageCompareView } from "./compare.js?v=toolbar-layout-20261112";
 import { readPreview } from "./preview_transport.js";
 import { installComparisonRecovery } from "./result_recovery.js";
 import {executionId,executionNode,graphNodeEntries} from "./workspace_flow.js";

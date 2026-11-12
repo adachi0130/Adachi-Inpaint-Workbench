@@ -58,7 +58,7 @@ export class InpaintParameterPanel {
     enum(parent, name, label, pills = false) {
         const widget = this.widget(name); if (!widget) return;
         label = T(label);
-        const wrapper = el("div", "dd-param-field"); wrapper.append(el("span", "dd-param-label", label));
+        const wrapper = el("div", "dd-param-field"); wrapper.dataset.adachiParam = name; wrapper.append(el("span", "dd-param-label", label));
         let values = widget.options?.values; if (typeof values === "function") values = values();
         if (!Array.isArray(values)) values = Object.keys(choices[name] || {});
         if (!values.includes(widget.value)) values = [widget.value, ...values];

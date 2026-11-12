@@ -12,8 +12,7 @@ export class ColorPaint {
         this.picker=document.createElement('input');this.picker.type='color';this.picker.value=this.color;this.picker.title=T('Brush color');this.picker.setAttribute('aria-label',this.picker.title);this.picker.oninput=()=>{this.color=this.picker.value;};
         this.undoButton=document.createElement('button');this.undoButton.type='button';this.undoButton.textContent='↶';this.undoButton.title=T('Undo color painting');this.undoButton.onclick=()=>this.step(this.undo,this.redo);
         this.redoButton=document.createElement('button');this.redoButton.type='button';this.redoButton.textContent='↷';this.redoButton.title=T('Redo color painting');this.redoButton.onclick=()=>this.step(this.redo,this.undo);
-        controls.append(this.button,this.picker,this.undoButton,this.redoButton);editor.stage.append(controls);this.controls=controls;
-        this.barObserver=new ResizeObserver(()=>editor.root.style.setProperty('--dd-color-offset',`${Math.ceil(crop.bar.getBoundingClientRect().height)+14}px`));this.barObserver.observe(crop.bar);
+        controls.append(this.button,this.picker,this.undoButton,this.redoButton);crop.bar.prepend(controls);this.controls=controls;
         const draw=editor.options.drawSource,revision=editor.options.sceneRevision;
         editor.options.drawSource=ctx=>{const done=draw?.(ctx);if(!done)ctx.drawImage(editor.image,0,0);if(this.layer.width&&!crop.previewOriginal)ctx.drawImage(this.layer,0,0);return true;};
         editor.options.sceneRevision=()=>`${revision?.()||''}:paint:${this.revision}`;
@@ -35,7 +34,7 @@ export class ColorPaint {
     remember(){this.undo.push(this.layer.toDataURL('image/png'));let bytes=this.undo.reduce((n,s)=>n+s.length*2,0);while(this.undo.length>1&&(this.undo.length>20||bytes>64*1024*1024))bytes-=this.undo.shift().length*2;}
     async step(from,to){if(this.drawing||this.restoring||!from.length)return;this.restoring=true;const current=this.layer.toDataURL('image/png'),data=from.pop(),image=new Image();image.src=data;try{await image.decode();to.push(current);const ctx=this.layer.getContext('2d');ctx.clearRect(0,0,this.layer.width,this.layer.height);ctx.drawImage(image,0,0);this.revision++;this.flush();this.editor.schedule();this.sync();}catch(e){from.push(data);this.editor.status(e.message,true);}finally{this.restoring=false;}}
     clear(){this.undo=[];this.redo=[];this.layer.width=this.layer.height=0;if(this.widget)this.widget.value='';this.revision++;this.sync();}
-    destroy(){this.barObserver.disconnect();this.layer.width=this.layer.height=0;this.controls.remove();}
+    destroy(){this.layer.width=this.layer.height=0;this.controls.remove();}
     clearRegion(r){if(!this.layer.width)return;this.remember();this.redo=[];this.layer.getContext('2d').clearRect(r.x,r.y,r.width,r.height);this.revision++;this.flush();this.editor.schedule();this.sync();}
     sync(){this.editor.stage.classList.toggle('dd-color-active',this.active);this.button.classList.toggle('dd-active',this.active);this.button.setAttribute('aria-pressed',String(this.active));this.picker.hidden=this.undoButton.hidden=this.redoButton.hidden=!this.active;this.undoButton.disabled=!this.undo.length;this.redoButton.disabled=!this.redo.length;this.editor.updateButtons?.();}
 }

@@ -34,7 +34,7 @@ export class ImageCompareView {
         this.downloadButton.setAttribute("aria-label", this.downloadButton.title);
         this.downloadButton.onclick = event => { event.preventDefault(); event.stopPropagation(); this.downloadLatest(); };
         toolbar.append(this.downloadButton);
-        const fit = element("button", "", T("Fit")); fit.type = "button";
+        const fit = element("button", "dd-compare-fit", T("Fit")); fit.type = "button";
         fit.onclick = event => { event.preventDefault(); event.stopPropagation(); this.fitView(); }; toolbar.append(fit);
         this.stage = element("div", "dd-stage dd-compare-stage");
         this.canvas = document.createElement("canvas"); this.canvas.tabIndex = 0;

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 class Element {
   constructor(tag){this.tag=tag;this.style={};this.dataset={};this.classList={toggle(){}};this.children=[];this.width=0;this.height=0;this.value='';}
-  append(...children){this.children.push(...children)} setAttribute(){} hasPointerCapture(){return false} setPointerCapture(){}
+  append(...children){this.children.push(...children)} prepend(...children){this.children.unshift(...children)} setAttribute(){} hasPointerCapture(){return false} setPointerCapture(){}
   getContext(){return {save(){},restore(){},beginPath(){},rect(){},clip(){},arc(){},fill(){},moveTo(){},lineTo(){},stroke(){},translate(){},clearRect(){},drawImage(){},getImageData(){return {data:[12,34,56,255]}}};}
   toDataURL(){return 'data:image/png;base64,paint';}
 }
@@ -10,7 +10,7 @@ globalThis.Image=class {constructor(){this.width=16;this.height=12;} async decod
 const {ColorPaint}=await import('../web/color_paint.js');
 const editor={image:{width:16,height:12},ready:true,view:'overlay',brushSize:8,brushOpacity:100,stage:new Element('div'),root:new Element('div'),canvas:new Element('canvas'),options:{drawSource:()=>false},point:e=>({x:e.x,y:e.y}),pointerDown(){},pointerMove(){},pointerUp(){},schedule(){},status(){}};
 const crop={mode:'mask',bar:new Element('div'),region:{locked:false}},widget={value:''};let changes=0;
-const paint=new ColorPaint(editor,crop,widget,()=>changes++);paint.button.onclick({preventDefault(){},stopPropagation(){}});
+const paint=new ColorPaint(editor,crop,widget,()=>changes++);assert.equal(crop.bar.children[0],paint.controls);paint.button.onclick({preventDefault(){},stopPropagation(){}});
 const event={button:0,pointerId:1,x:2,y:3,preventDefault(){},stopPropagation(){}};
 editor.pointerDown(event);assert.equal(editor.pointerId,1);editor.pointerUp(event);assert.equal(editor.pointerId,null);assert.match(widget.value,/data:image\/png/);assert.equal(changes,1);
 const saved=widget.value;editor.pointerDown({...event,altKey:true});assert.equal(paint.color,'#0c2238');assert.equal(widget.value,saved);

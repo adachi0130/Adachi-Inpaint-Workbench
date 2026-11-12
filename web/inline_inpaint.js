@@ -1,7 +1,7 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
 import { InlineMaskEditor } from "./editor.js?v=2.1.0";
-import { installInpaintWorkbench } from "./inpaint_node.js?v=workspace-zoom-20261112";
+import { installInpaintWorkbench } from "./inpaint_node.js?v=toolbar-layout-20261112";
 import { bindWidgetToNodeWidth, createWidgetHost } from "./widget_layout.js?v=stable-host-20261112";
 import { routeWheelOutsideImage } from "./wheel_routing.js";
 import { InlineCropController } from "./inline_crop.js?v=2.1.0";
@@ -9,13 +9,13 @@ import { canStoreDraft, prepareInlineDraft, syncInlineWidgets } from "./draft_gu
 import { T } from "./i18n.js";
 import { removeLegacyFeedback } from "./legacy_feedback.js?v=0.6.4";
 import { uploadImageWithProgress } from "./upload_transport.js?v=stability1";
-import { ColorPaint } from "./color_paint.js";
+import { ColorPaint } from "./color_paint.js?v=toolbar-layout-20261112";
 import { createPaintDraftProtection } from "./paint_draft.js";
 
 const styleId = "adachi-inpaint-style";
 const stylesheet = document.getElementById(styleId) || document.createElement("link");
 stylesheet.id = styleId; stylesheet.rel = "stylesheet";
-stylesheet.href = new URL("./editor.css?v=color-paint-20261112", import.meta.url).href;
+stylesheet.href = new URL("./editor.css?v=toolbar-layout-20261112", import.meta.url).href;
 if (!stylesheet.isConnected) document.head.append(stylesheet);
 
 function hide(widget) {
