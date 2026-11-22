@@ -92,7 +92,7 @@ export class Workspace {
   this.bindings=new WorkspaceBindings({graph:this.graph,sampler:this.sampler,canvas:app.canvas,onChange:()=>this.scheduleCheck(),markChanged:()=>{app.canvas?.emitBeforeChange?.();app.canvas?.emitAfterChange?.();}});
   this.settings.append(this.connectionPicker(),this.bindings.createPanel());
   this.prepare(true).catch(e=>this.setStatus(e.message,'error'));
-  this.bindings.loadCatalog(api.fetchApi.bind(api)).then(()=>this.scheduleCheck()).catch(e=>this.setStatus(e.message,'error'));
+  this.bindings.loadCatalog((...args)=>api.fetchApi(...args)).then(()=>this.scheduleCheck()).catch(e=>this.setStatus(e.message,'error'));
   const oldAdopt=this.compare.options.onAdopt;
   this.compare.options.onAdopt=async(...args)=>{const result=await this.history.transact(T("Adopted result"),()=>oldAdopt(...args));if(!this.closed && this.editorNode.adachiCrop?.mode==='crop')this.show('edit');return result;};
   this.disposers.push(()=>{this.compare.options.onAdopt=oldAdopt;});

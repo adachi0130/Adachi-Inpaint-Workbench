@@ -4,12 +4,12 @@ import { InlineMaskEditor } from "./editor.js?v=2.1.0";
 import { installInpaintWorkbench } from "./inpaint_node.js?v=toolbar-layout-20261112";
 import { bindWidgetToNodeWidth, createWidgetHost } from "./widget_layout.js?v=stable-host-20261112";
 import { routeWheelOutsideImage } from "./wheel_routing.js";
-import { InlineCropController } from "./inline_crop.js?v=2.1.0";
+import { InlineCropController } from "./inline_crop.js?v=2.1.2";
 import { canStoreDraft, prepareInlineDraft, syncInlineWidgets } from "./draft_guard.js?v=2.1.0";
 import { T } from "./i18n.js";
 import { removeLegacyFeedback } from "./legacy_feedback.js?v=0.6.4";
-import { uploadImageWithProgress } from "./upload_transport.js?v=stability1";
-import { ColorPaint } from "./color_paint.js?v=toolbar-layout-20261112";
+import { uploadImageWithProgress } from "./upload_transport.js?v=2.1.2";
+import { ColorPaint } from "./color_paint.js?v=2.1.2";
 import { createPaintDraftProtection } from "./paint_draft.js";
 
 const styleId = "adachi-inpaint-style";
@@ -204,7 +204,7 @@ app.registerExtension({
             const paintDraft=createPaintDraftProtection({paint:()=>node.adachiColorPaint,widget:()=>paintWidget,graph:()=>app.rootGraph||node.graph,disposed:()=>editor.destroyed||!node.graph,persist:()=>app.ui.settings.getSettingValue('Comfy.Workflow.Persist')!==false,fits:graph=>canStoreDraft(graph.serialize(),draftOptions()),upload:uploadEmbeddedSource,changed:markChanged,onError:error=>editor.status(`${T("Paint layer could not be saved as an input file; embedded data was retained")}: ${error.message}`,true)});
             node.adachiColorPaint = new ColorPaint(editor,crop,paintWidget,paintDraft.schedule,imageUrl);
             editor.colorPaint=node.adachiColorPaint;
-            const acceptCrop=crop.accept.bind(crop);
+            const origAccept=crop.accept,acceptCrop=(...args)=>origAccept.call(crop,...args);
             crop.accept=async(...args)=>{const old=crop.widgets.layer_image.value,region={...crop.region};const result=await acceptCrop(...args);if(crop.widgets.layer_image.value && crop.widgets.layer_image.value!==old)node.adachiColorPaint.clearRegion(region);return result;};
             const stopWheelRouting = routeWheelOutsideImage(editor.root, editor.canvas, () => editor.ready);
             node.adachiUseResult = async (file, origin, options={}) => {

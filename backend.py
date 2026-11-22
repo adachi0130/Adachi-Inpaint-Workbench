@@ -671,7 +671,7 @@ class AdachiImageCompare:
                 data = stream.getvalue()
                 encoded_size += len(data)
                 if encoded_size > PREVIEWS.limit:
-                    raise ValueError("The comparison batch exceeds the in-memory preview limit. Reduce batch size or increase ADACHI_COMPARE_MEMORY_MIB (64–4096 MiB).")
+                    raise ValueError("The comparison batch exceeds the 512 MiB in-memory preview limit. Reduce the batch size.")
                 images.append(data)
         refs = PREVIEWS.put_batch(images, unique_id)
         before, after = refs[:original.shape[0]], refs[original.shape[0]:]

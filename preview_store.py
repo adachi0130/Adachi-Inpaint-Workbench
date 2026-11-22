@@ -2,17 +2,14 @@
 
 from collections import OrderedDict
 import hashlib
-import os
 import secrets
 import threading
 
+DEFAULT_MEMORY_MIB = 512
+
 
 def _limit():
-    try:
-        mib = int(os.environ.get("ADACHI_COMPARE_MEMORY_MIB", "512"))
-    except ValueError:
-        mib = 512
-    return max(64, min(4096, mib)) * 1024 * 1024
+    return DEFAULT_MEMORY_MIB * 1024 * 1024
 
 
 class PreviewStore:
@@ -37,7 +34,7 @@ class PreviewStore:
             raise ValueError("The comparison batch must contain nonempty images.")
         total = sum(len(image) for image in images)
         if total > self.limit:
-            raise ValueError("The comparison batch exceeds the in-memory preview limit. Reduce batch size or increase ADACHI_COMPARE_MEMORY_MIB (64–4096 MiB).")
+            raise ValueError("The comparison batch exceeds the 512 MiB in-memory preview limit. Reduce the batch size.")
         digest = hashlib.sha256()
         for image in images:
             digest.update(len(image).to_bytes(8, "big")); digest.update(image)

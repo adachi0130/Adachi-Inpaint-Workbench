@@ -16,7 +16,7 @@ export class ColorPaint {
         const draw=editor.options.drawSource,revision=editor.options.sceneRevision;
         editor.options.drawSource=ctx=>{const done=draw?.(ctx);if(!done)ctx.drawImage(editor.image,0,0);if(this.layer.width&&!crop.previewOriginal)ctx.drawImage(this.layer,0,0);return true;};
         editor.options.sceneRevision=()=>`${revision?.()||''}:paint:${this.revision}`;
-        const down=editor.pointerDown.bind(editor),move=editor.pointerMove.bind(editor),up=editor.pointerUp.bind(editor);
+        const origDown=editor.pointerDown,origMove=editor.pointerMove,origUp=editor.pointerUp;const down=e=>origDown.call(editor,e),move=e=>origMove.call(editor,e),up=e=>origUp.call(editor,e);
         editor.pointerDown=e=>{if(this.active && this.restoring){e.preventDefault();e.stopPropagation();return;}if(!this.active||e.button!==0||editor.space||!editor.ready||crop.busy||crop.previewOriginal||(crop.mode==='crop'&&!crop.region?.locked))return down(e);
             e.preventDefault();e.stopPropagation();const p=editor.point(e);if(e.altKey){this.pick(p);return;}
             this.ensure();this.remember();this.redo=[];this.drawing={id:e.pointerId,last:p};editor.pointerId=e.pointerId;editor.canvas.setPointerCapture(e.pointerId);this.segment(p,p);this.sync();};

@@ -1,5 +1,11 @@
 # Verification record
 
+## 2.1.2 · 2026-11-15
+
+- All 71 Python regression tests and all 26 JavaScript test files pass locally on Python 3.13 / Node 22; every frontend module passes syntax checking. The upload transport tests now exercise the authenticated fetch channel: streaming byte progress, multi-user header, authentication fallback, server errors, inactivity timeout, external cancellation, slow advancing uploads and the fallback deadline.
+- The upload rewrite was not re-tested in a real browser for this release; streaming upload progress depends on the browser supporting duplex request streams, and other browsers fall back to an indeterminate indicator. No model generation was run.
+- The public Registry scan findings that motivated this release are listed in [scan review notes](registry/SECURITY-REVIEW.md); approval remains an external decision.
+
 ## 2026-11-12 · model compatibility and documentation
 
 - A real SD 1.5 checkpoint VAE was loaded on CPU and tested through the plugin: 64×64 encode, mock sampling, decode and masked compositing succeeded with a [1,4,8,8] latent, finite output and exact protected pixels. This is not a complete diffusion-generation test.

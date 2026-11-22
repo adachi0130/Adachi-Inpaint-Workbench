@@ -1,7 +1,7 @@
 import { CROP_PRESETS, cropAt } from "./crop_geometry.js?v=0.6.2";
 import { T } from "./i18n.js";
 import { syncCropDimensions, syncCurrentDimensions } from "./parameter_bridge.js?v=0.8.2";
-import { installResultAdoption } from "./result_adoption.js?v=2.1.0";
+import { installResultAdoption } from "./result_adoption.js?v=2.1.2";
 
 const fields = ["mask", "baseMask", "history", "future", "lastMask", "dirty"];
 const canvas = (w, h) =>
@@ -44,7 +44,8 @@ export class InlineCropController {
     installResultAdoption(node, this);
     // Only user uploads go through editor.upload; internal layer merges and
     // adopting an already-sized result call onUpload directly instead.
-    const upload = editor.upload.bind(editor);
+    const origUpload = editor.upload;
+    const upload = file => origUpload.call(editor, file);
     editor.upload = async file => {
       const previous = editor.image;
       await upload(file);
@@ -52,7 +53,8 @@ export class InlineCropController {
         syncCurrentDimensions(node);
       }
     };
-    const originalFlush = editor.flush.bind(editor);
+    const origFlush = editor.flush;
+    const originalFlush = () => origFlush.call(editor);
     editor.flush = () => {
       if (this.target !== "blend") return originalFlush();
       if (!editor.ready || !this.region?.locked)
@@ -89,8 +91,10 @@ export class InlineCropController {
     editor.options.drawOverlay = (ctx, d) => this.drawOverlay(ctx, d);
     editor.options.paintBounds = () =>
       this.mode === "crop" && this.region?.locked ? this.region : undefined;
-    const down = editor.pointerDown.bind(editor),
-      move = editor.pointerMove.bind(editor);
+    const origDown = editor.pointerDown,
+      origMove = editor.pointerMove;
+    const down = e => origDown.call(editor, e),
+      move = e => origMove.call(editor, e);
     editor.pointerDown = (e) => {
       if (!editor.ready) return;
       if (this.previewOriginal) { e.preventDefault(); e.stopPropagation(); return; }

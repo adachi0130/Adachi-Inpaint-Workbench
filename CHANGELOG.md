@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.1.2 · 2026-11-15
+
+- Upload source images and adopted results through ComfyUI's authenticated frontend API instead of a raw XMLHttpRequest. Browsers that support streaming request bodies still report the bytes actually sent; other browsers show an indeterminate indicator. Authentication fallback, inactivity timeouts and cancellation behave as before, and a transfer that already sent bytes is never retried as a duplicate upload.
+- Fix the comparison preview cache at 512 MiB and remove the `ADACHI_COMPARE_MEMORY_MIB` environment variable. The batch-size error message now states the fixed limit.
+- Replace `Function.prototype.bind` wrappers in the inline editor, crop controller, color paint, comparison node, result recovery and workspace with explicit receiver calls, keeping behavior identical.
+
 ## 2.1.1 · 2026-11-12
 
 - Remove the duplicate lower Fit button in the standalone workspace; the top Fit control and the workflow comparison node's button remain available.

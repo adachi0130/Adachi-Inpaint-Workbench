@@ -76,7 +76,7 @@ Use the **✎ color paint** button at the lower left to paint directly on the im
 
 If browser draft storage is too small, the color layer may be saved as a PNG in ComfyUI's input directory instead of embedded in the workflow. Include that referenced file when moving the workflow to another machine.
 
-While a source image uploads, a progress bar reports the bytes actually sent and then shows when the image is loading. On platforms requiring a special authentication fallback, the indicator stays indeterminate rather than showing an estimated percentage.
+While a source image uploads, browsers that support streaming uploads report the bytes actually sent; other browsers and platforms requiring an authentication fallback show an indeterminate indicator rather than an estimated percentage. The upload then shows when the image is loading.
 
 - Brush, soft edges, hardness, opacity, pen pressure, temporary erasing and shape tools.
 - A compact **↑ upload / ⛶ fit / pin** toolbar, with a mode selector at the upper right. The pin (**Keep**) preserves the current view; use **Fit** first if desired. Plain wheel then navigates the workflow, while `Ctrl` + wheel still changes brush size and `Shift` + wheel changes hardness.
@@ -273,7 +273,7 @@ Group presets capture group-level enabled/bypassed states, not every node's indi
 - **Crop layers:** the fusion mask and crop coordinates are saved in the workflow; the latest layer is a relative image reference under `input/adachi-inpaint-layers/`. Include that file when moving an unmerged edit between machines, or merge layers and embed the source first.
 - **Sharing:** masks are embedded in saved workflows. Source images use a relative `input/` path by default; enable **Embed source in workflow** to include the picture too. Embedded images increase JSON size. If an embedded source would exceed browser draft storage when loading a workflow, uploading an image, changing modes or enabling embedding, the plugin first uploads an exact source copy and switches to an input-file reference, preserving masks and layers. To intentionally keep a very large source embedded, disable ComfyUI browser workflow persistence before embedding; exported files are not subject to the browser draft quota. If the page already reports draft failures on every edit, save with **Ctrl+S**, then reload with **Ctrl+F5** to reset ComfyUI's disabled draft-storage state.
 - **Adoption:** source and result dimensions must match to preserve mask coordinates. Undo/redo commands survive adoption in the current session; saving/reloading retains the mask, not the command history.
-- **Comparison previews:** new originals and results are held in server memory instead of temporary image files. The default cache is 512 MiB and at most 512 comparison batches; set `ADACHI_COMPARE_MEMORY_MIB` to 64–4096 before starting ComfyUI to change it. Cache eviction or server restart expires old comparisons and their download references; rerun the workflow to refresh them. A single batch larger than the limit reports an error. Previous disk-based preview references remain supported while available, and expired old plugin preview files are still cleaned up. Images adopted into the editor are saved separately under `input/adachi-inpaint/` or `input/adachi-inpaint-layers/`.
+- **Comparison previews:** new originals and results are held in server memory instead of temporary image files. The cache is fixed at 512 MiB and at most 512 comparison batches. Cache eviction or server restart expires old comparisons and their download references; rerun the workflow to refresh them. A single batch larger than the limit reports an error. Previous disk-based preview references remain supported while available, and expired old plugin preview files are still cleaned up. Images adopted into the editor are saved separately under `input/adachi-inpaint/` or `input/adachi-inpaint-layers/`.
 - **Scope:** this is an original WebUI-style implementation. It does not promise identical WebUI pixels, scripts or extension behaviour. Extra soft-edge feathering is not WebUI's full Soft Inpainting algorithm.
 
 <details>
@@ -312,6 +312,7 @@ See [verification notes](VERIFICATION.md) for tested configurations and limits, 
 
 | Versions | Highlights and fixes |
 | --- | --- |
+| 2.1.2 | Uploads use ComfyUI's authenticated API channel with streaming byte progress where supported; the preview cache limit is fixed at 512 MiB. |
 | 2.1.1 | Streamlined comparison Fit controls, moved repaint-area choices below Generate, and combined color-paint controls with the lower toolbar. |
 | 2.1.0 | Color-paint layer, crop merge progress, workspace comparison zoom, reordered controls, collapsible prompts and GPL-3.0-only licensing. |
 | 2.0.1 | Weak-network retry and cancellation, preview resource cleanup, rollback races, dense-mask memory reduction and safer malformed-workflow handling. |

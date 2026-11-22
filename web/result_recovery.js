@@ -56,7 +56,7 @@ export class ResultRecovery {
 const installed=new WeakMap();
 export function installComparisonRecovery(api,getGraph) {
     if(installed.has(api))return installed.get(api);
-    const recovery=new ResultRecovery({fetchApi:api.fetchApi.bind(api),getGraph,
+    const recovery=new ResultRecovery({fetchApi:(...args)=>api.fetchApi(...args),getGraph,
         onDiscard:node=>{const view=node.adachiCompare;if(view){view.pendingOutputs=Math.max(0,(view.pendingOutputs||0)-1);view.updateButton();if(!view.pendingOutputs&&!view.loadingActive)view.progressBox.hidden=true;}},
         onPending:node=>{const view=node.adachiCompare;if(view){view.pendingOutputs=(view.pendingOutputs||0)+1;view.updateButton();view.loading(view.options.waitingText||T("Waiting for the generated image…"));}},
         onOutput(node,output,promptId,entry){

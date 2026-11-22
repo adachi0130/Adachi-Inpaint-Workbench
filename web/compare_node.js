@@ -37,7 +37,7 @@ app.registerExtension({
             node.adachiTrackPrompt=(id,graph=app.rootGraph||app.graph)=>recovery.track(graph,id,executionId(graph,node));
             const compare = new ImageCompareView({
                 resolveUrl: viewUrl,
-                loadPreview: (image,options)=>readPreview(api.fetchApi.bind(api),viewPath(image),options),
+                loadPreview: (image,options)=>readPreview((...args)=>api.fetchApi(...args),viewPath(image),options),
                 recover: ()=>recovery.recover(),
                 waitingText: T("Waiting for the generated image…"),
                 failedText: T("Generation failed; check the ComfyUI task history"),
@@ -45,13 +45,13 @@ app.registerExtension({
                 getTargets: () => targets(node),
                 onSelect: index => { node.properties.adachi_result_index = index; },
                 async fetchResult(image, options) {
-                    return readPreview(api.fetchApi.bind(api),viewPath(image),options);
+                    return readPreview((...args)=>api.fetchApi(...args),viewPath(image),options);
                 },
                 async onAdopt(id, image, options={}) {
                     const graph=app.rootGraph||app.graph,target = executionNode(graph,id);
                     if (!target?.adachiUseResult) throw new Error(T("No inline mask node is available to receive the result"));
                     options.onProgress?.({phase:'download'});
-                    const blob = await readPreview(api.fetchApi.bind(api),viewPath(image),{...options,onProgress:p=>options.onProgress?.({phase:'download',...p}),maxBytes:64*1024*1024});
+                    const blob = await readPreview((...args)=>api.fetchApi(...args),viewPath(image),{...options,onProgress:p=>options.onProgress?.({phase:'download',...p}),maxBytes:64*1024*1024});
                     options.signal?.throwIfAborted();
                     if(graph!==(app.rootGraph||app.graph)||target!==executionNode(graph,id))throw Error(T("The workflow changed; check connections again"));
                     if (blob.size > 64 * 1024 * 1024) throw new Error(T("Result image exceeds 64 MiB; downscale it first"));

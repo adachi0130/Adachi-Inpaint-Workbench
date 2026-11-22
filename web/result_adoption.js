@@ -2,7 +2,7 @@ import { api } from "../../scripts/api.js";
 import { app } from "../../scripts/app.js";
 import { executionId } from "./workspace_flow.js";
 import { T } from "./i18n.js";
-import {uploadImageWithProgress} from './upload_transport.js?v=stability1';
+import {uploadImageWithProgress} from './upload_transport.js?v=2.1.2';
 
 export function installResultAdoption(node, crop) {
     // Saved workflows may still contain the old feedback socket and wire.
